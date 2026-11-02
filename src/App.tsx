@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarDays, FilePlus2, FolderOpen, Notebook, PanelLeft, Search, X } from "lucide-react";
+import { CalendarDays, FilePlus2, FolderOpen, Notebook, PanelLeft, PenLine, Search, X } from "lucide-react";
 import { api, isApiError, onEvent, pickFolder, type VaultInfo } from "./lib/api";
 import { NotePane } from "./components/NotePane";
 import { Stream } from "./components/Stream";
@@ -8,7 +8,8 @@ import { SearchPalette } from "./components/SearchPalette";
 import { Journal } from "./views/Journal";
 import type { EditorHandle } from "./editor/Editor";
 
-type View = { kind: "notebook"; label?: string } | { kind: "journal" };
+/** "write" is the blank page; "notes" lists all notes (optionally one collection). */
+type View = { kind: "write" } | { kind: "notes"; label?: string } | { kind: "journal" };
 
 export function App() {
   const [vault, setVault] = useState<VaultInfo | null | undefined>(undefined);
@@ -52,11 +53,11 @@ function Welcome({ onOpened, error, setError }: { onOpened: (v: VaultInfo) => vo
 
 function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: () => void }) {
   const qc = useQueryClient();
-  const [view, setView] = useState<View>({ kind: "notebook" });
+  const [view, setView] = useState<View>({ kind: "write" });
   // `paneKey` remounts the editor; `currentId` tracks which note it shows.
   const [paneKey, setPaneKey] = useState("new-0");
   const [currentId, setCurrentId] = useState<string | null>(null);
-  const [chromePinned, setChromePinned] = useState(() => localStorage.getItem("nought.chrome") === "pinned");
+  const [chromePinned, setChromePinned] = useState(() => readPref("nought.chrome") === "pinned");
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const editorRef = useRef<EditorHandle | null>(null);
@@ -64,33 +65,44 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
 
   const { data: labels = [] } = useQuery({ queryKey: ["notes", "labels"], queryFn: api.labels });
 
+  // Optional: show the note list under the editor (off by default: the page stays blank).
+  const [listUnderEditor, setListUnderEditor] = useState(() => readPref("nought.listUnderEditor") === "on");
+  // A new note started from a collection gets that collection's label.
+  const [presetLabel, setPresetLabel] = useState<string | undefined>(undefined);
+
   const openNote = useCallback((id: string) => {
-    setView((v) => (v.kind === "notebook" ? v : { kind: "notebook" }));
+    setView({ kind: "write" });
     setCurrentId(id);
     setPaneKey(id);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    window.scrollTo({ top: 0 });
   }, []);
 
   const newNote = useCallback(() => {
-    setView((v) => (v.kind === "notebook" ? v : { kind: "notebook" }));
+    setView((v) => {
+      setPresetLabel(v.kind === "notes" ? v.label : undefined);
+      return { kind: "write" };
+    });
     setCurrentId(null);
     setPaneKey(`new-${++newSeq.current}`);
     window.scrollTo({ top: 0 });
   }, []);
 
+  const toggleListUnderEditor = useCallback(() => {
+    setListUnderEditor((on) => {
+      writePref("nought.listUnderEditor", on ? "off" : "on");
+      return !on;
+    });
+  }, []);
+
   const toggleChrome = useCallback(() => {
     setChromePinned((p) => {
-      try {
-        localStorage.setItem("nought.chrome", p ? "auto" : "pinned");
-      } catch {
-        /* storage unavailable: setting just won't persist */
-      }
+      writePref("nought.chrome", p ? "auto" : "pinned");
       return !p;
     });
   }, []);
 
   const showLabel = useCallback((label: string) => {
-    setView({ kind: "notebook", label });
+    setView({ kind: "notes", label });
     window.scrollTo({ top: 0 });
   }, []);
 
@@ -158,14 +170,15 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
     return () => clearTimeout(t);
   }, [notice]);
 
-  const label = view.kind === "notebook" ? view.label : undefined;
+  const label = view.kind === "notes" ? view.label : undefined;
 
   return (
     <div className={`app ${chromePinned ? "chrome-pinned" : "chrome-auto"} ${typing ? "is-typing" : ""}`}>
       <div className="sidebar-hotzone" aria-hidden />
       <aside className="sidebar chrome" aria-label="Navigation">
         <nav className="sidebar-section">
-          <SideItem icon={<Notebook size={15} />} label="Notebook" active={view.kind === "notebook" && !label} onClick={() => setView({ kind: "notebook" })} />
+          <SideItem icon={<PenLine size={15} />} label="Write" active={view.kind === "write"} onClick={() => setView({ kind: "write" })} />
+          <SideItem icon={<Notebook size={15} />} label="All notes" active={view.kind === "notes" && !label} onClick={() => setView({ kind: "notes" })} />
           <SideItem icon={<CalendarDays size={15} />} label="Journal" active={view.kind === "journal"} onClick={() => setView({ kind: "journal" })} />
         </nav>
         {labels.length > 0 && (
@@ -196,27 +209,41 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
         </button>
       </div>
 
-      <main className="main">
-        {view.kind === "notebook" && (
+      <main
+        className="main"
+        onMouseDown={(e) => {
+          // On the writing page, clicking empty space puts the cursor at the end, like paper.
+          const t = e.target as HTMLElement;
+          if (view.kind === "write" && (t === e.currentTarget || t.classList.contains("note-pane") || t.dataset.page === "write")) {
+            e.preventDefault();
+            editorRef.current?.focusEnd();
+          }
+        }}
+      >
+        {/* The editor stays mounted while other views are open, so cursor and undo history survive. */}
+        <div hidden={view.kind !== "write"} data-page="write">
+          <NotePane
+            key={paneKey}
+            noteId={currentId ?? (paneKey.startsWith("new-") ? null : paneKey)}
+            vaultRoot={vault.path}
+            presetLabels={presetLabel ? [presetLabel] : undefined}
+            onCreated={setCurrentId}
+            onTrashed={newNote}
+            onNotice={setNotice}
+            editorRef={editorRef}
+          />
+          {listUnderEditor && <Stream query={{}} currentId={currentId} onOpen={openNote} onLabel={showLabel} />}
+        </div>
+        {view.kind === "notes" && (
           <>
-            <NotePane
-              key={paneKey}
-              noteId={paneKey.startsWith("new-") ? null : paneKey}
-              vaultRoot={vault.path}
-              presetLabels={label ? [label] : undefined}
-              onCreated={setCurrentId}
-              onTrashed={newNote}
-              onNotice={setNotice}
-              editorRef={editorRef}
-            />
-            {label && (
-              <div className="filter-bar">
-                Collection <span className="chip">{label}</span>
-                <button className="icon-btn" onClick={() => setView({ kind: "notebook" })} aria-label="Clear collection filter">
-                  <X size={14} />
+            <div className="notes-head">
+              <h2 className="journal-heading">{label ?? "All notes"}</h2>
+              {label && (
+                <button className="icon-btn" onClick={() => setView({ kind: "notes" })} title="Show all notes" aria-label="Show all notes">
+                  <X size={15} />
                 </button>
-              </div>
-            )}
+              )}
+            </div>
             <Stream query={{ label }} currentId={currentId} onOpen={openNote} onLabel={showLabel} />
           </>
         )}
@@ -228,7 +255,9 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
         onClose={() => setPaletteOpen(false)}
         openNote={openNote}
         newNote={newNote}
-        showNotebook={() => setView({ kind: "notebook" })}
+        showNotes={() => setView({ kind: "notes" })}
+        listUnderEditor={listUnderEditor}
+        toggleListUnderEditor={toggleListUnderEditor}
         showJournal={() => setView({ kind: "journal" })}
         showLabel={showLabel}
         toggleChrome={toggleChrome}
@@ -241,6 +270,22 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
       )}
     </div>
   );
+}
+
+function readPref(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writePref(key: string, value: string) {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    /* storage unavailable: the preference just won't persist */
+  }
 }
 
 function SideItem({ icon, label, count, active, onClick }: { icon?: React.ReactNode; label: string; count?: number; active?: boolean; onClick: () => void }) {

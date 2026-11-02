@@ -115,6 +115,9 @@ button {
 
 /* ---------- shell & distraction-free chrome ------------------------------ */
 .main {
+  /* The whole page is the writing surface: clicking empty space focuses the editor. */
+  min-height: 100vh;
+  box-sizing: border-box;
   max-width: var(--measure);
   margin: 0 auto;
   padding: 72px 24px 120px;
@@ -128,6 +131,7 @@ button {
     margin-left: 260px;
   }
 }
+
 
 .chrome {
   transition:
@@ -284,7 +288,7 @@ button {
 
 /* ---------- note pane --------------------------------------------------- */
 .note-pane {
-  min-height: 34vh;
+  min-height: 30vh;
 }
 .note-header {
   display: flex;
@@ -568,13 +572,13 @@ button {
 }
 
 /* ---------- stream ------------------------------------------------------ */
-.filter-bar {
+.notes-head {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 32px;
-  font-size: 0.85rem;
-  color: var(--fg-muted);
+}
+.notes-head + .stream {
+  margin-top: 12px;
 }
 .stream {
   margin-top: 40px;

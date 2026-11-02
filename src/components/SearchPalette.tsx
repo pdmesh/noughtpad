@@ -1,14 +1,16 @@
 import { useEffect, useState } from "react";
 import { Command } from "cmdk";
 import { useQuery } from "@tanstack/react-query";
-import { BookOpen, CalendarDays, FilePlus2, Notebook, PanelLeft, RefreshCw, Tag } from "lucide-react";
+import { BookOpen, CalendarDays, FilePlus2, Notebook, PanelLeft, RefreshCw, Rows3, Tag } from "lucide-react";
 import { api } from "../lib/api";
 import { formatDay, plainExcerpt, snippetParts } from "../lib/format";
 
 export interface PaletteActions {
   openNote: (id: string) => void;
   newNote: () => void;
-  showNotebook: () => void;
+  showNotes: () => void;
+  listUnderEditor: boolean;
+  toggleListUnderEditor: () => void;
   showJournal: () => void;
   showLabel: (label: string) => void;
   toggleChrome: () => void;
@@ -106,9 +108,14 @@ export function SearchPalette({ open, onClose, ...actions }: Props) {
           {!query && (
             <Command.Group heading="Go to">
               <Cmd icon={<FilePlus2 size={14} />} label="New note" hint="⌘N" onSelect={run(actions.newNote)} />
-              <Cmd icon={<Notebook size={14} />} label="Notebook" onSelect={run(actions.showNotebook)} />
+              <Cmd icon={<Notebook size={14} />} label="All notes" onSelect={run(actions.showNotes)} />
               <Cmd icon={<CalendarDays size={14} />} label="Journal" onSelect={run(actions.showJournal)} />
               <Cmd icon={<PanelLeft size={14} />} label="Toggle sidebar & toolbar" hint="⌘\" onSelect={run(actions.toggleChrome)} />
+              <Cmd
+                icon={<Rows3 size={14} />}
+                label={actions.listUnderEditor ? "Hide note list under the editor" : "Show note list under the editor"}
+                onSelect={run(actions.toggleListUnderEditor)}
+              />
               <Cmd icon={<RefreshCw size={14} />} label="Rebuild search index" onSelect={run(actions.rebuildIndex)} />
             </Command.Group>
           )}

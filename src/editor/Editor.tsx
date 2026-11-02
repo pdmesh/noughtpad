@@ -12,6 +12,7 @@ import { markdownClipboard, type ClipboardOptions } from "./clipboard";
 
 export interface EditorHandle {
   focus(): void;
+  focusEnd(): void;
   setContent(text: string): void;
   getContent(): string;
 }
@@ -62,6 +63,12 @@ export function Editor({ initial, onChange, placeholder, autoFocus, resolveAsset
 
   useImperativeHandle(ref, () => ({
     focus: () => view.current?.focus(),
+    focusEnd: () => {
+      const v = view.current;
+      if (!v) return;
+      v.dispatch({ selection: { anchor: v.state.doc.length }, scrollIntoView: true });
+      v.focus();
+    },
     getContent: () => view.current?.state.doc.toString() ?? "",
     setContent: (text: string) => {
       const v = view.current;

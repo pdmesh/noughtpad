@@ -23,6 +23,7 @@ This document turns that thesis into a concrete architecture and build plan. Ite
 | 2026-11-02 | Primary user is the product owner (dogfooding). |
 | 2026-11-02 | Desktop shell: **Tauri 2** with a Rust core. |
 | 2026-11-02 | Notes have no title field. The first meaningful line is the display title, and filenames take their slug from it once, at creation. |
+| 2026-11-02 | The Write page shows only the editor. The note stream moves to its own "All notes" page; a palette toggle can put it back under the editor. |
 | 2026-11-02 | Extensions reuse the CodeMirror 6 and unified (remark/rehype) ecosystems; no bespoke plugin ecosystem. |
 
 ---
@@ -280,12 +281,15 @@ which notes before a remote call.
   ideas only, no code reuse).
 
 ### 7.2 Screens
-- **Notebook (home):** a large blank editor at the top (cursor already there). Below it is the
-  chronological stream grouped by day. **Distraction-free by default:** the sidebar, the
+- **Write (home):** just the blank page. No list, panel or AI under it, and clicking anywhere on the
+  page puts the cursor in the text. **Distraction-free by default:** the sidebar, the
   "source · labels" strip and the toolbar are hidden. They fade in when the pointer is near the
   edges or over the note header, or with a toggle button or `⌘\`. Nothing appears while you type.
-  `⌘K` opens search/palette and `⌘N` starts a new note. A global hotkey opens a floating capture
-  window.
+  `⌘K` opens search/palette and `⌘N` starts a new note. A global hotkey brings the app forward
+  on a new note. Anyone who wants the recent-notes list under the editor can switch it on from the
+  palette ("Show note list under the editor"). It is off by default.
+- **All notes:** the chronological stream of every note, personal and source, grouped by day.
+  Clicking a note opens it on the Write page.
 - **Journal:** personal notes by day, week or month. The monthly log is assembled
   deterministically; "Reflect on this month" is an explicit button that calls the AI.
 - **Collections:** a label sidebar (like Gmail). Clicking a label filters the stream.
