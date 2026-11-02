@@ -108,18 +108,6 @@ export function MetaStrip({ meta, onChange }: Props) {
             aria-label="Source URL"
             onChange={(e) => setSource("url", e.target.value)}
           />
-          <select
-            className="meta-kind"
-            aria-label="Note type"
-            value={meta.kindOverride ?? "auto"}
-            onChange={(e) =>
-              onChange({ ...meta, kindOverride: e.target.value === "auto" ? null : (e.target.value as "personal" | "source") })
-            }
-          >
-            <option value="auto">Type: auto</option>
-            <option value="personal">Personal</option>
-            <option value="source">Source</option>
-          </select>
         </div>
       )}
     </div>

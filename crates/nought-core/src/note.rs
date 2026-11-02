@@ -5,6 +5,7 @@
 //! ```markdown
 //! ---
 //! id: 01J8ZK4M7Q3V9X2T6B5N8C1D0E
+//! title: Optional title       # absent for most notes; the first line is used instead
 //! created: 2026-09-12T23:10:00+05:30
 //! labels: [VC, Product]
 //! source:
@@ -76,6 +77,8 @@ fn blank(s: &Option<String>) -> bool {
 pub struct NoteMeta {
     /// Stable identity (ULID). `None` for files created outside Nought.
     pub id: Option<String>,
+    /// Optional explicit title. Most notes have none; the first line stands in.
+    pub title: Option<String>,
     pub created: Option<DateTime<FixedOffset>>,
     pub labels: Vec<String>,
     pub source: Option<Source>,
@@ -101,6 +104,11 @@ impl NoteMeta {
             .map(|l| l.trim().trim_start_matches('#').trim().to_string())
             .filter(|l| !l.is_empty() && seen.insert(l.to_lowercase()))
             .collect();
+        if blank(&self.title) {
+            self.title = None;
+        } else if let Some(t) = &mut self.title {
+            *t = t.trim().to_string();
+        }
         if let Some(src) = &mut self.source {
             for f in [&mut src.title, &mut src.url] {
                 if blank(f) {
@@ -117,6 +125,7 @@ impl NoteMeta {
 
     fn is_empty(&self) -> bool {
         self.id.is_none()
+            && self.title.is_none()
             && self.created.is_none()
             && self.labels.is_empty()
             && self.source.is_none()
@@ -195,9 +204,12 @@ impl Note {
             .unwrap_or(&self.body)
     }
 
-    /// A display title derived from the first non-empty line.
+    /// The explicit title if there is one, else one derived from the first line.
     pub fn title(&self) -> String {
-        derive_title(self.content())
+        match &self.meta.title {
+            Some(t) => t.clone(),
+            None => derive_title(self.content()),
+        }
     }
 }
 
@@ -277,6 +289,7 @@ fn parse_meta(fm: &str) -> Result<(NoteMeta, Mapping)> {
     for (k, v) in map {
         match k.as_str() {
             Some("id") => meta.id = scalar_string(&v),
+            Some("title") => meta.title = scalar_string(&v),
             Some("created") => {
                 meta.created = scalar_string(&v).and_then(|s| parse_datetime(&s));
             }
@@ -367,6 +380,9 @@ fn render_meta(meta: &NoteMeta, extra: &Mapping) -> String {
     let mut out = String::new();
     if let Some(id) = &meta.id {
         out.push_str(&format!("id: {}\n", yaml_scalar(id)));
+    }
+    if let Some(t) = &meta.title {
+        out.push_str(&format!("title: {}\n", yaml_scalar(t)));
     }
     if let Some(c) = &meta.created {
         out.push_str(&format!(
@@ -483,6 +499,7 @@ mod tests {
     fn new_note_render() {
         let meta = NoteMeta {
             id: Some("01ABC".into()),
+            title: None,
             created: parse_datetime("2026-09-12T23:10:00+05:30"),
             labels: vec!["VC".into(), "yes".into(), "a: b".into()],
             source: None,
@@ -523,6 +540,18 @@ mod tests {
         );
         assert_eq!(slugify("  ", 6), "note");
         assert_eq!(slugify("The user's café — notes!", 6), "the-users-café-notes");
+    }
+
+    #[test]
+    fn explicit_title() {
+        let mut n = Note::parse("---\nid: X\n---\n\nFirst line\n");
+        assert_eq!(n.title(), "First line");
+        n.meta.title = Some("Fund maths: ownership".into());
+        let out = n.render();
+        assert!(out.contains("title: \"Fund maths: ownership\"\n"), "{out}");
+        let back = Note::parse(&out);
+        assert_eq!(back.title(), "Fund maths: ownership");
+        assert_eq!(back.content(), "First line\n");
     }
 
     #[test]

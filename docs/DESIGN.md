@@ -22,7 +22,9 @@ This document turns that thesis into a concrete architecture and build plan. Ite
 | 2026-11-02 | Distraction-free capture: metadata/chrome hidden, revealed on hover/focus or a toggle. |
 | 2026-11-02 | Primary user is the product owner (dogfooding). |
 | 2026-11-02 | Desktop shell: **Tauri 2** with a Rust core. |
-| 2026-11-02 | Notes have no title field. The first meaningful line is the display title, and filenames take their slug from it once, at creation. |
+| 2026-11-02 | Title is optional (`title:` in frontmatter), revealed on hover like labels and source. Without one, the first meaningful line is the display title. Filenames take their slug from the title once, at creation, and are never renamed. |
+| 2026-11-02 | No note-type control in the UI: a note with a source is a source note, otherwise personal. A hand-written `type:` in frontmatter is still respected. |
+| 2026-11-02 | Note lists (All notes, Collections, Journal) scroll infinitely: keyset pages of 100 and windowed rendering, so the page stays light at any vault size. |
 | 2026-11-02 | The Write page shows only the editor. The note stream moves to its own "All notes" page; a palette toggle can put it back under the editor. |
 | 2026-11-02 | Extensions reuse the CodeMirror 6 and unified (remark/rehype) ecosystems; no bespoke plugin ecosystem. |
 

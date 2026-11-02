@@ -398,14 +398,6 @@ button {
 .meta-add:hover {
   color: var(--fg);
 }
-.meta-kind {
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  background: var(--bg-elev);
-  color: var(--fg-muted);
-  font-size: 0.78rem;
-  padding: 1px 4px;
-}
 
 .chip {
   display: inline-flex;
@@ -430,6 +422,40 @@ button {
   background: none;
   padding: 0;
   color: var(--fg-muted);
+}
+
+/* Optional title: hidden (but focusable) until the note's top is hovered. */
+.note-title {
+  display: block;
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+  font-family: var(--font-text);
+  font-size: 1.9rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  padding: 0;
+  margin: 0 0 10px;
+  transition: opacity 0.18s ease;
+}
+.note-title::placeholder {
+  color: var(--fg-faint);
+}
+.note-title.no-title {
+  /* Space is kept so the text never jumps when the title appears. */
+  opacity: 0;
+}
+.note-header:hover + .note-title.no-title,
+.note-title.no-title:hover,
+.note-title.no-title:focus {
+  opacity: 1;
+}
+.chrome-auto.is-typing .note-title.no-title:not(:focus) {
+  opacity: 0;
 }
 
 /* ---------- editor (CodeMirror live preview) ---------------------------- */
@@ -584,6 +610,33 @@ button {
   margin-top: 40px;
   border-top: 1px solid var(--border);
   padding-top: 8px;
+}
+.stream-row {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+}
+.stream-row .stream-day-title {
+  padding-top: 22px;
+}
+.stream-row .journal-week-title {
+  margin-top: 28px;
+}
+.stream-loading {
+  text-align: center;
+  font-size: 0.85rem;
+  margin: 16px 0;
+}
+.note-card-title {
+  font-weight: 650;
+  font-size: 1rem;
+  line-height: 1.4;
+  margin-bottom: 2px;
+}
+.note-card-text.has-title {
+  color: var(--fg-muted);
+  -webkit-line-clamp: 2;
 }
 .stream-empty {
   margin-top: 48px;
@@ -793,6 +846,10 @@ button {
   align-items: center;
   gap: 10px;
   font-size: 0.9rem;
+}
+.palette-title {
+  font-weight: 650;
+  font-size: 0.92rem;
 }
 .palette-snippet {
   font-size: 0.9rem;

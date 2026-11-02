@@ -5,6 +5,7 @@ import type { DaySummary, EditableMeta, LabelCount, ListQuery, NoteDoc, NoteSumm
 
 interface MockNote {
   id: string;
+  title?: string | null;
   created: string;
   content: string;
   labels: string[];
@@ -33,6 +34,25 @@ const notes: MockNote[] = seed.map(([created, content, labels, src]) => ({
   kindOverride: null,
 }));
 
+// `?mock=many` adds thousands of notes to exercise the virtualised lists.
+if (typeof location !== "undefined" && new URLSearchParams(location.search).get("mock") === "many") {
+  const words = "ownership fund portfolio returns product customer travel idea question thinking book decision".split(" ");
+  const start = Date.parse("2026-10-30T12:00:00+05:30");
+  for (let i = 0; i < 5000; i++) {
+    const d = new Date(start - i * 3.7 * 3600_000);
+    const iso = new Date(d.getTime() + 330 * 60000).toISOString().slice(0, 19) + "+05:30";
+    notes.push({
+      id: `many-${i}`,
+      created: iso,
+      content: Array.from({ length: 12 + (i % 30) }, (_, k) => words[(i * 7 + k * 5) % words.length]).join(" "),
+      labels: i % 3 ? [`L${i % 9}`] : [],
+      source: i % 4 === 0 ? { title: `Book ${i % 50}`, url: null } : null,
+      kindOverride: null,
+      title: i % 10 === 0 ? `Titled note ${i}` : null,
+    });
+  }
+}
+
 const kindOf = (n: MockNote) => n.kindOverride ?? (n.source ? "source" : "personal");
 const titleOf = (c: string) =>
   (c.split("\n").find((l) => l.trim()) ?? "").replace(/^[#>\-*+\s]+/, "").replace(/^\[[ x]\]\s/, "").slice(0, 120);
@@ -41,7 +61,8 @@ function summary(n: MockNote): NoteSummary {
   return {
     id: n.id,
     path: `${n.created.slice(0, 4)}/${n.created.slice(5, 7)}/${n.id}.md`,
-    title: titleOf(n.content),
+    title: n.title || titleOf(n.content),
+    hasTitle: !!n.title,
     excerpt: n.content.trim().slice(0, 320),
     created: n.created,
     day: n.created.slice(0, 10),
@@ -56,12 +77,13 @@ function doc(n: MockNote): NoteDoc {
     id: n.id,
     path: summary(n).path,
     content: n.content,
+    title: n.title ?? null,
     labels: n.labels,
     source: n.source,
     kindOverride: n.kindOverride,
     kind: kindOf(n),
     created: n.created,
-    hash: String(n.content.length) + n.labels.join(),
+    hash: String(n.content.length) + n.labels.join() + (n.title ?? ""),
   };
 }
 
@@ -107,6 +129,7 @@ function nowIso(): string {
 }
 
 function applyMeta(n: MockNote, meta: EditableMeta) {
+  n.title = meta.title?.trim() || null;
   n.labels = meta.labels.map((l) => l.trim()).filter(Boolean);
   const s = meta.source;
   n.source = s && (s.title?.trim() || s.url?.trim()) ? s : null;

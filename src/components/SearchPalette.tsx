@@ -76,6 +76,7 @@ export function SearchPalette({ open, onClose, ...actions }: Props) {
             <Command.Group heading="Notes">
               {hits.map((h) => (
                 <Command.Item key={h.note.id} value={h.note.id} onSelect={run(() => actions.openNote(h.note.id))} className="palette-item">
+                  {h.note.hasTitle && <div className="palette-title">{h.note.title}</div>}
                   <div className="palette-snippet">
                     {snippetParts(plainSnippet(h.snippet)).map(([t, m], i) => (m ? <mark key={i}>{t}</mark> : <span key={i}>{t}</span>))}
                   </div>

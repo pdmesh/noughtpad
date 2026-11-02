@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 use crate::note::{NoteKind, Source};
 use crate::Result;
 
-const SCHEMA_VERSION: i64 = 2;
+const SCHEMA_VERSION: i64 = 3;
 const EXCERPT_CHARS: usize = 320;
 
 /// What the vault hands to the index for one note.
@@ -26,6 +26,8 @@ pub struct IndexedNote {
     pub modified_ms: i64,
     pub kind: NoteKind,
     pub title: String,
+    /// True when `title` is an explicit frontmatter title, not the first line.
+    pub has_title: bool,
     pub body: String,
     pub labels: Vec<String>,
     pub source: Option<Source>,
@@ -38,6 +40,7 @@ pub struct NoteSummary {
     pub id: String,
     pub path: String,
     pub title: String,
+    pub has_title: bool,
     pub excerpt: String,
     pub created: String,
     pub day: String,
@@ -158,8 +161,8 @@ fn upsert_in(tx: &rusqlite::Transaction, n: &IndexedNote) -> Result<()> {
     };
     tx.execute(
         "INSERT INTO notes (id, path, created, created_ms, day, modified_ms, kind, title, body,
-                            source_title, source_url, hash)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
+                            source_title, source_url, hash, has_title)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
         params![
             n.id,
             n.path,
@@ -173,6 +176,7 @@ fn upsert_in(tx: &rusqlite::Transaction, n: &IndexedNote) -> Result<()> {
             src_title,
             src_url,
             n.hash,
+            n.has_title,
         ],
     )?;
     // Capture before inserting labels, which have rowids of their own.
@@ -407,6 +411,7 @@ CREATE TABLE notes (
     modified_ms  INTEGER NOT NULL,
     kind         TEXT NOT NULL,
     title        TEXT NOT NULL,
+    has_title    INTEGER NOT NULL DEFAULT 0,
     body         TEXT NOT NULL,
     source_title TEXT,
     source_url   TEXT,
@@ -429,7 +434,8 @@ CREATE VIRTUAL TABLE notes_fts USING fts5(
 ";
 
 const SUMMARY_COLS: &str = "n.id, n.path, n.title, n.body, n.created, n.day, n.kind, n.source_title, n.source_url,
-    (SELECT json_group_array(label) FROM (SELECT label FROM note_labels WHERE note_id = n.id ORDER BY pos)) AS labels";
+    (SELECT json_group_array(label) FROM (SELECT label FROM note_labels WHERE note_id = n.id ORDER BY pos)) AS labels,
+    n.has_title";
 
 fn delete_rowid(tx: &rusqlite::Transaction, rowid: i64) -> rusqlite::Result<()> {
     tx.execute("DELETE FROM notes_fts WHERE rowid = ?1", [rowid])?;
@@ -451,6 +457,7 @@ fn summary_from_row(r: &Row) -> rusqlite::Result<NoteSummary> {
         id: r.get(0)?,
         path: r.get(1)?,
         title: r.get(2)?,
+        has_title: r.get(10)?,
         excerpt: excerpt(&body),
         created: r.get(4)?,
         day: r.get(5)?,
@@ -594,6 +601,7 @@ mod tests {
                 NoteKind::Personal
             },
             title: crate::note::derive_title(body),
+            has_title: false,
             body: body.into(),
             labels: labels.iter().map(|s| s.to_string()).collect(),
             source: source.map(|t| Source {

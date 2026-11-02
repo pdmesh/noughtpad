@@ -15,7 +15,9 @@ export interface Source {
 export interface NoteSummary {
   id: string;
   path: string;
+  /** Explicit title if set, otherwise derived from the first line. */
   title: string;
+  hasTitle: boolean;
   excerpt: string;
   created: string;
   day: string;
@@ -28,6 +30,7 @@ export interface NoteDoc {
   id: string;
   path: string;
   content: string;
+  title: string | null;
   labels: string[];
   source: Source | null;
   kindOverride: NoteKind | null;
@@ -37,6 +40,7 @@ export interface NoteDoc {
 }
 
 export interface EditableMeta {
+  title: string | null;
   labels: string[];
   source: Source | null;
   kindOverride: NoteKind | null;

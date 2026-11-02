@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { api, type DaySummary } from "../lib/api";
-import { formatDay, formatMonth, formatWeek, weekStart } from "../lib/format";
-import { NoteCard } from "../components/Stream";
+import { api } from "../lib/api";
+import { formatMonth } from "../lib/format";
+import { Stream } from "../components/Stream";
 
 type Mode = "day" | "week" | "month";
 
@@ -54,50 +54,15 @@ export function Journal({ onOpen, onLabel }: Props) {
   );
 }
 
-function DayList({ days, onOpen, onLabel }: { days: DaySummary[] } & Props) {
-  return (
-    <>
-      {days.map((d) => (
-        <section key={d.day} className="stream-day">
-          <h3 className="stream-day-title">{formatDay(d.day)}</h3>
-          {[...d.notes].reverse().map((n) => (
-            <NoteCard key={n.id} note={n} onOpen={onOpen} onLabel={onLabel} />
-          ))}
-        </section>
-      ))}
-    </>
-  );
-}
-
 function DayWeekView({ mode, onOpen, onLabel }: { mode: "day" | "week" } & Props) {
-  const { data: days = [], isSuccess } = useQuery({
-    queryKey: ["notes", "journal-days"],
-    queryFn: () => api.days({ kind: "personal", limit: 2000 }),
-  });
-  if (isSuccess && days.length === 0) return <Empty />;
-  if (mode === "day") return <DayList days={days} onOpen={onOpen} onLabel={onLabel} />;
-
-  const weeks: Array<{ start: string; days: DaySummary[] }> = [];
-  for (const d of days) {
-    const start = weekStart(d.day);
-    const last = weeks[weeks.length - 1];
-    if (last && last.start === start) last.days.push(d);
-    else weeks.push({ start, days: [d] });
-  }
   return (
-    <>
-      {weeks.map((w) => {
-        const count = w.days.reduce((n, d) => n + d.notes.length, 0);
-        return (
-          <section key={w.start} className="journal-week">
-            <h3 className="journal-week-title">
-              {formatWeek(w.start)} <span className="faint">· {count} {count === 1 ? "note" : "notes"}</span>
-            </h3>
-            <DayList days={w.days} onOpen={onOpen} onLabel={onLabel} />
-          </section>
-        );
-      })}
-    </>
+    <Stream
+      query={{ kind: "personal" }}
+      groupByWeek={mode === "week"}
+      onOpen={onOpen}
+      onLabel={onLabel}
+      emptyText="Your personal notes build the journal over time."
+    />
   );
 }
 
@@ -142,8 +107,16 @@ function MonthView({ onOpen, onLabel }: Props) {
               ))}
             </div>
           )}
-          {log.days.length === 0 && <p className="faint">No personal notes this month, only source notes.</p>}
-          <DayList days={log.days} onOpen={onOpen} onLabel={onLabel} />
+          {log.personalCount === 0 ? (
+            <p className="faint">No personal notes this month, only source notes.</p>
+          ) : (
+            <Stream
+              key={log.month}
+              query={{ kind: "personal", fromDay: `${log.month}-01`, toDay: `${log.month}-31` }}
+              onOpen={onOpen}
+              onLabel={onLabel}
+            />
+          )}
         </div>
       )}
     </>

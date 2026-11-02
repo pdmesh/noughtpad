@@ -7,7 +7,7 @@ import { MetaStrip } from "./MetaStrip";
 import { formatDateTime } from "../lib/format";
 
 const SAVE_DELAY_MS = 500;
-const emptyMeta: EditableMeta = { labels: [], source: null, kindOverride: null };
+const emptyMeta: EditableMeta = { title: null, labels: [], source: null, kindOverride: null };
 
 interface Props {
   /** Existing note to open, or null for a fresh blank page. */
@@ -50,7 +50,7 @@ export function NotePane({ noteId, vaultRoot, presetLabels, onCreated, onTrashed
         if (cancelled) return;
         docRef.current = d;
         content.current = d.content;
-        const m = { labels: d.labels, source: d.source, kindOverride: d.kindOverride };
+        const m = { title: d.title, labels: d.labels, source: d.source, kindOverride: d.kindOverride };
         metaRef.current = m;
         setDoc(d);
         setMeta(m);
@@ -151,7 +151,7 @@ export function NotePane({ noteId, vaultRoot, presetLabels, onCreated, onTrashed
       docRef.current = fresh;
       content.current = fresh.content;
       editor.current?.setContent(fresh.content);
-      const m = { labels: fresh.labels, source: fresh.source, kindOverride: fresh.kindOverride };
+      const m = { title: fresh.title, labels: fresh.labels, source: fresh.source, kindOverride: fresh.kindOverride };
       metaRef.current = m;
       setMeta(m);
       setDoc(fresh);
@@ -206,6 +206,20 @@ export function NotePane({ noteId, vaultRoot, presetLabels, onCreated, onTrashed
           )}
         </div>
       </header>
+      {/* Optional title: invisible until the top of the note is hovered, unless one is set. */}
+      <input
+        className={`note-title ${meta.title ? "has-title" : "no-title"}`}
+        value={meta.title ?? ""}
+        placeholder="Title"
+        aria-label="Title (optional)"
+        onChange={(e) => onMeta({ ...meta, title: e.target.value || null })}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === "ArrowDown") {
+            e.preventDefault();
+            editor.current?.focus();
+          }
+        }}
+      />
       <Editor
         ref={editor}
         initial={doc?.content ?? ""}

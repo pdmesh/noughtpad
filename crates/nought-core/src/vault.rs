@@ -32,6 +32,8 @@ pub struct NoteDoc {
     pub path: String,
     /// The body without the conventional blank line after frontmatter.
     pub content: String,
+    /// Explicit title, if the user set one.
+    pub title: Option<String>,
     pub labels: Vec<String>,
     pub source: Option<Source>,
     /// Explicit kind override; `None` means inferred.
@@ -46,6 +48,7 @@ pub struct NoteDoc {
 #[derive(Debug, Clone, Default, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase", default)]
 pub struct EditableMeta {
+    pub title: Option<String>,
     pub labels: Vec<String>,
     pub source: Option<Source>,
     pub kind_override: Option<NoteKind>,
@@ -169,6 +172,7 @@ impl Vault {
         let id = ulid::Ulid::new().to_string();
         let mut meta = NoteMeta {
             id: Some(id.clone()),
+            title: input.meta.title,
             created: Some(trim_subsec(now)),
             labels: input.meta.labels,
             source: input.meta.source,
@@ -202,6 +206,7 @@ impl Vault {
         }
         if let Some(m) = upd.meta {
             let mut meta = note.meta.clone();
+            meta.title = m.title;
             meta.labels = m.labels;
             meta.source = m.source;
             meta.kind = m.kind_override;
@@ -355,6 +360,7 @@ impl Vault {
             modified_ms: mtime_ms(&abs),
             kind: note.meta.effective_kind(),
             title: note.title(),
+            has_title: note.meta.title.is_some(),
             body: note.content().to_string(),
             labels: note.meta.labels.clone(),
             source: note.meta.source.clone(),
@@ -446,6 +452,7 @@ fn doc(id: String, path: String, note: &Note, created: DateTime<FixedOffset>, ha
         id,
         path,
         content: note.content().to_string(),
+        title: note.meta.title.clone(),
         labels: note.meta.labels.clone(),
         source: note.meta.source.clone(),
         kind_override: note.meta.kind,
@@ -522,6 +529,40 @@ mod tests {
     }
 
     #[test]
+    fn optional_title_names_the_file_and_is_indexed() {
+        let (_d, v) = vault();
+        let doc = v
+            .create(NewNote {
+                content: "body text".into(),
+                meta: EditableMeta {
+                    title: Some("Fund maths".into()),
+                    ..Default::default()
+                },
+            })
+            .unwrap();
+        assert!(doc.path.ends_with("-fund-maths.md"), "{}", doc.path);
+        assert_eq!(doc.title.as_deref(), Some("Fund maths"));
+        let s = &v.list(&ListQuery::default()).unwrap()[0];
+        assert!(s.has_title);
+        assert_eq!(s.title, "Fund maths");
+        assert_eq!(v.search("maths", 5).unwrap().len(), 1);
+        // Clearing the title falls back to the first line; the file is not renamed.
+        let doc2 = v
+            .update(
+                &doc.id,
+                NoteUpdate {
+                    meta: Some(EditableMeta::default()),
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+        assert_eq!(doc2.path, doc.path);
+        let s = &v.list(&ListQuery::default()).unwrap()[0];
+        assert!(!s.has_title);
+        assert_eq!(s.title, "body text");
+    }
+
+    #[test]
     fn update_preserves_body_and_detects_conflicts() {
         let (_d, v) = vault();
         let doc = v
@@ -558,6 +599,7 @@ mod tests {
                 &doc.id,
                 NoteUpdate {
                     meta: Some(EditableMeta {
+                        title: None,
                         labels: vec!["Books".into()],
                         source: Some(Source {
                             title: Some("The Mom Test".into()),
