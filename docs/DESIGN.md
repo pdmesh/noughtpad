@@ -22,6 +22,7 @@ This document turns that thesis into a concrete architecture and build plan. Ite
 | 2026-11-02 | Distraction-free capture: metadata/chrome hidden, revealed on hover/focus or a toggle. |
 | 2026-11-02 | Primary user is the product owner (dogfooding). |
 | 2026-11-02 | Desktop shell: **Tauri 2** with a Rust core. |
+| 2026-11-02 | Notes have no title field. The first meaningful line is the display title, and filenames take their slug from it once, at creation. |
 | 2026-11-02 | Extensions reuse the CodeMirror 6 and unified (remark/rehype) ecosystems; no bespoke plugin ecosystem. |
 
 ---
@@ -308,6 +309,18 @@ which notes before a remote call.
 | **M4 Thinking workspace** | `LlmProvider` (Ollama/llama.cpp/Claude), cited RAG, Explore-this-note actions, kept artifacts, optional SLM relation typing | Trusted thinking partner |
 
 Each milestone ships something that is usable on its own. M1 needs no ML.
+
+**M1 status (2026-11-02): complete.** Measured on a synthetic 10,000-note vault (release build, Linux):
+
+| Measure | Result |
+|---|---|
+| Process start to focused, editable page | ~1.2–1.4 s, mostly webview start-up. The vault scan runs in the background and never delays capture |
+| First full index | ~0.8 s |
+| Startup rescan of an unchanged vault | ~40 ms |
+| Full-text search | ~20 ms |
+| Create a note (write + index) | ~2 ms |
+
+Reproduce with `cargo run --release -p nought-core --example bench -- 10000`. The app logs `editor ready ms=…` on every launch.
 
 ---
 

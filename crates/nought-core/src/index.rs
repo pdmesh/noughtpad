@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 use crate::note::{NoteKind, Source};
 use crate::Result;
 
-const SCHEMA_VERSION: i64 = 1;
+const SCHEMA_VERSION: i64 = 2;
 const EXCERPT_CHARS: usize = 320;
 
 /// What the vault hands to the index for one note.
@@ -127,63 +127,85 @@ impl Index {
 
     /// Insert or replace a note and its labels and FTS row.
     pub fn upsert(&mut self, n: &IndexedNote) -> Result<()> {
+        self.upsert_many(std::slice::from_ref(n))
+    }
+
+    /// Upsert several notes in one transaction (much faster for scans).
+    pub fn upsert_many(&mut self, notes: &[IndexedNote]) -> Result<()> {
         let tx = self.conn.transaction()?;
-        // A note may have moved (renamed file) or its path may have been reused.
-        tx.execute("DELETE FROM notes WHERE id = ?1 OR path = ?2", params![n.id, n.path])?;
-        tx.execute("DELETE FROM notes_fts WHERE note_id = ?1", params![n.id])?;
-        let (src_title, src_url) = match &n.source {
-            Some(s) => (s.title.clone(), s.url.clone()),
-            None => (None, None),
-        };
-        tx.execute(
-            "INSERT INTO notes (id, path, created, created_ms, day, modified_ms, kind, title, body,
-                                source_title, source_url, hash)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
-            params![
-                n.id,
-                n.path,
-                n.created.to_rfc3339(),
-                n.created.timestamp_millis(),
-                n.created.format("%Y-%m-%d").to_string(),
-                n.modified_ms,
-                n.kind.as_str(),
-                n.title,
-                n.body,
-                src_title,
-                src_url,
-                n.hash,
-            ],
-        )?;
-        for (pos, label) in n.labels.iter().enumerate() {
-            tx.execute(
-                "INSERT OR IGNORE INTO note_labels (note_id, label, label_key, pos) VALUES (?1, ?2, ?3, ?4)",
-                params![n.id, label, label.to_lowercase(), pos as i64],
-            )?;
+        for n in notes {
+            upsert_in(&tx, n)?;
         }
-        let source_text = [src_title.as_deref(), src_url.as_deref()]
-            .into_iter()
-            .flatten()
-            .collect::<Vec<_>>()
-            .join(" ");
-        tx.execute(
-            "INSERT INTO notes_fts (note_id, title, body, source, labels) VALUES (?1, ?2, ?3, ?4, ?5)",
-            params![n.id, n.title, n.body, source_text, n.labels.join(" ")],
-        )?;
         tx.commit()?;
         Ok(())
     }
+}
 
+fn upsert_in(tx: &rusqlite::Transaction, n: &IndexedNote) -> Result<()> {
+    // A note may have moved (renamed file) or its path may have been reused.
+    // FTS rows share the note's rowid, so every delete here is an index lookup.
+    for (sql, key) in [
+        ("SELECT rowid FROM notes WHERE id = ?1", &n.id),
+        ("SELECT rowid FROM notes WHERE path = ?1", &n.path),
+    ] {
+        if let Some(rowid) = tx.query_row(sql, [key], |r| r.get::<_, i64>(0)).optional()? {
+            delete_rowid(tx, rowid)?;
+        }
+    }
+    let (src_title, src_url) = match &n.source {
+        Some(s) => (s.title.clone(), s.url.clone()),
+        None => (None, None),
+    };
+    tx.execute(
+        "INSERT INTO notes (id, path, created, created_ms, day, modified_ms, kind, title, body,
+                            source_title, source_url, hash)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
+        params![
+            n.id,
+            n.path,
+            n.created.to_rfc3339(),
+            n.created.timestamp_millis(),
+            n.created.format("%Y-%m-%d").to_string(),
+            n.modified_ms,
+            n.kind.as_str(),
+            n.title,
+            n.body,
+            src_title,
+            src_url,
+            n.hash,
+        ],
+    )?;
+    // Capture before inserting labels, which have rowids of their own.
+    let rowid = tx.last_insert_rowid();
+    for (pos, label) in n.labels.iter().enumerate() {
+        tx.execute(
+            "INSERT OR IGNORE INTO note_labels (note_id, label, label_key, pos) VALUES (?1, ?2, ?3, ?4)",
+            params![n.id, label, label.to_lowercase(), pos as i64],
+        )?;
+    }
+    let source_text = [src_title.as_deref(), src_url.as_deref()]
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>()
+        .join(" ");
+    tx.execute(
+        "INSERT INTO notes_fts (rowid, note_id, title, body, source, labels) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+        params![rowid, n.id, n.title, n.body, source_text, n.labels.join(" ")],
+    )?;
+    Ok(())
+}
+
+impl Index {
     pub fn remove_path(&mut self, path: &str) -> Result<bool> {
         let tx = self.conn.transaction()?;
-        let id: Option<String> = tx
-            .query_row("SELECT id FROM notes WHERE path = ?1", [path], |r| r.get(0))
+        let rowid: Option<i64> = tx
+            .query_row("SELECT rowid FROM notes WHERE path = ?1", [path], |r| r.get(0))
             .optional()?;
-        if let Some(id) = &id {
-            tx.execute("DELETE FROM notes_fts WHERE note_id = ?1", [id])?;
-            tx.execute("DELETE FROM notes WHERE id = ?1", [id])?;
+        if let Some(rowid) = rowid {
+            delete_rowid(&tx, rowid)?;
         }
         tx.commit()?;
-        Ok(id.is_some())
+        Ok(rowid.is_some())
     }
 
     /// `path -> (hash, modified_ms)` for incremental rescans.
@@ -264,7 +286,7 @@ impl Index {
             "SELECT {SUMMARY_COLS},
                     snippet(notes_fts, 2, char(2), char(3), '…', 16) AS snip,
                     bm25(notes_fts, 0.0, 5.0, 1.0, 2.0, 3.0) AS rank
-             FROM notes_fts JOIN notes n ON n.id = notes_fts.note_id
+             FROM notes_fts JOIN notes n ON n.rowid = notes_fts.rowid
              WHERE {}
              ORDER BY rank ASC, n.created_ms DESC
              LIMIT {}",
@@ -376,7 +398,8 @@ impl Index {
 
 const SCHEMA: &str = "
 CREATE TABLE notes (
-    id           TEXT PRIMARY KEY,
+    rowid        INTEGER PRIMARY KEY,
+    id           TEXT NOT NULL UNIQUE,
     path         TEXT NOT NULL UNIQUE,
     created      TEXT NOT NULL,
     created_ms   INTEGER NOT NULL,
@@ -407,6 +430,16 @@ CREATE VIRTUAL TABLE notes_fts USING fts5(
 
 const SUMMARY_COLS: &str = "n.id, n.path, n.title, n.body, n.created, n.day, n.kind, n.source_title, n.source_url,
     (SELECT json_group_array(label) FROM (SELECT label FROM note_labels WHERE note_id = n.id ORDER BY pos)) AS labels";
+
+fn delete_rowid(tx: &rusqlite::Transaction, rowid: i64) -> rusqlite::Result<()> {
+    tx.execute("DELETE FROM notes_fts WHERE rowid = ?1", [rowid])?;
+    tx.execute(
+        "DELETE FROM note_labels WHERE note_id = (SELECT id FROM notes WHERE rowid = ?1)",
+        [rowid],
+    )?;
+    tx.execute("DELETE FROM notes WHERE rowid = ?1", [rowid])?;
+    Ok(())
+}
 
 fn summary_from_row(r: &Row) -> rusqlite::Result<NoteSummary> {
     let body: String = r.get(3)?;

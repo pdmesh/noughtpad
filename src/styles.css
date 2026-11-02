@@ -646,6 +646,52 @@ button {
 }
 
 /* ---------- journal ----------------------------------------------------- */
+.journal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.journal-heading {
+  font-size: 1.5rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+.segmented {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: 8px;
+  background: var(--bg-sunk);
+  border: 1px solid var(--border);
+}
+.segmented button {
+  border: 0;
+  background: transparent;
+  padding: 3px 12px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  color: var(--fg-muted);
+}
+.segmented button.is-current {
+  background: var(--bg-elev);
+  color: var(--fg);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
+}
+.journal-week {
+  margin-top: 28px;
+}
+.journal-week-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 0;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+.cm-md-math {
+  padding: 0 0.1em;
+}
 .journal-months {
   display: flex;
   gap: 4px;

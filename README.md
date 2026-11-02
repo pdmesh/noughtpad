@@ -5,18 +5,19 @@ A local-first notebook: capture anything on a blank page, and let it gradually r
 Notes are plain Markdown files you own. AI stays out of the way during capture and works quietly in the background. It shows up through derived views (Journal, Connections, Ideas over time) or when you ask.
 
 - Design: [docs/DESIGN.md](docs/DESIGN.md)
-- Status: **M1 (a genuinely good notebook) in progress**
+- Status: **M1 (a genuinely good notebook) complete**. Next: M2, quiet retrieval with local embeddings
 
-## What works today (M1)
+## What works today
 
 - Blank-page capture with an Obsidian-style live-preview Markdown editor (CodeMirror 6)
   - headings, emphasis, links, task checkboxes, quotes, code, images rendered inline. Syntax shows only on the line you're editing
-  - ```` ```mermaid ```` diagrams and `$$ … $$` / ```` ```math ```` (KaTeX) render in place
+  - ```` ```mermaid ```` diagrams, `$$ … $$` / ```` ```math ```` blocks and inline `$…$` maths (KaTeX) render in place
   - paste rich text (web, Docs, Word) → Markdown. Copy → Markdown + rich HTML. URL over selection → link. Pasted images saved to `attachments/`. `⌘/Ctrl+Shift+V` pastes plain text
 - Autosave to plain `.md` files (`YYYY/MM/YYYY-MM-DD-HHMM-slug.md`) with minimal frontmatter. Files are written atomically and never rewritten behind your back
 - Optional labels (Gmail-style, many per note) and source (title, URL), hidden until you hover
-- Chronological stream, Collections (by label), Journal (monthly log of personal notes)
+- Chronological stream, Collections (by label), Journal of personal notes by day, week or month (with a monthly log)
 - Full-text search (SQLite FTS5) with `#label`, `type:personal|source`, `"phrases"`, prefix matching: `⌘/Ctrl+K`
+- Opening a vault never blocks capture: catching up with changes runs in the background (10k notes: under 1 s first time, ~40 ms after)
 - Edits from other apps (Obsidian, git, sync) are picked up live. The index in `.nought/` is disposable and rebuildable
 - Distraction-free by default: toolbar and sidebar appear on hover. `⌘/Ctrl+\` pins them
 - Global quick capture: `⌘⇧Space` (macOS) / `Ctrl+Shift+Space`

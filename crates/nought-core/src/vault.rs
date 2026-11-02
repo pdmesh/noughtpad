@@ -21,6 +21,8 @@ use crate::{Error, Result};
 pub const DATA_DIR: &str = ".nought";
 const INDEX_FILE: &str = "index.sqlite";
 const TRASH_DIR: &str = "trash";
+/// Notes written per index transaction during a scan.
+const SCAN_BATCH: usize = 250;
 
 /// A note as the editor sees it.
 #[derive(Debug, Clone, Serialize, PartialEq)]
@@ -236,6 +238,7 @@ impl Vault {
     pub fn rescan(&self) -> Result<ScanReport> {
         let mut report = ScanReport::default();
         let known = self.ix().fingerprints()?;
+        let mut pending = Vec::new();
         let mut seen = std::collections::HashSet::new();
         let walker = walkdir::WalkDir::new(&self.root)
             .into_iter()
@@ -254,16 +257,33 @@ impl Vault {
             let rel = self.rel(entry.path())?;
             seen.insert(rel.clone());
             let mtime = mtime_ms(entry.path());
-            if let Some((_, known_mtime)) = known.get(&rel) {
-                if *known_mtime == mtime {
+            match known.get(&rel) {
+                Some((_, known_mtime)) if *known_mtime == mtime => report.unchanged += 1,
+                _ => pending.push(rel),
+            }
+        }
+        // Read and parse without holding the index lock, then write in batches,
+        // so the UI's queries and the editor's saves are never starved during
+        // a large first scan.
+        for chunk in pending.chunks(SCAN_BATCH) {
+            let mut batch = Vec::with_capacity(chunk.len());
+            for rel in chunk {
+                let abs = self.root.join(rel);
+                let text = match fs::read_to_string(&abs) {
+                    Ok(t) => t,
+                    Err(e) => {
+                        tracing::warn!("skipping {rel}: {e}");
+                        continue;
+                    }
+                };
+                if known.get(rel).is_some_and(|(h, _)| *h == hash(&text)) {
                     report.unchanged += 1;
                     continue;
                 }
+                batch.push(self.prepare(rel, &text));
             }
-            match self.sync_rel(&rel)? {
-                Change::Unchanged => report.unchanged += 1,
-                _ => report.indexed += 1,
-            }
+            report.indexed += batch.len();
+            self.ix().upsert_many(&batch)?;
         }
         let mut ix = self.ix();
         for path in known.keys().filter(|p| !seen.contains(*p)) {
@@ -319,24 +339,27 @@ impl Vault {
     // ---- internals -------------------------------------------------------
 
     fn index_text(&self, rel: &str, text: &str) -> Result<String> {
+        let n = self.prepare(rel, text);
+        self.ix().upsert(&n)?;
+        Ok(n.id)
+    }
+
+    /// Parse a file into what the index stores (no locking, no writes).
+    fn prepare(&self, rel: &str, text: &str) -> IndexedNote {
         let abs = self.root.join(rel);
         let note = Note::parse(text);
-        let id = note.meta.id.clone().unwrap_or_else(|| path_id(rel));
-        let created = self.created_for(&note, rel, &abs);
-        let content = note.content().to_string();
-        self.ix().upsert(&IndexedNote {
-            id: id.clone(),
+        IndexedNote {
+            id: note.meta.id.clone().unwrap_or_else(|| path_id(rel)),
             path: rel.to_string(),
-            created,
+            created: self.created_for(&note, rel, &abs),
             modified_ms: mtime_ms(&abs),
             kind: note.meta.effective_kind(),
             title: note.title(),
-            body: content,
+            body: note.content().to_string(),
             labels: note.meta.labels.clone(),
             source: note.meta.source.clone(),
             hash: hash(text),
-        })?;
-        Ok(id)
+        }
     }
 
     /// `created` frontmatter, else a date in the filename, else file times.

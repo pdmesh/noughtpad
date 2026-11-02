@@ -99,16 +99,34 @@ fn default_vault_path() -> PathBuf {
 /// Open a vault, index it, and start watching it.
 fn activate(app: &AppHandle, state: &AppState, path: &Path) -> CmdResult<VaultInfo> {
     let vault = Arc::new(Vault::open(path)?);
-    let report = vault.rescan()?;
     // Let the webview load images (attachments) from inside this vault only.
     if let Err(e) = app.asset_protocol_scope().allow_directory(vault.root(), true) {
         tracing::warn!("could not allow asset access to vault: {e}");
     }
-    tracing::info!(?report, "vault opened at {}", vault.root().display());
     let handle = app.clone();
     let watcher = watch(vault.clone(), move |changes: Vec<Change>| {
         let _ = handle.emit("vault-changed", changes);
     })?;
+    // Catch up with edits made while Nought was closed, without blocking the
+    // editor: capture must be available immediately, even on a large vault.
+    let (bg, handle) = (vault.clone(), app.clone());
+    std::thread::spawn(move || {
+        let started = std::time::Instant::now();
+        match bg.rescan() {
+            Ok(report) => {
+                tracing::info!(
+                    ?report,
+                    elapsed_ms = started.elapsed().as_millis() as u64,
+                    "vault scanned: {}",
+                    bg.root().display()
+                );
+                if report.indexed + report.removed > 0 {
+                    let _ = handle.emit("vault-changed", Vec::<Change>::new());
+                }
+            }
+            Err(e) => tracing::error!("vault scan failed: {e}"),
+        }
+    });
     *state.watcher.lock().unwrap_or_else(|e| e.into_inner()) = Some(watcher);
     *state.vault.write().unwrap_or_else(|e| e.into_inner()) = Some(vault.clone());
     save_config(
@@ -140,6 +158,16 @@ async fn vault_info(app: AppHandle, state: State<'_, AppState>) -> CmdResult<Opt
         Some(p) if p.exists() => activate(&app, &state, &p).map(Some),
         _ => Ok(None),
     }
+}
+
+static STARTED: std::sync::OnceLock<std::time::Instant> = std::sync::OnceLock::new();
+
+/// Called by the UI once the editor is focused; logs the time-to-capture budget.
+#[tauri::command]
+fn mark_ready() -> u64 {
+    let ms = STARTED.get().map_or(0, |t| t.elapsed().as_millis() as u64);
+    tracing::info!(ms, "editor ready");
+    ms
 }
 
 #[tauri::command]
@@ -246,6 +274,7 @@ async fn save_attachment(state: State<'_, AppState>, bytes: Vec<u8>, extension: 
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    STARTED.get_or_init(std::time::Instant::now);
     tracing_subscriber::fmt()
         .with_env_filter(tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
         .init();
@@ -291,6 +320,7 @@ pub fn run() {
     builder
         .invoke_handler(tauri::generate_handler![
             vault_info,
+            mark_ready,
             default_vault,
             open_vault,
             list_notes,

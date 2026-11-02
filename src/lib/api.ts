@@ -106,6 +106,8 @@ async function call<T>(cmd: string, args?: Record<string, unknown>): Promise<T> 
 export const api = {
   vaultInfo: () => call<VaultInfo | null>("vault_info"),
   defaultVault: () => call<string>("default_vault"),
+  /** Logs time from process start to an interactive editor (the capture budget). */
+  markReady: () => call<number>("mark_ready"),
   openVault: (path: string) => call<VaultInfo>("open_vault", { path }),
   listNotes: (query: ListQuery = {}) => call<NoteSummary[]>("list_notes", { query }),
   search: (query: string, limit = 50) => call<SearchHit[]>("search_notes", { query, limit }),

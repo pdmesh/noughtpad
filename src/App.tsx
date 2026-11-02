@@ -100,6 +100,15 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
     void qc.invalidateQueries({ queryKey: ["notes"] });
   }, [qc]);
 
+  // Report time-to-capture once the first editor has painted.
+  useEffect(() => {
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        void api.markReady().then((ms) => console.info(`[nought] editor ready ${ms} ms after start`));
+      }),
+    );
+  }, []);
+
   // Keyboard shortcuts.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

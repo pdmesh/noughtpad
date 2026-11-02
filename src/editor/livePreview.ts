@@ -17,6 +17,7 @@ import {
   WidgetType,
 } from "@codemirror/view";
 import type { SyntaxNodeRef } from "@lezer/common";
+import katex from "katex";
 
 /** Resolves a Markdown image/link target to a loadable URL. */
 export const assetResolver = Facet.define<(src: string) => string, (src: string) => string>({
@@ -64,6 +65,34 @@ class BulletWidget extends WidgetType {
     s.textContent = "•";
     return s;
   }
+}
+
+class InlineMathWidget extends WidgetType {
+  constructor(readonly tex: string) {
+    super();
+  }
+  eq(other: InlineMathWidget) {
+    return other.tex === this.tex;
+  }
+  toDOM() {
+    const span = document.createElement("span");
+    span.className = "cm-md-math";
+    katex.render(this.tex, span, { throwOnError: false, displayMode: false });
+    return span;
+  }
+}
+
+/**
+ * Inline `$…$` maths, using Pandoc's rule so prices don't trigger it: no space
+ * after the opening `$` or before the closing one, and no digit right after it.
+ */
+export const INLINE_MATH = /(?<![\\$\w])\$(?=[^\s$])([^$\n]*?[^\s\\$])\$(?![$\d])/g;
+
+function inCode(state: EditorState, pos: number): boolean {
+  for (let n: SyntaxNodeRef["node"] | null = syntaxTree(state).resolveInner(pos, 1); n; n = n.parent) {
+    if (n.name === "InlineCode" || n.name === "FencedCode" || n.name === "CodeBlock" || n.name === "URL") return true;
+  }
+  return false;
 }
 
 class ImageWidget extends WidgetType {
@@ -228,6 +257,19 @@ function build(view: EditorView): DecorationSet {
         }
       },
     });
+  }
+  for (const { from, to } of view.visibleRanges) {
+    for (let pos = from; pos <= to; ) {
+      const line = state.doc.lineAt(pos);
+      if (!active.has(line.number) && line.text.includes("$") && line.text.trim() !== "$$") {
+        for (const m of line.text.matchAll(INLINE_MATH)) {
+          const start = line.from + m.index!;
+          if (inCode(state, start)) continue;
+          deco.push(Decoration.replace({ widget: new InlineMathWidget(m[1]) }).range(start, start + m[0].length));
+        }
+      }
+      pos = line.to + 1;
+    }
   }
   return Decoration.set(deco, true);
 }

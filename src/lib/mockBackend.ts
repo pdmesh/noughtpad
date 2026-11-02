@@ -124,6 +124,8 @@ export async function mock(cmd: string, a: Record<string, any> = {}): Promise<un
   switch (cmd) {
     case "vault_info":
       return { path: "/mock/Nought", noteCount: notes.length, defaultPath: "/mock/Nought" };
+    case "mark_ready":
+      return Math.round(performance.now());
     case "default_vault":
       return "/mock/Nought";
     case "open_vault":

@@ -63,3 +63,17 @@ export function plainExcerpt(md: string): string {
     .replace(/\s+/g, " ")
     .trim();
 }
+
+/** Monday of the ISO week containing `day` (`YYYY-MM-DD`). */
+export function weekStart(day: string): string {
+  const d = dayToDate(day);
+  const offset = (d.getDay() + 6) % 7; // Monday = 0
+  d.setDate(d.getDate() - offset);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+const weekFmt = new Intl.DateTimeFormat(undefined, { day: "numeric", month: "short", year: "numeric" });
+
+export function formatWeek(start: string): string {
+  return `Week of ${weekFmt.format(dayToDate(start))}`;
+}
