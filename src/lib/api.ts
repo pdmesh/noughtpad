@@ -74,6 +74,63 @@ export interface Related {
   daysApart: number;
 }
 
+export interface MonthCount {
+  month: string;
+  count: number;
+}
+
+export interface ThemeSummary {
+  id: string;
+  name: string;
+  keywords: string[];
+  labels: string[];
+  noteCount: number;
+  personalCount: number;
+  sourceCount: number;
+  firstDay: string;
+  lastDay: string;
+  activeMonths: number;
+  /** Last 12 calendar months, oldest first. */
+  months: MonthCount[];
+}
+
+export interface Influence {
+  source: NoteSummary;
+  later: NoteSummary[];
+  themeId: string | null;
+  themeName: string | null;
+}
+
+export interface OpenQuestion {
+  note: NoteSummary;
+  themeId: string | null;
+  themeName: string | null;
+}
+
+export interface IdeasOverview {
+  enabled: boolean;
+  stale: boolean;
+  returning: ThemeSummary[];
+  forming: ThemeSummary[];
+  dormant: ThemeSummary[];
+  other: ThemeSummary[];
+  influences: Influence[];
+  openQuestions: OpenQuestion[];
+}
+
+export interface TimelineEntry {
+  note: NoteSummary;
+  influencedBy: NoteSummary | null;
+  revisits: NoteSummary | null;
+  mayRevise: boolean;
+  isQuestion: boolean;
+}
+
+export interface ThemeTimeline {
+  theme: ThemeSummary;
+  entries: TimelineEntry[];
+}
+
 export interface RelatedNotes {
   enabled: boolean;
   pending: boolean;
@@ -162,6 +219,9 @@ export const api = {
   related: (id: string, limit = 8) => call<RelatedNotes>("related_notes", { id, limit }),
   dismissRelated: (a: string, b: string) => call<void>("dismiss_related", { a, b }),
   undismissRelated: (a: string, b: string) => call<void>("undismiss_related", { a, b }),
+  ideasOverview: () => call<IdeasOverview>("ideas_overview"),
+  themeTimeline: (id: string) => call<ThemeTimeline | null>("theme_timeline", { id }),
+  noteTheme: (id: string) => call<ThemeSummary | null>("note_theme", { id }),
   saveAttachment: (bytes: Uint8Array, extension: string) =>
     call<string>("save_attachment", { bytes: Array.from(bytes), extension }),
 };

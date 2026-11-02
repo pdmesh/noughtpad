@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Command } from "cmdk";
 import { useQuery } from "@tanstack/react-query";
-import { BookOpen, CalendarDays, FilePlus2, Notebook, PanelLeft, RefreshCw, Rows3, Sparkle, Tag, Waypoints } from "lucide-react";
+import { BookOpen, CalendarDays, FilePlus2, Notebook, PanelLeft, RefreshCw, Rows3, Sparkle, Sprout, Tag, Waypoints } from "lucide-react";
 import { api } from "../lib/api";
 import { formatDay, plainExcerpt, snippetParts } from "../lib/format";
 
@@ -12,6 +12,7 @@ export interface PaletteActions {
   listUnderEditor: boolean;
   toggleListUnderEditor: () => void;
   showJournal: () => void;
+  showIdeas: () => void;
   showLabel: (label: string) => void;
   toggleChrome: () => void;
   rebuildIndex: () => void;
@@ -50,12 +51,37 @@ export function SearchPalette({ open, onClose, ...actions }: Props) {
     if (open) setInput("");
   }, [open]);
 
-  // Results arrive asynchronously; keep the top one selected so Enter opens it.
+  const commands: Array<{ label: string; icon: React.ReactNode; hint?: string; run: () => void }> = [
+    { label: "New note", icon: <FilePlus2 size={14} />, hint: "⌘N", run: actions.newNote },
+    { label: "All notes", icon: <Notebook size={14} />, run: actions.showNotes },
+    { label: "Journal", icon: <CalendarDays size={14} />, run: actions.showJournal },
+    { label: "Ideas over time", icon: <Sprout size={14} />, run: actions.showIdeas },
+    { label: "Related notes", icon: <Waypoints size={14} />, hint: "⌘J", run: actions.toggleRelated },
+    { label: "Toggle sidebar & toolbar", icon: <PanelLeft size={14} />, hint: "⌘\\", run: actions.toggleChrome },
+    {
+      label: actions.listUnderEditor ? "Hide note list under the editor" : "Show note list under the editor",
+      icon: <Rows3 size={14} />,
+      run: actions.toggleListUnderEditor,
+    },
+    {
+      label: actions.semanticOn ? "Turn off search by meaning (local model)" : "Turn on search by meaning (local model)",
+      icon: <Sparkle size={14} />,
+      run: actions.toggleSemantic,
+    },
+    { label: "Rebuild search index", icon: <RefreshCw size={14} />, run: actions.rebuildIndex },
+  ];
+  // With a query, commands whose name contains every typed word come first.
+  const words = input.toLowerCase().split(/\s+/).filter(Boolean);
+  const matchingCommands = words.length
+    ? commands.filter((c) => words.every((w) => c.label.toLowerCase().includes(w)))
+    : commands;
+
+  // Results arrive asynchronously; keep the top item selected so Enter opens it.
   const [selected, setSelected] = useState("");
-  const firstHit = query ? hits[0]?.note.id : undefined;
+  const first = (words.length ? matchingCommands[0]?.label : undefined) ?? (query ? hits[0]?.note.id : undefined);
   useEffect(() => {
-    setSelected(firstHit ?? "New note");
-  }, [firstHit, query]);
+    setSelected(first ?? "New note");
+  }, [first, query]);
 
   if (!open) return null;
   const run = (fn: () => void) => () => {
@@ -83,6 +109,13 @@ export function SearchPalette({ open, onClose, ...actions }: Props) {
           className="palette-input"
         />
         <Command.List className="palette-list">
+          {matchingCommands.length > 0 && (
+            <Command.Group heading={query ? "Commands" : "Go to"}>
+              {matchingCommands.map((c) => (
+                <Cmd key={c.label} icon={c.icon} label={c.label} hint={c.hint} onSelect={run(c.run)} />
+              ))}
+            </Command.Group>
+          )}
           {query && !isFetching && hits.length === 0 && <Command.Empty className="palette-empty">No matching notes.</Command.Empty>}
           {hits.length > 0 && query && (
             <Command.Group heading="Notes">
@@ -117,26 +150,6 @@ export function SearchPalette({ open, onClose, ...actions }: Props) {
                     <Tag size={14} aria-hidden /> {l.label} <span className="faint">{l.count}</span>
                   </Command.Item>
                 ))}
-            </Command.Group>
-          )}
-          {!query && (
-            <Command.Group heading="Go to">
-              <Cmd icon={<FilePlus2 size={14} />} label="New note" hint="⌘N" onSelect={run(actions.newNote)} />
-              <Cmd icon={<Notebook size={14} />} label="All notes" onSelect={run(actions.showNotes)} />
-              <Cmd icon={<CalendarDays size={14} />} label="Journal" onSelect={run(actions.showJournal)} />
-              <Cmd icon={<PanelLeft size={14} />} label="Toggle sidebar & toolbar" hint="⌘\" onSelect={run(actions.toggleChrome)} />
-              <Cmd
-                icon={<Rows3 size={14} />}
-                label={actions.listUnderEditor ? "Hide note list under the editor" : "Show note list under the editor"}
-                onSelect={run(actions.toggleListUnderEditor)}
-              />
-              <Cmd icon={<Waypoints size={14} />} label="Related notes" hint="⌘J" onSelect={run(actions.toggleRelated)} />
-              <Cmd
-                icon={<Sparkle size={14} />}
-                label={actions.semanticOn ? "Turn off search by meaning (local model)" : "Turn on search by meaning (local model)"}
-                onSelect={run(actions.toggleSemantic)}
-              />
-              <Cmd icon={<RefreshCw size={14} />} label="Rebuild search index" onSelect={run(actions.rebuildIndex)} />
             </Command.Group>
           )}
         </Command.List>

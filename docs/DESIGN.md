@@ -27,6 +27,7 @@ This document turns that thesis into a concrete architecture and build plan. Ite
 | 2026-11-02 | Note lists (All notes, Collections, Journal) scroll infinitely: keyset pages of 100 and windowed rendering, so the page stays light at any vault size. |
 | 2026-11-02 | The Write page shows only the editor. The note stream moves to its own "All notes" page; a palette toggle can put it back under the editor. |
 | 2026-11-02 | M2 semantic features are opt-in (one click, ~65 MB model download, local only). Related notes open on demand (⌘J or the top-bar button), never during capture. |
+| 2026-11-02 | M3 is deterministic over local embeddings; AI-written monthly or topic syntheses move to M4 (bring-your-own LLM). |
 | 2026-11-02 | Extensions reuse the CodeMirror 6 and unified (remark/rehype) ecosystems; no bespoke plugin ecosystem. |
 
 ---
@@ -339,6 +340,28 @@ Reproduce with `cargo run --release -p nought-core --example bench -- 10000`.
 - The CI `model` job downloads the real model and checks that the thresholds separate related from unrelated sentences. Measured: related pairs 0.66–0.88, unrelated pairs up to 0.57, so `min_related` is 0.60. This favours precision: two short sourdough notes with no shared vocabulary are missed rather than letting false links in. `examples/semantic.rs` reproduces the quality and speed check. The app logs `editor ready ms=…` on every launch.
 
 ---
+
+**M3 status (2026-11-02): complete, verified with the real model on the sample notebook.**
+- **Themes** use average-linkage merging over the mutual 6-nearest-neighbour graph of *mean-centred* note vectors, with a cut-off of 0.10.
+  - Without centring, BGE rates generic notes as similar to everything (e.g. *The Mom Test* scored ≥ 0.60 against 9 of 12 VC notes), and single-link grouping chained unrelated topics.
+  - Measured on the sample notebook: genuine members scored 0.13–0.48 centred; intruders −0.04–0.0.
+- **Labels** steer merging. Groups whose main labels differ need +0.10 to merge; groups sharing a main label need 0.03 less. User metadata outranks embeddings.
+- **Theme size:** at least 3 notes on at least 2 different days. Themes are only formed with at least 8 embedded notes.
+- **Names** use class-based TF-IDF (unigrams and bigrams, English stopwords). If no word appears in two of the theme's notes, the label is used, then the latest note's first line.
+- **Identity:** a recomputed group reuses an earlier theme id when member overlap (Jaccard) is at least 0.3.
+- **Sections:**
+  - *returning*: 3 or more active months;
+  - *forming*: first note within the last 45 days;
+  - *dormant*: no note for 90 days or more.
+- **Influences:** within a theme, an earlier *source* note related (≥ `min_related`) to a later personal note.
+- **Revisits:** an earlier *personal* note at least 7 days older. "May rethink" is shown when the later note uses contrast words ("but", "tension", "not sure"…).
+- **Open questions:** questions with no later note at `strong_related` or above.
+- **Recompute:** the worker recomputes when idle and the vectors changed, at most once a minute. Computing 37 notes takes about 1 ms; the full pairwise pass is O(n²), so it will need an approximate index well beyond about 20k notes.
+- **UI:**
+  - an *Ideas over time* page with 12-month bar charts (muted bars, current month in the accent, a tooltip per bar, an accessible summary);
+  - a theme timeline with cues worded tentatively ("may build on", "returns to", "may rethink");
+  - a "Part of a thread" link in the Related panel.
+- Reproduce with `cargo run --release -p nought-core --features embedding-static --example ideas -- <model-dir> samples/vault 2026-11-02`.
 
 ## 9. Risks I would watch from day one
 

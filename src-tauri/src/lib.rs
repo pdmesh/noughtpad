@@ -131,6 +131,10 @@ fn activate(app: &AppHandle, state: &AppState, path: &Path, remember: bool) -> C
     let sem = Semantic::new(vault.clone(), user)?;
     let handle = app.clone();
     sem.on_status(move |s| semantic::emit_status(&handle, s));
+    let handle = app.clone();
+    sem.on_ideas(move || {
+        let _ = handle.emit("ideas-updated", ());
+    });
     sem.spawn_worker();
     if load_config(app).semantic == Some(true) {
         semantic::start(app, sem.clone());
@@ -388,6 +392,9 @@ pub fn run() {
             semantic::related_notes,
             semantic::dismiss_related,
             semantic::undismiss_related,
+            semantic::ideas_overview,
+            semantic::theme_timeline,
+            semantic::note_theme,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Nought");

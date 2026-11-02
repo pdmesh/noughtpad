@@ -5,7 +5,7 @@ A local-first notebook: capture anything on a blank page, and let it gradually r
 Notes are plain Markdown files you own. AI stays out of the way during capture and works quietly in the background. It shows up through derived views (Journal, Connections, Ideas over time) or when you ask.
 
 - Design: [docs/DESIGN.md](docs/DESIGN.md)
-- Status: **M1 complete; M2 (quiet retrieval) implemented**. Next: M3, temporal discovery
+- Status: **M1–M3 complete** (notebook, quiet retrieval, temporal discovery). Next: M4, an on-demand thinking workspace with your own LLM
 
 ## What works today
 
@@ -22,11 +22,12 @@ Notes are plain Markdown files you own. AI stays out of the way during capture a
 - Distraction-free by default: toolbar and sidebar appear on hover. `⌘/Ctrl+\` pins them
 - **Related notes** (`⌘/Ctrl+J`, or the button in the top bar): notes that appear connected, each with the passage that matched, shared labels, same source and how far apart in time. "Not related" hides a suggestion for good, with undo
 - **Search by meaning**: once turned on, `⌘K` finds notes by meaning as well as words. Opt-in: a ~65 MB local model is downloaded once, and notes never leave your computer
+- **Ideas over time**: threads you keep returning to, ideas forming in recent weeks, dormant ideas, what you read that seems to have shaped later notes, and questions you never came back to. Open a thread to see it month by month: which source a note may build on, which earlier note it returns to, and where you may be rethinking it. Deterministic and local; nothing is generated
 - Global quick capture: `⌘⇧Space` (macOS) / `Ctrl+Shift+Space`
 
 ## Sample notebook
 
-`samples/vault` holds about 30 realistic notes from 2026: a VC thesis that evolves over the year, customer-discovery notes from *The Mom Test*, presentation-software ideas, travel plans, sourdough, a Mermaid diagram, maths, tasks, a titled note and a plain Markdown file with no frontmatter.
+`samples/vault` holds 37 realistic notes from 2026 (regenerate with `python3 scripts/generate-samples.py samples/vault`): a VC thesis that evolves over the year, a half-marathon plan begun in October, customer-discovery notes from *The Mom Test*, presentation-software ideas, travel plans, sourdough, a Mermaid diagram, maths, tasks, a titled note and a plain Markdown file with no frontmatter.
 
 ```sh
 pnpm dev:sample           # copy to ~/Nought Sample and run the app on it

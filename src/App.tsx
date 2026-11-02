@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarDays, FilePlus2, FolderOpen, Notebook, PanelLeft, PenLine, Search, Waypoints, X } from "lucide-react";
+import { CalendarDays, FilePlus2, FolderOpen, Notebook, PanelLeft, PenLine, Search, Sprout, Waypoints, X } from "lucide-react";
 import { api, isApiError, onEvent, pickFolder, type VaultInfo } from "./lib/api";
 import { NotePane } from "./components/NotePane";
 import { Stream } from "./components/Stream";
@@ -8,10 +8,16 @@ import { SearchPalette } from "./components/SearchPalette";
 import { RelatedPanel } from "./components/RelatedPanel";
 import { describeStatus, useSemanticStatus } from "./lib/useSemantic";
 import { Journal } from "./views/Journal";
+import { IdeasView, ThemeView } from "./views/Ideas";
 import type { EditorHandle } from "./editor/Editor";
 
 /** "write" is the blank page; "notes" lists all notes (optionally one collection). */
-type View = { kind: "write" } | { kind: "notes"; label?: string } | { kind: "journal" };
+type View =
+  | { kind: "write" }
+  | { kind: "notes"; label?: string }
+  | { kind: "journal" }
+  | { kind: "ideas" }
+  | { kind: "theme"; id: string };
 
 export function App() {
   const [vault, setVault] = useState<VaultInfo | null | undefined>(undefined);
@@ -195,6 +201,12 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
           <SideItem icon={<PenLine size={15} />} label="Write" active={view.kind === "write"} onClick={() => setView({ kind: "write" })} />
           <SideItem icon={<Notebook size={15} />} label="All notes" active={view.kind === "notes" && !label} onClick={() => setView({ kind: "notes" })} />
           <SideItem icon={<CalendarDays size={15} />} label="Journal" active={view.kind === "journal"} onClick={() => setView({ kind: "journal" })} />
+          <SideItem
+            icon={<Sprout size={15} />}
+            label="Ideas over time"
+            active={view.kind === "ideas" || view.kind === "theme"}
+            onClick={() => setView({ kind: "ideas" })}
+          />
         </nav>
         {labels.length > 0 && (
           <nav className="sidebar-section" aria-label="Collections">
@@ -276,6 +288,10 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
           </>
         )}
         {view.kind === "journal" && <Journal onOpen={openNote} onLabel={showLabel} />}
+        {view.kind === "ideas" && <IdeasView onOpenNote={openNote} onOpenTheme={(id) => setView({ kind: "theme", id })} />}
+        {view.kind === "theme" && (
+          <ThemeView id={view.id} onBack={() => setView({ kind: "ideas" })} onOpenNote={openNote} />
+        )}
       </main>
 
       <SearchPalette
@@ -287,6 +303,7 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
         listUnderEditor={listUnderEditor}
         toggleListUnderEditor={toggleListUnderEditor}
         showJournal={() => setView({ kind: "journal" })}
+        showIdeas={() => setView({ kind: "ideas" })}
         showLabel={showLabel}
         toggleChrome={toggleChrome}
         rebuildIndex={() => void rebuildIndex()}
@@ -302,7 +319,13 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
         }
       />
       {relatedOpen && view.kind === "write" && (
-        <RelatedPanel noteId={currentId} onOpen={openNote} onClose={() => setRelatedOpen(false)} onNotice={setNotice} />
+        <RelatedPanel
+          noteId={currentId}
+          onOpen={openNote}
+          onOpenTheme={(id) => setView({ kind: "theme", id })}
+          onClose={() => setRelatedOpen(false)}
+          onNotice={setNotice}
+        />
       )}
       {toast && (
         <div className="toast" role="status">

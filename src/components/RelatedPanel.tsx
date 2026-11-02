@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { BookOpen, Tag, X } from "lucide-react";
+import { BookOpen, Sprout, Tag, X } from "lucide-react";
 import { api, type Related } from "../lib/api";
 import { describeStatus, useSemanticStatus } from "../lib/useSemantic";
 import { formatDay, plainExcerpt } from "../lib/format";
@@ -7,6 +7,7 @@ import { formatDay, plainExcerpt } from "../lib/format";
 interface Props {
   noteId: string | null;
   onOpen: (id: string) => void;
+  onOpenTheme: (id: string) => void;
   onClose: () => void;
   onNotice: (msg: string, undo?: () => void) => void;
 }
@@ -15,7 +16,7 @@ interface Props {
  * "Explore this note": notes that appear connected, each with the passage that
  * matched and why. Opened on demand only, never while writing.
  */
-export function RelatedPanel({ noteId, onOpen, onClose, onNotice }: Props) {
+export function RelatedPanel({ noteId, onOpen, onOpenTheme, onClose, onNotice }: Props) {
   const status = useSemanticStatus();
   const qc = useQueryClient();
   const active = status.state === "ready" || status.state === "indexing";
@@ -25,6 +26,12 @@ export function RelatedPanel({ noteId, onOpen, onClose, onNotice }: Props) {
     enabled: !!noteId && active,
     // A just-edited note is embedded a few seconds after typing stops.
     refetchInterval: (q) => (q.state.data?.pending ? 3000 : false),
+  });
+
+  const { data: theme } = useQuery({
+    queryKey: ["ideas", "note-theme", noteId],
+    queryFn: () => api.noteTheme(noteId!),
+    enabled: !!noteId && active,
   });
 
   const dismiss = async (r: Related) => {
@@ -46,6 +53,18 @@ export function RelatedPanel({ noteId, onOpen, onClose, onNotice }: Props) {
         </button>
       </header>
 
+      {theme && (
+        <button className="related-theme" onClick={() => onOpenTheme(theme.id)}>
+          <Sprout size={13} aria-hidden />
+          <span>
+            Part of a thread: <strong>{theme.name}</strong>
+            <span className="faint">
+              {" "}
+              · {theme.noteCount} notes over {theme.activeMonths} months
+            </span>
+          </span>
+        </button>
+      )}
       {status.state === "off" && <EnableCard />}
       {status.state === "error" && (
         <div className="related-card">
@@ -105,7 +124,7 @@ export function RelatedPanel({ noteId, onOpen, onClose, onNotice }: Props) {
   );
 }
 
-function EnableCard() {
+export function EnableCard() {
   return (
     <div className="related-card">
       <p>

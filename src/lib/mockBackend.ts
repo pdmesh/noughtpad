@@ -212,6 +212,103 @@ function related(id: string, limit: number): RelatedNotes {
   return { enabled: true, pending: false, items };
 }
 
+// ---- ideas over time (mock: one thread per label with 3+ notes) -------------
+
+interface MockTheme {
+  id: string;
+  name: string;
+  label: string;
+  members: MockNote[];
+}
+
+function mockThemes(): MockTheme[] {
+  if (semantic.state !== "ready") return [];
+  const by = new Map<string, MockNote[]>();
+  for (const n of notes) {
+    const l = n.labels[0];
+    if (l) by.set(l, [...(by.get(l) ?? []), n]);
+  }
+  return [...by.entries()]
+    .filter(([, ms]) => ms.length >= 3)
+    .map(([label, ms]) => {
+      const members = [...ms].sort((a, b) => Date.parse(a.created) - Date.parse(b.created));
+      const words = [...wordsOf(members.map((m) => m.content).join(" "))].slice(0, 3);
+      return { id: `t-${label.toLowerCase()}`, label, members, name: words.join(" · ") };
+    });
+}
+
+function themeSummary(t: MockTheme) {
+  const months = new Map<string, number>();
+  for (const m of t.members) months.set(m.created.slice(0, 7), (months.get(m.created.slice(0, 7)) ?? 0) + 1);
+  const now = new Date();
+  const last12 = Array.from({ length: 12 }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - 11 + i, 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    return { month: key, count: months.get(key) ?? 0 };
+  });
+  const personal = t.members.filter((m) => kindOf(m) === "personal").length;
+  return {
+    id: t.id,
+    name: t.name,
+    keywords: t.name.split(" · "),
+    labels: [t.label],
+    noteCount: t.members.length,
+    personalCount: personal,
+    sourceCount: t.members.length - personal,
+    firstDay: t.members[0].created.slice(0, 10),
+    lastDay: t.members[t.members.length - 1].created.slice(0, 10),
+    activeMonths: months.size,
+    months: last12,
+  };
+}
+
+function ideasOverview() {
+  const themes = mockThemes();
+  const enabled = semantic.state !== "off";
+  const influences = themes.flatMap((t) => {
+    const src = t.members.find((m) => kindOf(m) === "source");
+    if (!src) return [];
+    const later = t.members.filter((m) => kindOf(m) === "personal" && Date.parse(m.created) > Date.parse(src.created));
+    return later.length ? [{ source: summary(src), later: later.map(summary), themeId: t.id, themeName: t.name }] : [];
+  });
+  const openQuestions = notes
+    .filter((n) => kindOf(n) === "personal" && /\w\?/.test(n.content))
+    .map((n) => {
+      const t = themes.find((t) => t.members.includes(n));
+      return { note: summary(n), themeId: t?.id ?? null, themeName: t?.name ?? null };
+    });
+  return {
+    enabled,
+    stale: false,
+    returning: themes.filter((t) => new Set(t.members.map((m) => m.created.slice(0, 7))).size >= 3).map(themeSummary),
+    forming: [],
+    dormant: [],
+    other: themes.filter((t) => new Set(t.members.map((m) => m.created.slice(0, 7))).size < 3).map(themeSummary),
+    influences,
+    openQuestions,
+  };
+}
+
+function themeTimeline(id: string) {
+  const t = mockThemes().find((t) => t.id === id);
+  if (!t) return null;
+  return {
+    theme: themeSummary(t),
+    entries: t.members.map((m, i) => {
+      const earlierSource = t.members.slice(0, i).reverse().find((x) => kindOf(x) === "source");
+      const earlierPersonal = t.members.slice(0, i).reverse().find((x) => kindOf(x) === "personal");
+      const personal = kindOf(m) === "personal";
+      return {
+        note: summary(m),
+        influencedBy: personal && earlierSource ? summary(earlierSource) : null,
+        revisits: personal && earlierPersonal ? summary(earlierPersonal) : null,
+        mayRevise: personal && /\b(but|however|tension)\b/i.test(m.content),
+        isQuestion: /\w\?/.test(m.content),
+      };
+    }),
+  };
+}
+
 export async function mock(cmd: string, a: Record<string, any> = {}): Promise<unknown> {
   await new Promise((r) => setTimeout(r, 5));
   switch (cmd) {
@@ -261,6 +358,15 @@ export async function mock(cmd: string, a: Record<string, any> = {}): Promise<un
     case "disable_semantic":
       setSemantic({ state: "off" });
       return semantic;
+    case "ideas_overview":
+      return ideasOverview();
+    case "theme_timeline":
+      return themeTimeline(a.id);
+    case "note_theme": {
+      const n = notes.find((x) => x.id === a.id);
+      const t = mockThemes().find((t) => n && t.members.includes(n));
+      return t ? themeSummary(t) : null;
+    }
     case "related_notes":
       return related(a.id, a.limit ?? 8);
     case "dismiss_related":

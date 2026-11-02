@@ -3,6 +3,7 @@
 
 use std::sync::Arc;
 
+use nought_core::semantic::ideas::{IdeasOverview, ThemeSummary, ThemeTimeline};
 use nought_core::semantic::model::DEFAULT_MODEL;
 use nought_core::semantic::{RelatedNotes, Semantic, Status};
 use tauri::{AppHandle, Emitter, Manager, State};
@@ -123,4 +124,33 @@ pub async fn dismiss_related(state: State<'_, AppState>, a: String, b: String) -
 #[tauri::command]
 pub async fn undismiss_related(state: State<'_, AppState>, a: String, b: String) -> CmdResult<()> {
     Ok(state.semantic()?.undismiss(&a, &b)?)
+}
+
+#[tauri::command]
+pub async fn ideas_overview(state: State<'_, AppState>) -> CmdResult<IdeasOverview> {
+    let sem = state.semantic()?;
+    tauri::async_runtime::spawn_blocking(move || sem.ideas_overview())
+        .await
+        .map_err(|e| CmdError {
+            kind: "internal",
+            message: e.to_string(),
+        })?
+        .map_err(Into::into)
+}
+
+#[tauri::command]
+pub async fn theme_timeline(state: State<'_, AppState>, id: String) -> CmdResult<Option<ThemeTimeline>> {
+    let sem = state.semantic()?;
+    tauri::async_runtime::spawn_blocking(move || sem.theme_timeline(&id))
+        .await
+        .map_err(|e| CmdError {
+            kind: "internal",
+            message: e.to_string(),
+        })?
+        .map_err(Into::into)
+}
+
+#[tauri::command]
+pub async fn note_theme(state: State<'_, AppState>, id: String) -> CmdResult<Option<ThemeSummary>> {
+    Ok(state.semantic()?.note_theme(&id)?)
 }
