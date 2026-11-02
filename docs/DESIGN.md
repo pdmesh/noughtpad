@@ -16,7 +16,7 @@ This document turns that thesis into a concrete architecture and build plan. Ite
 | 2026-11-02 | Desktop only for v1. No mobile app. |
 | 2026-11-02 | No migration or import from other tools in v1. Nought starts its own vault. Files stay Obsidian-*readable*. |
 | 2026-11-02 | AI tiers: deterministic → local embeddings → small local **non-generative** models (e.g. Laya-class decision/classifier models) → **bring-your-own LLM** (key or endpoint), opt-in, only for advanced tasks. |
-| 2026-11-02 | Open-source licence (exact licence to confirm). |
+| 2026-11-02 | Licence: **FSL-1.1-ALv2** (source-available). Any use except a competing commercial product; each release converts to Apache-2.0 after 2 years. Contributions require a licence grant to the owner (CONTRIBUTING.md) so commercial editions stay possible. ELv2 was rejected because it only restricts hosted services, not desktop resale. |
 | 2026-11-02 | English first; language-pluggable architecture (§11). |
 | 2026-11-02 | Source metadata entered manually in v1; no web clipper. |
 | 2026-11-02 | Distraction-free capture: metadata/chrome hidden, revealed on hover/focus or a toggle. |
@@ -103,8 +103,8 @@ Key idea: **three kinds of data, three lifetimes.**
 | Global quick-capture hotkey | `tauri-plugin-global-shortcut` | Capture from anywhere (G1) | MIT/Apache |
 | Tests | `cargo test`, **Vitest**, **Playwright** | — | MIT/Apache |
 
-All of these are permissive licences, so they are compatible with either a closed or an
-open-source distribution. Model weights get a separate licence check (thesis §19.5).
+All of these use permissive licences, so they are compatible with FSL distribution. Avoid GPL/AGPL
+dependencies; copyleft terms conflict with FSL's competing-use restriction. Model weights get a separate licence check (thesis §19.5).
 
 ---
 
@@ -311,7 +311,6 @@ Each milestone ships something that is usable on its own. M1 needs no ML.
 ## 10. Open questions
 
 1. Desktop shell & language comfort (Tauri/Rust vs Electron/all-TypeScript).
-2. Exact licence (Apache-2.0 proposed).
 
 ---
 
