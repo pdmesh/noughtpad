@@ -8,12 +8,13 @@
 
 pub mod chunk;
 pub mod embedder;
+pub mod ideas;
 pub mod model;
 pub(crate) mod store;
 mod vectors;
 
 use std::collections::{HashMap, HashSet};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Condvar, Mutex, RwLock};
 use std::time::{Duration, Instant};
 
@@ -102,6 +103,10 @@ pub struct Semantic {
     listener: Mutex<Option<Listener>>,
     wake: (Mutex<bool>, Condvar),
     stop: AtomicBool,
+    /// Bumped whenever vectors change; the ideas model records the version it saw.
+    version: AtomicU64,
+    ideas: RwLock<Option<Arc<ideas::Model>>>,
+    ideas_listener: Mutex<Option<Box<dyn Fn() + Send + Sync>>>,
 }
 
 fn lock<T>(m: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
@@ -121,12 +126,20 @@ impl Semantic {
             listener: Mutex::new(None),
             wake: (Mutex::new(false), Condvar::new()),
             stop: AtomicBool::new(false),
+            version: AtomicU64::new(1),
+            ideas: RwLock::new(None),
+            ideas_listener: Mutex::new(None),
         }))
     }
 
     /// Called whenever the status changes.
     pub fn on_status(&self, f: impl Fn(&Status) + Send + Sync + 'static) {
         *lock(&self.listener) = Some(Box::new(f));
+    }
+
+    /// Called after the ideas model (themes, timelines) is recomputed.
+    pub fn on_ideas(&self, f: impl Fn() + Send + Sync + 'static) {
+        *lock(&self.ideas_listener) = Some(Box::new(f));
     }
 
     pub fn status(&self) -> Status {
@@ -159,6 +172,7 @@ impl Semantic {
         *self.vectors.write().unwrap_or_else(|e| e.into_inner()) = VectorIndex::from_rows(rows);
         *lock(&self.embedder) = Some(e);
         *self.spec.write().unwrap_or_else(|e| e.into_inner()) = Some(spec);
+        self.version.fetch_add(1, Ordering::SeqCst);
         self.update_progress();
         self.nudge();
         Ok(())
@@ -169,6 +183,7 @@ impl Semantic {
         *self.spec.write().unwrap_or_else(|e| e.into_inner()) = None;
         *lock(&self.embedder) = None;
         *self.vectors.write().unwrap_or_else(|e| e.into_inner()) = VectorIndex::default();
+        *self.ideas.write().unwrap_or_else(|e| e.into_inner()) = None;
         self.set_status(Status::Off);
     }
 
@@ -208,6 +223,7 @@ impl Semantic {
 
     fn run(&self) {
         let mut last_sweep: Option<Instant> = None;
+        let mut last_ideas: Option<Instant> = None;
         while !self.stop.load(Ordering::SeqCst) {
             let Some(spec) = self.spec.read().unwrap_or_else(|e| e.into_inner()).clone() else {
                 self.wait(Duration::from_secs(5));
@@ -218,6 +234,9 @@ impl Semantic {
                     Ok(gone) => {
                         let mut v = self.vectors.write().unwrap_or_else(|e| e.into_inner());
                         gone.iter().for_each(|id| v.remove(id));
+                        if !gone.is_empty() {
+                            self.version.fetch_add(1, Ordering::SeqCst);
+                        }
                     }
                     Err(e) => tracing::warn!("semantic sweep failed: {e}"),
                 }
@@ -226,6 +245,15 @@ impl Semantic {
             match self.step(&spec) {
                 Ok(0) => {
                     self.update_progress();
+                    // Themes are recomputed when indexing is idle and something
+                    // changed, at most once a minute.
+                    if self.ideas_stale() && last_ideas.is_none_or(|t| t.elapsed() > Duration::from_secs(60)) {
+                        match self.refresh_ideas() {
+                            Ok(()) => {}
+                            Err(e) => tracing::warn!("computing themes failed: {e}"),
+                        }
+                        last_ideas = Some(Instant::now());
+                    }
                     self.wait(Duration::from_secs(2));
                 }
                 Ok(_) => {
@@ -314,6 +342,7 @@ impl Semantic {
             .write()
             .unwrap_or_else(|e| e.into_inner())
             .set(n.id.clone(), mem);
+        self.version.fetch_add(1, Ordering::SeqCst);
         Ok(())
     }
 
@@ -455,6 +484,179 @@ impl Semantic {
             pending: false,
             items,
         })
+    }
+
+    // ---- ideas over time (M3) ----------------------------------------------
+
+    fn ideas_stale(&self) -> bool {
+        let current = self.version.load(Ordering::SeqCst);
+        self.ideas
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .as_ref()
+            .is_none_or(|m| m.version != current)
+    }
+
+    /// Recompute themes and temporal links from the current vectors.
+    pub fn refresh_ideas(&self) -> Result<()> {
+        self.refresh_ideas_at(chrono::Local::now().date_naive())
+    }
+
+    pub fn refresh_ideas_at(&self, today: chrono::NaiveDate) -> Result<()> {
+        let Some(spec) = self.spec.read().unwrap_or_else(|e| e.into_inner()).clone() else {
+            return Ok(());
+        };
+        let version = self.version.load(Ordering::SeqCst);
+        let started = Instant::now();
+        let (rows, previous) = self
+            .vault
+            .with_index(|ix| -> Result<_> { Ok((store::note_rows(ix.conn())?, store::load_themes(ix.conn())?)) })?;
+        let (rows, means): (Vec<_>, Vec<_>) = {
+            let v = self.vectors.read().unwrap_or_else(|e| e.into_inner());
+            rows.into_iter()
+                .filter_map(|r| v.notes.get(&r.id).map(|nv| nv.mean.clone()).map(|m| (r, m)))
+                .unzip()
+        };
+        let model = ideas::compute(
+            rows,
+            &means,
+            &previous,
+            &ideas::Thresholds {
+                related: spec.min_related,
+                strong: spec.strong_related,
+            },
+            today,
+            version,
+        );
+        let save: Vec<(String, Vec<String>)> = model
+            .themes
+            .iter()
+            .map(|t| {
+                (
+                    t.id.clone(),
+                    t.members.iter().map(|&m| model.notes[m].id.clone()).collect(),
+                )
+            })
+            .collect();
+        self.vault.with_index(|ix| store::save_themes(ix.conn(), &save))?;
+        tracing::info!(
+            notes = model.notes.len(),
+            themes = model.themes.len(),
+            ms = started.elapsed().as_millis() as u64,
+            "themes computed"
+        );
+        *self.ideas.write().unwrap_or_else(|e| e.into_inner()) = Some(Arc::new(model));
+        if let Some(f) = lock(&self.ideas_listener).as_ref() {
+            f();
+        }
+        Ok(())
+    }
+
+    fn ideas_model(&self) -> Result<Option<Arc<ideas::Model>>> {
+        if !self.is_enabled() {
+            return Ok(None);
+        }
+        let existing = self.ideas.read().unwrap_or_else(|e| e.into_inner()).clone();
+        if existing.is_none() {
+            self.refresh_ideas()?;
+            return Ok(self.ideas.read().unwrap_or_else(|e| e.into_inner()).clone());
+        }
+        Ok(existing)
+    }
+
+    fn summaries(&self, model: &ideas::Model, idx: &[usize]) -> Result<Vec<NoteSummary>> {
+        idx.iter()
+            .filter_map(|&i| self.vault.summary(&model.notes[i].id).transpose())
+            .collect()
+    }
+
+    pub fn ideas_overview(&self) -> Result<ideas::IdeasOverview> {
+        let empty = |enabled| ideas::IdeasOverview {
+            enabled,
+            stale: false,
+            returning: vec![],
+            forming: vec![],
+            dormant: vec![],
+            other: vec![],
+            influences: vec![],
+            open_questions: vec![],
+        };
+        let Some(model) = self.ideas_model()? else {
+            return Ok(empty(false));
+        };
+        let sections = model.sections();
+        let to = |v: &[usize]| v.iter().map(|&ti| model.summary(ti)).collect::<Vec<_>>();
+        let theme_of = |i: usize| model.note_theme.get(&model.notes[i].id).map(|&ti| &model.themes[ti]);
+        let mut influences = Vec::new();
+        for (src, later) in model.influences().into_iter().take(6) {
+            let Some(source) = self.vault.summary(&model.notes[src].id)? else {
+                continue;
+            };
+            influences.push(ideas::Influence {
+                source,
+                later: self.summaries(&model, &later)?,
+                theme_id: theme_of(src).map(|t| t.id.clone()),
+                theme_name: theme_of(src).map(|t| t.name.clone()),
+            });
+        }
+        let mut open_questions = Vec::new();
+        for &q in model.open_questions.iter().take(8) {
+            let Some(note) = self.vault.summary(&model.notes[q].id)? else {
+                continue;
+            };
+            open_questions.push(ideas::OpenQuestion {
+                note,
+                theme_id: theme_of(q).map(|t| t.id.clone()),
+                theme_name: theme_of(q).map(|t| t.name.clone()),
+            });
+        }
+        Ok(ideas::IdeasOverview {
+            enabled: true,
+            stale: model.version != self.version.load(Ordering::SeqCst),
+            returning: to(&sections.returning),
+            forming: to(&sections.forming),
+            dormant: to(&sections.dormant),
+            other: to(&sections.other),
+            influences,
+            open_questions,
+        })
+    }
+
+    pub fn theme_timeline(&self, theme_id: &str) -> Result<Option<ideas::ThemeTimeline>> {
+        let Some(model) = self.ideas_model()? else {
+            return Ok(None);
+        };
+        let Some(ti) = model.themes.iter().position(|t| t.id == theme_id) else {
+            return Ok(None);
+        };
+        let summary_of = |i: usize| self.vault.summary(&model.notes[i].id);
+        let mut entries = Vec::new();
+        for &m in &model.themes[ti].members {
+            let Some(note) = summary_of(m)? else { continue };
+            entries.push(ideas::TimelineEntry {
+                note,
+                influenced_by: match model.influenced_by.get(&m) {
+                    Some(l) => summary_of(l.to)?,
+                    None => None,
+                },
+                revisits: match model.revisits.get(&m) {
+                    Some(l) => summary_of(l.to)?,
+                    None => None,
+                },
+                may_revise: model.may_revise.contains(&m),
+                is_question: model.questions.contains(&m),
+            });
+        }
+        Ok(Some(ideas::ThemeTimeline {
+            theme: model.summary(ti),
+            entries,
+        }))
+    }
+
+    /// The theme a note belongs to, if any.
+    pub fn note_theme(&self, note_id: &str) -> Result<Option<ideas::ThemeSummary>> {
+        let model = self.ideas.read().unwrap_or_else(|e| e.into_inner()).clone();
+        Ok(model.and_then(|m| m.note_theme.get(note_id).map(|&ti| m.summary(ti))))
     }
 
     pub fn dismiss(&self, a: &str, b: &str) -> Result<()> {
@@ -735,5 +937,196 @@ mod tests {
         // Filters apply to meaning-only matches too.
         let hits = sem.search("fund ownership #travel", 10).unwrap();
         assert!(hits.iter().all(|h| h.note.labels.contains(&"Travel".to_string())));
+    }
+}
+
+#[cfg(test)]
+mod ideas_tests {
+    use super::embedder::HashEmbedder;
+    use super::*;
+
+    fn write(root: &std::path::Path, id: &str, day: &str, labels: &str, source: Option<&str>, body: &str) {
+        let src = source.map(|s| format!("source:\n  title: {s}\n")).unwrap_or_default();
+        let text = format!("---\nid: {id}\ncreated: {day}T10:00:00+00:00\nlabels: [{labels}]\n{src}---\n\n{body}\n");
+        std::fs::write(root.join(format!("{id}.md")), text).unwrap();
+    }
+
+    fn notebook() -> (tempfile::TempDir, Arc<Vault>, Arc<Semantic>) {
+        let dir = tempfile::tempdir().unwrap();
+        let r = dir.path();
+        // A VC thread across the year, starting from a source.
+        write(
+            r,
+            "vc1",
+            "2026-01-14",
+            "VC",
+            Some("Venture Deals"),
+            "Venture fund returns follow a power law: outlier companies return the fund.",
+        );
+        write(
+            r,
+            "vc2",
+            "2026-03-03",
+            "VC",
+            None,
+            "Fund returns depend on ownership in the outlier companies of the power law.",
+        );
+        write(
+            r,
+            "vc3",
+            "2026-06-20",
+            "VC",
+            None,
+            "Ownership targets and fund returns: concentration on outlier companies.",
+        );
+        write(r, "vc4", "2026-09-12", "VC", None, "But maybe ownership in outlier companies matters less than fund returns from many companies? Tension with March.");
+        // Travel in spring only: dormant by November.
+        write(
+            r,
+            "tr1",
+            "2026-02-25",
+            "Travel",
+            None,
+            "Tokyo itinerary: Shibuya, Asakusa, Kyoto temples trip.",
+        );
+        write(
+            r,
+            "tr2",
+            "2026-03-01",
+            "Travel",
+            None,
+            "Kyoto temples trip and the Tokyo itinerary for spring.",
+        );
+        write(
+            r,
+            "tr3",
+            "2026-03-20",
+            "Travel",
+            None,
+            "Revisit the Tokyo itinerary and Kyoto temples dates.",
+        );
+        // A new theme in the last weeks: forming.
+        write(
+            r,
+            "ga1",
+            "2026-10-10",
+            "",
+            None,
+            "Garden compost beds and tomato seedlings.",
+        );
+        write(
+            r,
+            "ga2",
+            "2026-10-18",
+            "",
+            None,
+            "Tomato seedlings need the compost garden beds warmer.",
+        );
+        write(
+            r,
+            "ga3",
+            "2026-10-25",
+            "",
+            None,
+            "Compost for the garden tomato beds is ready.",
+        );
+        // An unrelated question nobody came back to.
+        write(
+            r,
+            "q1",
+            "2026-05-02",
+            "",
+            None,
+            "Should the sailing club change its membership fees?",
+        );
+        let vault = Arc::new(Vault::open(r).unwrap());
+        vault.rescan().unwrap();
+        let sem = Semantic::new(vault.clone(), Arc::new(UserState::open_in_memory().unwrap())).unwrap();
+        sem.set_embedder(Box::new(HashEmbedder::default())).unwrap();
+        sem.index_now().unwrap();
+        (dir, vault, sem)
+    }
+
+    fn today() -> chrono::NaiveDate {
+        chrono::NaiveDate::from_ymd_opt(2026, 11, 2).unwrap()
+    }
+
+    #[test]
+    fn themes_sections_and_signals() {
+        let (_d, _v, sem) = notebook();
+        sem.refresh_ideas_at(today()).unwrap();
+        let o = sem.ideas_overview().unwrap();
+        let names = |v: &[ideas::ThemeSummary]| v.iter().map(|t| t.name.clone()).collect::<Vec<_>>();
+        assert_eq!(o.returning.len(), 1, "returning: {:?}", names(&o.returning));
+        let vc = &o.returning[0];
+        assert_eq!(vc.note_count, 4);
+        assert_eq!(vc.labels, vec!["VC"]);
+        assert_eq!(vc.active_months, 4);
+        assert!(
+            vc.name.contains("outlier") || vc.name.contains("fund") || vc.name.contains("ownership"),
+            "{}",
+            vc.name
+        );
+        assert_eq!(vc.months.len(), 12);
+        assert_eq!(vc.months.last().unwrap().month, "2026-11");
+        assert_eq!(o.dormant.len(), 1, "dormant: {:?}", names(&o.dormant));
+        assert_eq!(o.dormant[0].labels, vec!["Travel"]);
+        assert_eq!(o.forming.len(), 1, "forming: {:?}", names(&o.forming));
+
+        // The source note is shown as influencing later personal notes.
+        assert_eq!(o.influences[0].source.id, "vc1");
+        assert!(o.influences[0].later.iter().any(|n| n.id == "vc2"));
+
+        // The sailing question was never picked up again.
+        assert!(o.open_questions.iter().any(|q| q.note.id == "q1"));
+
+        // Timeline: oldest first, with revisit and possible revision marked.
+        let tl = sem.theme_timeline(&vc.id).unwrap().unwrap();
+        let ids: Vec<_> = tl.entries.iter().map(|e| e.note.id.as_str()).collect();
+        assert_eq!(ids, ["vc1", "vc2", "vc3", "vc4"]);
+        let last = &tl.entries[3];
+        assert!(last.revisits.is_some());
+        assert!(last.may_revise, "'but… tension' suggests rethinking");
+        assert!(last.is_question);
+        assert_eq!(tl.entries[1].influenced_by.as_ref().map(|n| n.id.as_str()), Some("vc1"));
+
+        assert_eq!(sem.note_theme("vc2").unwrap().map(|t| t.id), Some(vc.id.clone()));
+        assert!(sem.note_theme("q1").unwrap().is_none());
+    }
+
+    #[test]
+    fn theme_identity_survives_new_notes() {
+        let (d, v, sem) = notebook();
+        sem.refresh_ideas_at(today()).unwrap();
+        let before = sem.ideas_overview().unwrap().returning[0].id.clone();
+        write(
+            d.path(),
+            "vc5",
+            "2026-10-30",
+            "VC",
+            None,
+            "Outlier companies and fund returns again: ownership matters.",
+        );
+        v.rescan().unwrap();
+        sem.index_now().unwrap();
+        assert!(sem.ideas_overview().unwrap().stale, "new vectors make the model stale");
+        sem.refresh_ideas_at(today()).unwrap();
+        let after = sem.ideas_overview().unwrap();
+        let vc = after
+            .returning
+            .iter()
+            .chain(&after.forming)
+            .find(|t| t.labels == ["VC"])
+            .unwrap();
+        assert_eq!(vc.id, before, "same theme keeps its id");
+        assert_eq!(vc.note_count, 5);
+    }
+
+    #[test]
+    fn off_without_model() {
+        let dir = tempfile::tempdir().unwrap();
+        let vault = Arc::new(Vault::open(dir.path()).unwrap());
+        let sem = Semantic::new(vault, Arc::new(UserState::open_in_memory().unwrap())).unwrap();
+        assert!(!sem.ideas_overview().unwrap().enabled);
     }
 }

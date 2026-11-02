@@ -725,7 +725,7 @@ mod tests {
             fs::copy(e.path(), to).unwrap();
         }
         let v = Vault::open(dir.path()).unwrap();
-        assert_eq!(v.rescan().unwrap().indexed, 33);
+        assert_eq!(v.rescan().unwrap().indexed, 37);
         let notes = v
             .list(&ListQuery {
                 limit: Some(100),
@@ -733,7 +733,7 @@ mod tests {
             })
             .unwrap();
         assert!(
-            notes.iter().filter(|n| !n.id.starts_with("p-")).count() == 32,
+            notes.iter().filter(|n| !n.id.starts_with("p-")).count() == 36,
             "all but the imported file have ids"
         );
         assert_eq!(v.search("ownership", 50).unwrap().len(), 5);

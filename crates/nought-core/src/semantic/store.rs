@@ -4,6 +4,8 @@
 //! notes index, renaming files or re-saving an unchanged note never re-runs
 //! the model.
 
+use std::collections::{HashMap, HashSet};
+
 use rusqlite::{params, Connection, OptionalExtension};
 
 use super::chunk::Chunk;
@@ -23,6 +25,11 @@ pub(crate) fn init(conn: &Connection) -> Result<()> {
              model   TEXT NOT NULL,
              hash    TEXT NOT NULL,
              PRIMARY KEY (note_id, model)
+         );
+         CREATE TABLE IF NOT EXISTS theme_members (
+             theme_id TEXT NOT NULL,
+             note_id  TEXT NOT NULL,
+             PRIMARY KEY (theme_id, note_id)
          );
          CREATE TABLE IF NOT EXISTS vec_cache (
              model     TEXT NOT NULL,
@@ -158,6 +165,56 @@ pub(crate) fn sweep(conn: &mut Connection) -> Result<Vec<String>> {
     )?;
     tx.commit()?;
     Ok(gone)
+}
+
+/// Every note with the fields temporal analysis needs.
+pub(crate) fn note_rows(conn: &Connection) -> Result<Vec<super::ideas::NoteRow>> {
+    let mut stmt = conn.prepare(
+        "SELECT n.id, n.day, n.created_ms, n.kind, n.title || char(10) || n.body,
+                (SELECT group_concat(label, char(31)) FROM note_labels WHERE note_id = n.id)
+         FROM notes n ORDER BY n.created_ms",
+    )?;
+    let rows = stmt.query_map([], |r| {
+        let day: String = r.get(1)?;
+        let kind: String = r.get(3)?;
+        let labels: Option<String> = r.get(5)?;
+        Ok(super::ideas::NoteRow {
+            id: r.get(0)?,
+            day: chrono::NaiveDate::parse_from_str(&day, "%Y-%m-%d").unwrap_or_default(),
+            created_ms: r.get(2)?,
+            kind: crate::note::NoteKind::parse(&kind).unwrap_or(crate::note::NoteKind::Personal),
+            text: r.get(4)?,
+            labels: labels
+                .map(|l| l.split('\u{1f}').map(str::to_string).collect())
+                .unwrap_or_default(),
+        })
+    })?;
+    Ok(rows.collect::<rusqlite::Result<_>>()?)
+}
+
+pub(crate) fn load_themes(conn: &Connection) -> Result<HashMap<String, HashSet<String>>> {
+    let mut stmt = conn.prepare("SELECT theme_id, note_id FROM theme_members")?;
+    let mut out: HashMap<String, HashSet<String>> = HashMap::new();
+    for row in stmt.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))? {
+        let (t, n) = row?;
+        out.entry(t).or_default().insert(n);
+    }
+    Ok(out)
+}
+
+pub(crate) fn save_themes(conn: &mut Connection, themes: &[(String, Vec<String>)]) -> Result<()> {
+    let tx = conn.transaction()?;
+    tx.execute("DELETE FROM theme_members", [])?;
+    for (t, members) in themes {
+        for n in members {
+            tx.execute(
+                "INSERT OR IGNORE INTO theme_members (theme_id, note_id) VALUES (?1, ?2)",
+                params![t, n],
+            )?;
+        }
+    }
+    tx.commit()?;
+    Ok(())
 }
 
 fn to_blob(v: &[f32]) -> Vec<u8> {
