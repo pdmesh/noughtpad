@@ -9,6 +9,21 @@ This document turns that thesis into a concrete architecture and build plan. Ite
 
 ---
 
+## 0. Decisions log
+
+| Date | Decision |
+|---|---|
+| 2026-11-02 | Desktop only for v1. No mobile app. |
+| 2026-11-02 | No migration or import from other tools in v1. Nought starts its own vault. Files stay Obsidian-*readable*. |
+| 2026-11-02 | AI tiers: deterministic → local embeddings → small local **non-generative** models (e.g. Laya-class decision/classifier models) → **bring-your-own LLM** (key or endpoint), opt-in, only for advanced tasks. |
+| 2026-11-02 | Open-source licence (exact licence to confirm). |
+| 2026-11-02 | English first; language-pluggable architecture (§11). |
+| 2026-11-02 | Source metadata entered manually in v1; no web clipper. |
+| 2026-11-02 | Distraction-free capture: metadata/chrome hidden, revealed on hover/focus or a toggle. |
+| 2026-11-02 | Primary user is the product owner (dogfooding). |
+
+---
+
 ## 1. Goals distilled
 
 | # | Goal | Design consequence |
@@ -79,8 +94,10 @@ Key idea: **three kinds of data, three lifetimes.**
 | Vector search | **sqlite-vec** | Vectors live in the same SQLite file; brute-force KNN is fine at personal scale | MIT/Apache-2.0 |
 | Embeddings | **fastembed-rs** (ONNX Runtime) with `bge-small-en-v1.5` or `nomic-embed-text-v1.5`; `multilingual-e5-small` if non-English | In-process, CPU, roughly 30–130 MB models. Check each model's licence | Apache-2.0 (lib) |
 | Clustering / themes | **HDBSCAN** (`hdbscan` crate) on embeddings + c-TF-IDF keywords (BERTopic-style, deterministic) | Themes without an LLM; an LLM only *names* them, optionally | MIT/Apache |
-| Local LLM (optional) | **Ollama** or **llama.cpp server** via its OpenAI-compatible HTTP API | Not bundled; detected if present. Keeps the app small (G8) | MIT |
-| Remote LLM (optional) | Anthropic Claude / OpenAI-compatible, via one `LlmProvider` trait | Explicit opt-in, per-request transparency | — |
+| Small local classifier (optional, Tier 2) | Encoder models (ModernBERT-class, e.g. **Laya**, ~400M, Apache-2.0) run via **ort** (ONNX Runtime) | Non-generative, so it can't invent text. Used for yes/no and label decisions (§6.5) | Apache-2.0 / MIT |
+| LLM, bring your own (optional, Tier 3) | One `LlmProvider` trait: OpenAI-compatible HTTP (covers Ollama, llama.cpp, LM Studio, OpenRouter) and Anthropic native | Explicit opt-in. A per-request banner shows which notes leave the machine | — |
+| Markdown ↔ HTML on paste/copy | **turndown** + `turndown-plugin-gfm` (HTML→MD), **markdown-it** (MD→HTML) | Clipboard behaves the way it does in Obsidian (§7.1) | MIT |
+| Diagrams / math | **mermaid**, **KaTeX** | Rendered in the editor's live preview | MIT |
 | Background jobs | Tokio task queue inside core, persisted in SQLite (`jobs` table) | No extra service | MIT |
 | Migrations | **rusqlite_migration** | Simple | Apache-2.0 |
 | Global quick-capture hotkey | `tauri-plugin-global-shortcut` | Capture from anywhere (G1) | MIT/Apache |
@@ -199,7 +216,24 @@ theme that elaborates them).
 
 An LLM is used only to *narrate* these signals on demand, and always with citations.
 
-### 6.5 Thinking workspace (on demand)
+### 6.5 Small non-generative models (Tier 2)
+Encoder/decision models such as Laya output a label or a score, never prose. That suits the
+"quiet librarian" role: they cannot rewrite or hallucinate content. Candidate tasks:
+
+| Task | Input | Output |
+|---|---|---|
+| Relation typing | (note A, note B) pair | similar / elaborates / supports / conflicts / raises-question + score |
+| Is this an open question? | note | yes/no (feeds "unresolved questions") |
+| Stance shift | (earlier note, later note) in the same theme | same / refined / reversed |
+| Theme membership check | (theme keywords, note) | belongs / doesn't (stabilises clusters) |
+| Should we escalate to the LLM? | task context | yes/no (keeps BYO-LLM calls rare) |
+
+The interface is `trait Classifier { fn classify(&self, inputs, labels) -> Scores }`, which lets
+models be swapped. The fallback is zero-shot via embedding similarity to label descriptions, so
+Tier 2 is never required. The candidate model gets evaluated on a hand-labelled set of my own
+note pairs before it is adopted. Model claims so far come from secondary write-ups.
+
+### 6.6 Thinking workspace (on demand)
 Retrieval-augmented: hybrid search over the notebook, then the top-k notes with their dates, then
 the LLM, with a prompt that requires `[[note-id]]` citations. Answers are rendered with clickable
 citations, and nothing is saved unless the user clicks **Keep**, which writes to
@@ -210,10 +244,32 @@ which notes before a remote call.
 
 ## 7. Screens (MVP shape)
 
+### 7.1 Editor: Obsidian-style live preview on CodeMirror 6
+- **Live preview:** Markdown renders inline (headings, bold, links, task checkboxes, images,
+  tables). The raw syntax reappears only on the line the cursor is on. A source-mode toggle is
+  available. The file on disk is exactly what you typed.
+- **Paste:** plain text or Markdown is inserted as-is. HTML from a browser or Docs is converted
+  to Markdown (turndown + GFM tables). Pasting an image saves it to `attachments/` and inserts
+  `![](…)`. Pasting a URL over selected text makes a link.
+- **Copy:** puts the Markdown text on the clipboard as `text/plain`, plus rendered HTML as
+  `text/html`. Pasting into a Markdown tool gives Markdown; pasting into email or Docs gives
+  formatted text.
+- **Fenced-block renderers:** ```` ```mermaid ````, `$$math$$` (KaTeX) and syntax-highlighted code
+  are rendered as widgets when the cursor is outside them. This is the same idea as Obsidian's
+  code-block processors.
+- **Plugins:** Obsidian's own plugins can't run, because they depend on Obsidian's closed API. Nought
+  instead exposes a small plugin API: block renderers keyed by fence language, CM6 extensions,
+  and commands. Mermaid, KaTeX and callouts ship as built-in plugins written against that same API.
+- Reference implementations to study: SilverBullet (MIT, CM6 live preview) and Zettlr (GPL;
+  ideas only, no code reuse).
+
+### 7.2 Screens
 - **Notebook (home):** a large blank editor at the top (cursor already there). Below it is the
-  chronological stream grouped by day. A small, collapsed "＋ source · labels" affordance sits under
-  the editor. `⌘K` opens search/palette and `⌘N` starts a new note. A global hotkey opens a
-  floating capture window.
+  chronological stream grouped by day. **Distraction-free by default:** the sidebar, the
+  "source · labels" strip and the toolbar are hidden. They fade in when the pointer is near the
+  edges or over the note header, or with a toggle button or `⌘\`. Nothing appears while you type.
+  `⌘K` opens search/palette and `⌘N` starts a new note. A global hotkey opens a floating capture
+  window.
 - **Journal:** personal notes by day, week or month. The monthly log is assembled
   deterministically; "Reflect on this month" is an explicit button that calls the AI.
 - **Collections:** a label sidebar (like Gmail). Clicking a label filters the stream.
@@ -254,12 +310,19 @@ Each milestone ships something that is usable on its own. M1 needs no ML.
 
 ## 10. Open questions
 
-See the accompanying discussion. These are the ones that change the build:
 1. Desktop shell & language comfort (Tauri/Rust vs Electron/all-TypeScript).
-2. Mobile capture in v1?
-3. Obsidian: open existing vaults at launch, or import later?
-4. Default AI posture and preferred remote provider.
-5. Languages of notes (affects embedding model).
-6. Licence / open-source intent for this repo.
-7. Expected scale (hundreds vs tens of thousands of notes) and first user (dogfooding by you?).
-8. Browser clipping in v1, or manual source metadata only?
+2. Exact licence (Apache-2.0 proposed).
+
+---
+
+## 11. Language extensibility (English first)
+
+- Each note gets a `lang` field in the index, detected with **whatlang** (MIT) and never written to
+  the file.
+- FTS5 tokenizer chosen per language: `porter unicode61` for English, `unicode61
+  remove_diacritics 2` for other Latin scripts, `trigram` for CJK. Notes go into per-language FTS
+  tables behind one search API.
+- The embedding model is recorded in `meta`. Moving to multilingual means switching to
+  `multilingual-e5-small` and running a reindex, with no schema change.
+- Stopwords and keyword extraction sit behind a `LanguagePack` trait. English ships first.
+- UI strings go through i18n keys from day one (`i18next`), even though only English ships.
