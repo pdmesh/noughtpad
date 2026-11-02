@@ -399,6 +399,43 @@ button {
   color: var(--fg);
 }
 
+.label-combo {
+  position: relative;
+}
+.label-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: -8px;
+  z-index: 30;
+  min-width: 220px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 4px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.12);
+}
+.label-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 0.86rem;
+  color: var(--fg);
+  cursor: pointer;
+}
+.label-option[data-selected="true"] {
+  background: var(--accent-soft);
+}
+.label-create {
+  justify-content: flex-start;
+  gap: 6px;
+  color: var(--fg-muted);
+}
+
 .chip {
   display: inline-flex;
   align-items: center;

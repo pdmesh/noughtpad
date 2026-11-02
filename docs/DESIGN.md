@@ -88,7 +88,7 @@ Key idea: **three kinds of data, three lifetimes.**
 |---|---|---|---|
 | Desktop shell | **Tauri 2** | Small binary, fast startup, low idle RAM (G1, G8); iOS/Android targets exist for a later capture app. Alt: Electron (all-TypeScript, heavier) | MIT/Apache-2.0 |
 | UI | **React + TypeScript + Vite** | Largest ecosystem | MIT |
-| UI kit | **shadcn/ui (Radix) + Tailwind** | Accessible primitives, owned code, calm aesthetic | MIT |
+| UI kit | Small hand-written components on shared CSS tokens (`src/styles.css`); **cmdk** for anything with keyboard-driven lists (⌘K palette, label combobox); **lucide** icons. Never native widgets that can't be themed (e.g. `<datalist>`) | The surface is tiny and deliberately quiet. Reconsider shadcn/ui (Radix + Tailwind) when settings or dialog-heavy screens arrive | MIT |
 | Command palette / quick search | **cmdk** | Standard, fast | MIT |
 | Long lists | **TanStack Virtual**, **TanStack Query** | Chronological stream of 10k+ notes | MIT |
 | Editor | **CodeMirror 6** + `@codemirror/lang-markdown` + live-preview decorations | Edits the raw Markdown text directly, so files are preserved byte-for-byte (G2). Obsidian uses it. Alt: TipTap/Milkdown (nicer WYSIWYG, but Markdown round-trips are lossy) | MIT |

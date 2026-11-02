@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { BookOpen, Link2, Tag, X } from "lucide-react";
 import { api, type EditableMeta } from "../lib/api";
+import { LabelInput } from "./LabelInput";
 
 interface Props {
   meta: EditableMeta;
@@ -13,7 +14,6 @@ interface Props {
  * filled), so the blank page stays blank.
  */
 export function MetaStrip({ meta, onChange }: Props) {
-  const [labelDraft, setLabelDraft] = useState("");
   const [showSource, setShowSource] = useState(false);
   const { data: allLabels = [] } = useQuery({ queryKey: ["notes", "labels"], queryFn: api.labels });
 
@@ -21,25 +21,10 @@ export function MetaStrip({ meta, onChange }: Props) {
   const filled = meta.labels.length > 0 || hasSource;
   const sourceOpen = showSource || hasSource;
 
-  const addLabel = (raw: string) => {
-    const parts = raw.split(",").map((s) => s.trim().replace(/^#/, "")).filter(Boolean);
-    if (!parts.length) return;
-    const existing = new Set(meta.labels.map((l) => l.toLowerCase()));
-    const fresh = parts
-      .map((p) => allLabels.find((l) => l.label.toLowerCase() === p.toLowerCase())?.label ?? p)
-      .filter((p) => !existing.has(p.toLowerCase()));
-    onChange({ ...meta, labels: [...meta.labels, ...fresh] });
-    setLabelDraft("");
-  };
-
   const setSource = (field: "title" | "url", value: string) => {
     const source = { ...(meta.source ?? {}), [field]: value };
     onChange({ ...meta, source });
   };
-
-  const suggestions = allLabels
-    .filter((l) => !meta.labels.some((m) => m.toLowerCase() === l.label.toLowerCase()))
-    .slice(0, 50);
 
   return (
     <div className={`meta-strip ${filled ? "meta-filled" : "meta-empty"}`}>
@@ -57,32 +42,12 @@ export function MetaStrip({ meta, onChange }: Props) {
             </button>
           </span>
         ))}
-        <input
-          className="meta-input"
-          list="nought-labels"
-          value={labelDraft}
-          placeholder={meta.labels.length ? "" : "Add label"}
-          aria-label="Add label"
-          onChange={(e) => {
-            const v = e.target.value;
-            if (v.endsWith(",")) addLabel(v);
-            else setLabelDraft(v);
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              addLabel(labelDraft);
-            } else if (e.key === "Backspace" && !labelDraft && meta.labels.length) {
-              onChange({ ...meta, labels: meta.labels.slice(0, -1) });
-            }
-          }}
-          onBlur={() => labelDraft && addLabel(labelDraft)}
+        <LabelInput
+          current={meta.labels}
+          all={allLabels}
+          onAdd={(labels) => onChange({ ...meta, labels: [...meta.labels, ...labels] })}
+          onRemoveLast={() => onChange({ ...meta, labels: meta.labels.slice(0, -1) })}
         />
-        <datalist id="nought-labels">
-          {suggestions.map((l) => (
-            <option key={l.label} value={l.label} />
-          ))}
-        </datalist>
         {!sourceOpen && (
           <button className="meta-add" onClick={() => setShowSource(true)}>
             <BookOpen size={13} aria-hidden /> Add source
