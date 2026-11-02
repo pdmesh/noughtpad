@@ -18,6 +18,8 @@ pub enum Error {
     OutsideVault(PathBuf),
     #[error("note changed on disk since it was opened: {0}")]
     Conflict(String),
+    #[error("embedding error: {0}")]
+    Embedding(String),
     #[error("watcher error: {0}")]
     Watch(#[from] notify_debouncer_full::notify::Error),
 }

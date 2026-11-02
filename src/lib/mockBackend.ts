@@ -1,7 +1,7 @@
 // In-memory stand-in for the Rust backend, used only when the UI runs in a
 // plain browser (no Tauri). It mimics command shapes, not search quality.
 
-import type { DaySummary, EditableMeta, LabelCount, ListQuery, NoteDoc, NoteSummary } from "./api";
+import type { DaySummary, EditableMeta, LabelCount, ListQuery, NoteDoc, NoteSummary, Related, RelatedNotes, SemanticStatus } from "./api";
 
 interface MockNote {
   id: string;
@@ -142,6 +142,76 @@ const get = (id: string) => {
   return n;
 };
 
+// ---- semantic features (simulated with word overlap) ----------------------
+
+type Listener = (payload: unknown) => void;
+const listeners = new Map<string, Set<Listener>>();
+
+export function mockOn(name: string, handler: Listener): () => void {
+  if (!listeners.has(name)) listeners.set(name, new Set());
+  listeners.get(name)!.add(handler);
+  return () => listeners.get(name)!.delete(handler);
+}
+
+function emit(name: string, payload: unknown) {
+  listeners.get(name)?.forEach((h) => h(payload));
+}
+
+let semantic: SemanticStatus = { state: "off" };
+function setSemantic(s: SemanticStatus) {
+  semantic = s;
+  emit("semantic-status", s);
+}
+
+async function simulateEnable() {
+  const total = 34_000_000;
+  for (let r = 0; r <= total; r += 4_250_000) {
+    setSemantic({ state: "downloading", received: r, total });
+    await new Promise((res) => setTimeout(res, 120));
+  }
+  setSemantic({ state: "loading" });
+  await new Promise((res) => setTimeout(res, 200));
+  for (let d = 0; d <= notes.length; d += Math.max(1, Math.ceil(notes.length / 5))) {
+    setSemantic({ state: "indexing", done: d, total: notes.length });
+    await new Promise((res) => setTimeout(res, 150));
+  }
+  setSemantic({ state: "ready", notes: notes.length });
+}
+
+const dismissed = new Set<string>();
+const pairKey = (a: string, b: string) => [a, b].sort().join("|");
+const stop = new Set("the and that this with for are was not but what they how have from more than just into about".split(" "));
+const wordsOf = (t: string) =>
+  new Set(t.toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 3 && !stop.has(w)).map((w) => w.replace(/s$/, "")));
+
+function related(id: string, limit: number): RelatedNotes {
+  if (semantic.state !== "ready" && semantic.state !== "indexing") return { enabled: false, pending: false, items: [] };
+  const me = get(id);
+  const mine = wordsOf(me.content);
+  const items: Related[] = notes
+    .filter((n) => n.id !== id && !dismissed.has(pairKey(id, n.id)))
+    .map((n) => {
+      const theirs = wordsOf(n.content);
+      const shared = [...mine].filter((w) => theirs.has(w)).length;
+      const score = shared / Math.sqrt(Math.max(1, mine.size * theirs.size));
+      return { n, score };
+    })
+    .filter((x) => x.score >= 0.12)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+    .map(({ n, score }) => ({
+      note: summary(n),
+      score,
+      strength: score >= 0.25 ? "strong" : "possible",
+      passage: n.content.slice(0, 280),
+      sourcePassage: null,
+      sharedLabels: n.labels.filter((l) => me.labels.some((m) => m.toLowerCase() === l.toLowerCase())),
+      sameSource: me.source?.title && n.source?.title === me.source.title ? n.source.title : null,
+      daysApart: Math.round((Date.parse(n.created) - Date.parse(me.created)) / 86_400_000),
+    }));
+  return { enabled: true, pending: false, items };
+}
+
 export async function mock(cmd: string, a: Record<string, any> = {}): Promise<unknown> {
   await new Promise((r) => setTimeout(r, 5));
   switch (cmd) {
@@ -180,9 +250,25 @@ export async function mock(cmd: string, a: Record<string, any> = {}): Promise<un
         .map((note) => {
           let snippet = note.excerpt;
           for (const w of words) snippet = snippet.replace(new RegExp(`(${w.replace(/[^\w]/g, "")})`, "ig"), "\u0002$1\u0003");
-          return { note, snippet, score: 1 };
+          return { note, snippet, score: 1, matched: semantic.state === "ready" ? "both" : "text" };
         });
     }
+    case "semantic_status":
+      return semantic;
+    case "enable_semantic":
+      void simulateEnable();
+      return semantic;
+    case "disable_semantic":
+      setSemantic({ state: "off" });
+      return semantic;
+    case "related_notes":
+      return related(a.id, a.limit ?? 8);
+    case "dismiss_related":
+      dismissed.add(pairKey(a.a, a.b));
+      return null;
+    case "undismiss_related":
+      dismissed.delete(pairKey(a.a, a.b));
+      return null;
     case "get_note":
       return doc(get(a.id));
     case "create_note": {

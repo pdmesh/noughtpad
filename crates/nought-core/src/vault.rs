@@ -124,6 +124,15 @@ impl Vault {
         &self.root
     }
 
+    /// Run `f` with exclusive access to the index (for the semantic layer).
+    pub(crate) fn with_index<R>(&self, f: impl FnOnce(&mut Index) -> R) -> R {
+        f(&mut self.ix())
+    }
+
+    pub fn summary(&self, id: &str) -> Result<Option<NoteSummary>> {
+        self.ix().get(id)
+    }
+
     fn ix(&self) -> MutexGuard<'_, Index> {
         // A panic while holding the lock can't leave the derived index in a state
         // worse than "stale", so recover rather than poison the whole app.

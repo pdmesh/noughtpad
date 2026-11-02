@@ -29,6 +29,22 @@ jobs:
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo test --workspace
 
+  # Downloads the real embedding model and checks that the similarity
+  # thresholds separate related from unrelated notes.
+  model:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/nought-model
+          key: model-bge-small-en-v1.5-q
+      - run: cargo test -p nought-core --features embedding-static -- --ignored --nocapture model_
+        env:
+          NOUGHT_MODEL_DIR: /home/runner/.cache/nought-model
+
   web:
     runs-on: ubuntu-24.04
     steps:

@@ -56,6 +56,16 @@ pub struct SearchHit {
     /// Snippet with matches wrapped in U+0002 … U+0003 (the UI renders them).
     pub snippet: String,
     pub score: f64,
+    /// Whether the note matched the words, the meaning, or both.
+    pub matched: MatchKind,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum MatchKind {
+    Text,
+    Meaning,
+    Both,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
@@ -200,6 +210,11 @@ fn upsert_in(tx: &rusqlite::Transaction, n: &IndexedNote) -> Result<()> {
 }
 
 impl Index {
+    /// Raw connection for sibling modules (the semantic store shares this file).
+    pub(crate) fn conn(&mut self) -> &mut Connection {
+        &mut self.conn
+    }
+
     pub fn remove_path(&mut self, path: &str) -> Result<bool> {
         let tx = self.conn.transaction()?;
         let rowid: Option<i64> = tx
@@ -277,6 +292,7 @@ impl Index {
                 .list(&q)?
                 .into_iter()
                 .map(|note| SearchHit {
+                    matched: MatchKind::Text,
                     snippet: note.excerpt.clone(),
                     note,
                     score: 0.0,
@@ -309,6 +325,7 @@ impl Index {
                 note.excerpt.clone()
             };
             Ok(SearchHit {
+                matched: MatchKind::Text,
                 note,
                 snippet,
                 score: -rank,
@@ -520,17 +537,21 @@ fn group_by_day(notes: Vec<NoteSummary>) -> Vec<DaySummary> {
     days
 }
 
+/// A search query split into a safe FTS5 expression, free text and filters.
 #[derive(Debug, Default, PartialEq)]
-struct ParsedQuery {
-    fts: Option<String>,
-    label: Option<String>,
-    kind: Option<NoteKind>,
+pub struct ParsedQuery {
+    pub fts: Option<String>,
+    /// The words and phrases without filters, for semantic matching.
+    pub text: String,
+    pub label: Option<String>,
+    pub kind: Option<NoteKind>,
 }
 
 /// Turn free text into a safe FTS5 expression plus structured filters.
-fn parse_query(input: &str) -> ParsedQuery {
+pub fn parse_query(input: &str) -> ParsedQuery {
     let mut out = ParsedQuery::default();
     let mut terms: Vec<String> = Vec::new();
+    let mut words: Vec<String> = Vec::new();
     let mut chars = input.chars().peekable();
     let mut trailing_word = false;
     while let Some(&c) = chars.peek() {
@@ -543,6 +564,7 @@ fn parse_query(input: &str) -> ParsedQuery {
             let phrase: String = chars.by_ref().take_while(|&c| c != '"').collect();
             if !phrase.trim().is_empty() {
                 terms.push(format!("\"{}\"", phrase.trim().replace('"', "")));
+                words.push(phrase.trim().to_string());
             }
             trailing_word = false;
             continue;
@@ -569,6 +591,7 @@ fn parse_query(input: &str) -> ParsedQuery {
             let clean = clean.trim_matches(['-', '\'']).to_string();
             if !clean.is_empty() {
                 terms.push(format!("\"{clean}\""));
+                words.push(word.clone());
                 trailing_word = true;
             }
         }
@@ -578,6 +601,7 @@ fn parse_query(input: &str) -> ParsedQuery {
             last.push('*');
         }
     }
+    out.text = words.join(" ");
     if !terms.is_empty() {
         out.fts = Some(terms.join(" "));
     }

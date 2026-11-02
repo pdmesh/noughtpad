@@ -5,6 +5,8 @@ import { api, isApiError, onEvent, pickFolder, type VaultInfo } from "./lib/api"
 import { NotePane } from "./components/NotePane";
 import { Stream } from "./components/Stream";
 import { SearchPalette } from "./components/SearchPalette";
+import { RelatedPanel } from "./components/RelatedPanel";
+import { describeStatus, useSemanticStatus } from "./lib/useSemantic";
 import { Journal } from "./views/Journal";
 import type { EditorHandle } from "./editor/Editor";
 
@@ -59,7 +61,12 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [chromePinned, setChromePinned] = useState(() => readPref("nought.chrome") === "pinned");
   const [paletteOpen, setPaletteOpen] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ text: string; undo?: () => void } | null>(null);
+  const setNotice = useCallback((text: string | null, undo?: () => void) => setToast(text ? { text, undo } : null), []);
+  // "Explore this note": the related-notes panel, opened on demand only.
+  const [relatedOpen, setRelatedOpen] = useState(false);
+  const semantic = useSemanticStatus();
+  const semanticLine = describeStatus(semantic);
   const editorRef = useRef<EditorHandle | null>(null);
   const newSeq = useRef(0);
 
@@ -134,11 +141,17 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
       } else if (mod && e.key === "\\") {
         e.preventDefault();
         toggleChrome();
+      } else if (mod && e.key.toLowerCase() === "j") {
+        e.preventDefault();
+        setView({ kind: "write" });
+        setRelatedOpen((o) => !o);
+      } else if (e.key === "Escape" && relatedOpen && !paletteOpen) {
+        setRelatedOpen(false);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [newNote, toggleChrome]);
+  }, [newNote, toggleChrome, relatedOpen, paletteOpen]);
 
   // Backend events: external file changes and the global quick-capture shortcut.
   useEffect(() => {
@@ -165,15 +178,17 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
   }, []);
 
   useEffect(() => {
-    if (!notice) return;
-    const t = setTimeout(() => setNotice(null), 5000);
+    if (!toast) return;
+    const t = setTimeout(() => setNotice(null), toast?.undo ? 8000 : 5000);
     return () => clearTimeout(t);
-  }, [notice]);
+  }, [toast, setNotice]);
 
   const label = view.kind === "notes" ? view.label : undefined;
 
   return (
-    <div className={`app ${chromePinned ? "chrome-pinned" : "chrome-auto"} ${typing ? "is-typing" : ""}`}>
+    <div
+      className={`app ${chromePinned ? "chrome-pinned" : "chrome-auto"} ${typing ? "is-typing" : ""} ${relatedOpen && view.kind === "write" ? "related-open" : ""}`}
+    >
       <div className="sidebar-hotzone" aria-hidden />
       <aside className="sidebar chrome" aria-label="Navigation">
         <nav className="sidebar-section">
@@ -190,6 +205,7 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
           </nav>
         )}
         <div className="sidebar-footer">
+          {semanticLine && <p className="sidebar-status">{semanticLine}</p>}
           <button className="vault-path" title={`${vault.path}\nClick to switch folder`} onClick={onSwitchVault}>
             <FolderOpen size={13} aria-hidden /> {vault.path.split(/[\\/]/).pop()}
           </button>
@@ -230,6 +246,7 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
             onCreated={setCurrentId}
             onTrashed={newNote}
             onNotice={setNotice}
+            onShowRelated={() => setRelatedOpen(true)}
             editorRef={editorRef}
           />
           {listUnderEditor && <Stream query={{}} currentId={currentId} onOpen={openNote} onLabel={showLabel} />}
@@ -262,10 +279,34 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
         showLabel={showLabel}
         toggleChrome={toggleChrome}
         rebuildIndex={() => void rebuildIndex()}
+        toggleRelated={() => {
+          setView({ kind: "write" });
+          setRelatedOpen((o) => !o);
+        }}
+        semanticOn={semantic.state !== "off"}
+        toggleSemantic={() =>
+          void (semantic.state === "off" ? api.enableSemantic() : api.disableSemantic()).then(() =>
+            qc.invalidateQueries({ queryKey: ["semantic-status"] }),
+          )
+        }
       />
-      {notice && (
+      {relatedOpen && view.kind === "write" && (
+        <RelatedPanel noteId={currentId} onOpen={openNote} onClose={() => setRelatedOpen(false)} onNotice={setNotice} />
+      )}
+      {toast && (
         <div className="toast" role="status">
-          {notice}
+          {toast.text}
+          {toast.undo && (
+            <button
+              className="toast-undo"
+              onClick={() => {
+                toast.undo?.();
+                setNotice(null);
+              }}
+            >
+              Undo
+            </button>
+          )}
         </div>
       )}
     </div>

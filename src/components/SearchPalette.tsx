@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Command } from "cmdk";
 import { useQuery } from "@tanstack/react-query";
-import { BookOpen, CalendarDays, FilePlus2, Notebook, PanelLeft, RefreshCw, Rows3, Tag } from "lucide-react";
+import { BookOpen, CalendarDays, FilePlus2, Notebook, PanelLeft, RefreshCw, Rows3, Sparkle, Tag, Waypoints } from "lucide-react";
 import { api } from "../lib/api";
 import { formatDay, plainExcerpt, snippetParts } from "../lib/format";
 
@@ -15,6 +15,9 @@ export interface PaletteActions {
   showLabel: (label: string) => void;
   toggleChrome: () => void;
   rebuildIndex: () => void;
+  toggleRelated: () => void;
+  semanticOn: boolean;
+  toggleSemantic: () => void;
 }
 
 interface Props extends PaletteActions {
@@ -81,6 +84,7 @@ export function SearchPalette({ open, onClose, ...actions }: Props) {
                     {snippetParts(plainSnippet(h.snippet)).map(([t, m], i) => (m ? <mark key={i}>{t}</mark> : <span key={i}>{t}</span>))}
                   </div>
                   <div className="palette-meta">
+                    {h.matched === "meaning" && <span className="palette-badge">similar meaning</span>}
                     {formatDay(h.note.day)}
                     {h.note.source?.title && (
                       <>
@@ -116,6 +120,12 @@ export function SearchPalette({ open, onClose, ...actions }: Props) {
                 icon={<Rows3 size={14} />}
                 label={actions.listUnderEditor ? "Hide note list under the editor" : "Show note list under the editor"}
                 onSelect={run(actions.toggleListUnderEditor)}
+              />
+              <Cmd icon={<Waypoints size={14} />} label="Related notes" hint="⌘J" onSelect={run(actions.toggleRelated)} />
+              <Cmd
+                icon={<Sparkle size={14} />}
+                label={actions.semanticOn ? "Turn off search by meaning (local model)" : "Turn on search by meaning (local model)"}
+                onSelect={run(actions.toggleSemantic)}
               />
               <Cmd icon={<RefreshCw size={14} />} label="Rebuild search index" onSelect={run(actions.rebuildIndex)} />
             </Command.Group>

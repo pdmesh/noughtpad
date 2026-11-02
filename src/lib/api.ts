@@ -3,7 +3,7 @@
 // mock backend is used so the UI can be developed and screenshotted.
 
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
-import { mock } from "./mockBackend";
+import { mock, mockOn } from "./mockBackend";
 
 export type NoteKind = "personal" | "source";
 
@@ -50,6 +50,34 @@ export interface SearchHit {
   note: NoteSummary;
   snippet: string;
   score: number;
+  /** Matched the words, the meaning (local semantic search), or both. */
+  matched: "text" | "meaning" | "both";
+}
+
+export type SemanticStatus =
+  | { state: "off" }
+  | { state: "downloading"; received: number; total: number }
+  | { state: "loading" }
+  | { state: "indexing"; done: number; total: number }
+  | { state: "ready"; notes: number }
+  | { state: "error"; message: string };
+
+export interface Related {
+  note: NoteSummary;
+  score: number;
+  strength: "strong" | "possible";
+  passage: string;
+  sourcePassage: string | null;
+  sharedLabels: string[];
+  sameSource: string | null;
+  /** Days from the current note to the related one (negative = earlier). */
+  daysApart: number;
+}
+
+export interface RelatedNotes {
+  enabled: boolean;
+  pending: boolean;
+  items: Related[];
 }
 
 export interface LabelCount {
@@ -128,13 +156,19 @@ export const api = {
   months: () => call<string[]>("list_months"),
   monthLog: (month: string) => call<MonthLog>("month_log", { month }),
   rebuildIndex: () => call<{ indexed: number; unchanged: number; removed: number }>("rebuild_index"),
+  semanticStatus: () => call<SemanticStatus>("semantic_status"),
+  enableSemantic: () => call<SemanticStatus>("enable_semantic"),
+  disableSemantic: () => call<SemanticStatus>("disable_semantic"),
+  related: (id: string, limit = 8) => call<RelatedNotes>("related_notes", { id, limit }),
+  dismissRelated: (a: string, b: string) => call<void>("dismiss_related", { a, b }),
+  undismissRelated: (a: string, b: string) => call<void>("undismiss_related", { a, b }),
   saveAttachment: (bytes: Uint8Array, extension: string) =>
     call<string>("save_attachment", { bytes: Array.from(bytes), extension }),
 };
 
 /** Subscribe to a backend event. Returns an unsubscribe function. */
 export async function onEvent<T>(name: string, handler: (payload: T) => void): Promise<() => void> {
-  if (!isTauri) return () => {};
+  if (!isTauri) return mockOn(name, handler as (p: unknown) => void);
   const { listen } = await import("@tauri-apps/api/event");
   return listen<T>(name, (e) => handler(e.payload));
 }

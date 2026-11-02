@@ -10,6 +10,13 @@ repository.workspace = true
 name = "nought_app_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
+[features]
+default = ["embedding-static"]
+# Local embeddings with ONNX Runtime linked statically (downloaded at build time).
+embedding-static = ["nought-core/embedding-static"]
+# Same, but loading a system onnxruntime at run time (for offline builds).
+embedding-dynamic = ["nought-core/embedding-dynamic"]
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 

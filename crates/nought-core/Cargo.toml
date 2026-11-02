@@ -19,6 +19,19 @@ blake3 = "1"
 walkdir = "2"
 notify-debouncer-full = "0.5"
 tempfile = "3"
+fastembed = { version = "7.5", default-features = false, optional = true }
+ureq = { version = "3", optional = true }
+
+[features]
+default = []
+# Model download over HTTPS (Hugging Face).
+download = ["dep:ureq"]
+# Local embeddings via fastembed/ONNX Runtime. `embedding-static` downloads and
+# statically links ONNX Runtime at build time (release builds, CI);
+# `embedding-dynamic` loads a system onnxruntime at run time (offline builds).
+embedding = ["dep:fastembed", "download"]
+embedding-static = ["embedding", "fastembed/ort-download-binaries-rustls-tls"]
+embedding-dynamic = ["embedding", "fastembed/ort-load-dynamic"]
 
 [dev-dependencies]
 pretty_assertions = "1"

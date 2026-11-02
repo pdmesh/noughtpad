@@ -1,10 +1,14 @@
 //! Tauri shell: exposes `nought-core` to the UI as commands and forwards
 //! filesystem changes as events.
 
+mod semantic;
+
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, RwLock};
 
 use nought_core::index::{DaySummary, LabelCount, ListQuery, MonthLog, NoteSummary, SearchHit};
+use nought_core::semantic::Semantic;
+use nought_core::userstate::{UserState, USER_STATE_FILE};
 use nought_core::vault::{Change, NewNote, NoteDoc, NoteUpdate, ScanReport};
 use nought_core::watch::{watch, VaultWatcher};
 use nought_core::Vault;
@@ -12,9 +16,10 @@ use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager, State};
 
 #[derive(Default)]
-struct AppState {
+pub(crate) struct AppState {
     vault: RwLock<Option<Arc<Vault>>>,
     watcher: Mutex<Option<VaultWatcher>>,
+    semantic: RwLock<Option<Arc<Semantic>>>,
 }
 
 impl AppState {
@@ -28,11 +33,22 @@ impl AppState {
                 message: "No vault is open".into(),
             })
     }
+
+    pub(crate) fn semantic(&self) -> Result<Arc<Semantic>, CmdError> {
+        self.semantic
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone()
+            .ok_or_else(|| CmdError {
+                kind: "noVault",
+                message: "No vault is open".into(),
+            })
+    }
 }
 
 /// Errors as the UI sees them: a machine-readable kind plus a message.
 #[derive(Debug, Serialize)]
-struct CmdError {
+pub(crate) struct CmdError {
     kind: &'static str,
     message: String,
 }
@@ -53,26 +69,28 @@ impl From<nought_core::Error> for CmdError {
     }
 }
 
-type CmdResult<T> = Result<T, CmdError>;
+pub(crate) type CmdResult<T> = Result<T, CmdError>;
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 struct Config {
     vault_path: Option<PathBuf>,
+    /// Local semantic search: `None` = never asked, so it stays off.
+    semantic: Option<bool>,
 }
 
 fn config_path(app: &AppHandle) -> Option<PathBuf> {
     app.path().app_config_dir().ok().map(|d| d.join("config.json"))
 }
 
-fn load_config(app: &AppHandle) -> Config {
+pub(crate) fn load_config(app: &AppHandle) -> Config {
     config_path(app)
         .and_then(|p| std::fs::read_to_string(p).ok())
         .and_then(|s| serde_json::from_str(&s).ok())
         .unwrap_or_default()
 }
 
-fn save_config(app: &AppHandle, cfg: &Config) {
+pub(crate) fn save_config(app: &AppHandle, cfg: &Config) {
     if let Some(p) = config_path(app) {
         let _ = std::fs::create_dir_all(p.parent().unwrap());
         if let Err(e) = std::fs::write(&p, serde_json::to_string_pretty(cfg).unwrap()) {
@@ -103,8 +121,25 @@ fn activate(app: &AppHandle, state: &AppState, path: &Path) -> CmdResult<VaultIn
     if let Err(e) = app.asset_protocol_scope().allow_directory(vault.root(), true) {
         tracing::warn!("could not allow asset access to vault: {e}");
     }
+    // Semantic layer: the previous vault's worker stops when its engine drops.
+    if let Some(old) = state.semantic.write().unwrap_or_else(|e| e.into_inner()).take() {
+        old.shutdown();
+    }
+    let user = Arc::new(UserState::open(
+        &vault.root().join(nought_core::vault::DATA_DIR).join(USER_STATE_FILE),
+    )?);
+    let sem = Semantic::new(vault.clone(), user)?;
+    let handle = app.clone();
+    sem.on_status(move |s| semantic::emit_status(&handle, s));
+    sem.spawn_worker();
+    if load_config(app).semantic == Some(true) {
+        semantic::start(app, sem.clone());
+    }
+    *state.semantic.write().unwrap_or_else(|e| e.into_inner()) = Some(sem.clone());
+
     let handle = app.clone();
     let watcher = watch(vault.clone(), move |changes: Vec<Change>| {
+        sem.nudge();
         let _ = handle.emit("vault-changed", changes);
     })?;
     // Catch up with edits made while Nought was closed, without blocking the
@@ -129,12 +164,9 @@ fn activate(app: &AppHandle, state: &AppState, path: &Path) -> CmdResult<VaultIn
     });
     *state.watcher.lock().unwrap_or_else(|e| e.into_inner()) = Some(watcher);
     *state.vault.write().unwrap_or_else(|e| e.into_inner()) = Some(vault.clone());
-    save_config(
-        app,
-        &Config {
-            vault_path: Some(vault.root().to_path_buf()),
-        },
-    );
+    let mut cfg = load_config(app);
+    cfg.vault_path = Some(vault.root().to_path_buf());
+    save_config(app, &cfg);
     Ok(VaultInfo {
         path: vault.root().display().to_string(),
         note_count: vault.count()?,
@@ -187,7 +219,15 @@ async fn list_notes(state: State<'_, AppState>, query: ListQuery) -> CmdResult<V
 
 #[tauri::command]
 async fn search_notes(state: State<'_, AppState>, query: String, limit: Option<u32>) -> CmdResult<Vec<SearchHit>> {
-    Ok(state.vault()?.search(&query, limit.unwrap_or(50))?)
+    // Hybrid (words + meaning) when a local model is active, full-text otherwise.
+    let sem = state.semantic()?;
+    tauri::async_runtime::spawn_blocking(move || sem.search(&query, limit.unwrap_or(50)))
+        .await
+        .map_err(|e| CmdError {
+            kind: "internal",
+            message: e.to_string(),
+        })?
+        .map_err(Into::into)
 }
 
 #[tauri::command]
@@ -335,6 +375,12 @@ pub fn run() {
             month_log,
             rebuild_index,
             save_attachment,
+            semantic::semantic_status,
+            semantic::enable_semantic,
+            semantic::disable_semantic,
+            semantic::related_notes,
+            semantic::dismiss_related,
+            semantic::undismiss_related,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Nought");

@@ -5,7 +5,7 @@ A local-first notebook: capture anything on a blank page, and let it gradually r
 Notes are plain Markdown files you own. AI stays out of the way during capture and works quietly in the background. It shows up through derived views (Journal, Connections, Ideas over time) or when you ask.
 
 - Design: [docs/DESIGN.md](docs/DESIGN.md)
-- Status: **M1 (a genuinely good notebook) complete**. Next: M2, quiet retrieval with local embeddings
+- Status: **M1 complete; M2 (quiet retrieval) implemented**. Next: M3, temporal discovery
 
 ## What works today
 
@@ -20,6 +20,8 @@ Notes are plain Markdown files you own. AI stays out of the way during capture a
 - Opening a vault never blocks capture: catching up with changes runs in the background (10k notes: under 1 s first time, ~40 ms after)
 - Edits from other apps (Obsidian, git, sync) are picked up live. The index in `.nought/` is disposable and rebuildable
 - Distraction-free by default: toolbar and sidebar appear on hover. `⌘/Ctrl+\` pins them
+- **Related notes** (`⌘/Ctrl+J`, or the hover button on a note): notes that appear connected, each with the passage that matched, shared labels, same source and how far apart in time. "Not related" hides a suggestion for good, with undo
+- **Search by meaning**: once turned on, `⌘K` finds notes by meaning as well as words. Opt-in: a ~35 MB local model is downloaded once, and notes never leave your computer
 - Global quick capture: `⌘⇧Space` (macOS) / `Ctrl+Shift+Space`
 
 ## Development
@@ -33,6 +35,8 @@ pnpm dev              # UI only, in a browser, with an in-memory mock backend
 cargo test --workspace
 pnpm test && pnpm typecheck
 ```
+
+Local embeddings use ONNX Runtime, statically linked by default; the build downloads it from `cdn.pyke.io`. Offline, build with `--no-default-features --features embedding-dynamic` and point `ORT_DYLIB_PATH` at a `libonnxruntime` (e.g. from the `onnxruntime` PyPI wheel). Real-model test: `cargo test -p nought-core --features embedding-static -- --ignored model_`.
 
 Layout:
 
