@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { formatMonth } from "../lib/format";
 import { Stream } from "../components/Stream";
+import { ActivityMap } from "../components/ActivityMap";
 
 type Mode = "day" | "week" | "month";
 
@@ -39,6 +40,7 @@ export function Journal({ onOpen, onLabel }: Props) {
 
   return (
     <div className="journal">
+      <ActivityMap />
       <div className="journal-head">
         <h2 className="journal-heading">Journal</h2>
         <div className="segmented" role="tablist" aria-label="Journal grouping">

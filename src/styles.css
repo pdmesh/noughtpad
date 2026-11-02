@@ -16,6 +16,12 @@
   --mark: #f6dfae;
   --code-bg: #f1ede4;
   --danger: #b4443a;
+  /* Activity heat ramp (one hue, validated as an ordinal ramp vs the surface). */
+  --heat-0: #ece7dc;
+  --heat-1: #d9a35a;
+  --heat-2: #c08036;
+  --heat-3: #9a5f1c;
+  --heat-4: #6b3e0c;
   --font-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
   --font-text: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
   --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
@@ -39,6 +45,11 @@
     --mark: #5a4523;
     --code-bg: #22252d;
     --danger: #e0786e;
+    --heat-0: #262a32;
+    --heat-1: #7a5220;
+    --heat-2: #a4702f;
+    --heat-3: #cf9446;
+    --heat-4: #f0bf78;
     color-scheme: dark;
   }
 }
@@ -1093,6 +1104,98 @@ button {
   .related {
     box-shadow: -8px 0 30px rgb(0 0 0 / 0.12);
   }
+}
+
+/* ---------- activity map ------------------------------------------------ */
+.activity {
+  margin-bottom: 28px;
+}
+.activity-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 28px;
+  margin-bottom: 12px;
+}
+.activity-stat {
+  display: flex;
+  flex-direction: column;
+}
+.activity-value {
+  font-size: 1.35rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+.activity-value.is-accent {
+  color: var(--accent);
+}
+.activity-stat-label {
+  font-size: 0.74rem;
+}
+.activity-scroll {
+  position: relative;
+  overflow-x: auto;
+  direction: rtl; /* start scrolled to the most recent weeks on narrow screens */
+}
+.activity-map {
+  direction: ltr;
+  display: block;
+}
+.activity-label {
+  font-size: 9px;
+  fill: var(--fg-faint);
+  font-family: var(--font-ui);
+}
+.heat {
+  stroke: none;
+}
+.heat-0 {
+  fill: var(--heat-0);
+}
+.heat-1 {
+  fill: var(--heat-1);
+}
+.heat-2 {
+  fill: var(--heat-2);
+}
+.heat-3 {
+  fill: var(--heat-3);
+}
+.heat-4 {
+  fill: var(--heat-4);
+}
+.heat-today {
+  stroke: var(--fg);
+  stroke-width: 1;
+}
+.activity-map rect:hover {
+  stroke: var(--fg);
+  stroke-width: 1;
+}
+.activity-tip {
+  position: fixed;
+  direction: ltr;
+  transform: translate(-50%, calc(-100% - 6px));
+  white-space: nowrap;
+  font-size: 0.76rem;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 14px rgb(0 0 0 / 0.1);
+  pointer-events: none;
+  z-index: 5;
+}
+.activity-legend {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 3px;
+  font-size: 0.72rem;
+  margin-top: 6px;
+}
+.activity-legend span {
+  margin: 0 4px;
 }
 
 /* ---------- ideas over time ---------------------------------------------- */

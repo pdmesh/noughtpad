@@ -39,7 +39,7 @@ if (typeof location !== "undefined" && new URLSearchParams(location.search).get(
   const words = "ownership fund portfolio returns product customer travel idea question thinking book decision".split(" ");
   const start = Date.parse("2026-10-30T12:00:00+05:30");
   for (let i = 0; i < 5000; i++) {
-    const d = new Date(start - i * 3.7 * 3600_000);
+    const d = new Date(start - i * 3.7 * 3600_000 * (1 + ((i * 7919) % 13 === 0 ? 30 : (i % 5) * 0.6)));
     const iso = new Date(d.getTime() + 330 * 60000).toISOString().slice(0, 19) + "+05:30";
     notes.push({
       id: `many-${i}`,
@@ -358,6 +358,14 @@ export async function mock(cmd: string, a: Record<string, any> = {}): Promise<un
     case "disable_semantic":
       setSemantic({ state: "off" });
       return semantic;
+    case "day_counts": {
+      const m = new Map<string, number>();
+      for (const n of notes) {
+        const d = n.created.slice(0, 10);
+        if (d >= a.fromDay) m.set(d, (m.get(d) ?? 0) + 1);
+      }
+      return [...m.entries()].sort().map(([day, count]) => ({ day, count }));
+    }
     case "ideas_overview":
       return ideasOverview();
     case "theme_timeline":

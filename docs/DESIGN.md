@@ -28,6 +28,7 @@ This document turns that thesis into a concrete architecture and build plan. Ite
 | 2026-11-02 | The Write page shows only the editor. The note stream moves to its own "All notes" page; a palette toggle can put it back under the editor. |
 | 2026-11-02 | M2 semantic features are opt-in (one click, ~65 MB model download, local only). Related notes open on demand (⌘J or the top-bar button), never during capture. |
 | 2026-11-02 | M3 is deterministic over local embeddings; AI-written monthly or topic syntheses move to M4 (bring-your-own LLM). |
+| 2026-11-02 | Journal shows a GitHub-style activity map with streaks. It is informational only (no goals, reminders or badges), so it never turns capture into a chore. Its levels adapt to the writer's own quartiles. The colour ramp is one hue (the amber accent), validated as an ordinal ramp against both surfaces (light end 2.12:1 on the light surface, 2.56:1 on dark). |
 | 2026-11-02 | Extensions reuse the CodeMirror 6 and unified (remark/rehype) ecosystems; no bespoke plugin ecosystem. |
 
 ---

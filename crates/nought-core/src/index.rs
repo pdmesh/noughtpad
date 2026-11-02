@@ -77,6 +77,13 @@ pub struct LabelCount {
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
+pub struct DayCount {
+    pub day: String,
+    pub count: i64,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct DaySummary {
     pub day: String,
     pub notes: Vec<NoteSummary>,
@@ -399,6 +406,21 @@ impl Index {
             top_labels,
             days,
         })
+    }
+
+    /// Notes written per day from `from_day` (inclusive), oldest first; days
+    /// without notes are omitted.
+    pub fn day_counts(&self, from_day: &str) -> Result<Vec<DayCount>> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT day, COUNT(*) FROM notes WHERE day >= ?1 GROUP BY day ORDER BY day")?;
+        let rows = stmt.query_map([from_day], |r| {
+            Ok(DayCount {
+                day: r.get(0)?,
+                count: r.get(1)?,
+            })
+        })?;
+        Ok(rows.collect::<rusqlite::Result<_>>()?)
     }
 
     /// Distinct months that have notes, newest first (`YYYY-MM`).
@@ -757,6 +779,20 @@ mod tests {
         assert_eq!(log.active_days, 1);
         assert_eq!(log.top_labels.len(), 3);
         assert_eq!(ix.months().unwrap(), ["2026-09", "2026-03", "2026-01"]);
+        let counts = ix.day_counts("2026-02-01").unwrap();
+        assert_eq!(
+            counts,
+            vec![
+                DayCount {
+                    day: "2026-03-02".into(),
+                    count: 2
+                },
+                DayCount {
+                    day: "2026-09-12".into(),
+                    count: 1
+                },
+            ]
+        );
     }
 
     #[test]

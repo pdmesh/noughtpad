@@ -15,6 +15,7 @@ Notes are plain Markdown files you own. AI stays out of the way during capture a
   - paste rich text (web, Docs, Word) → Markdown. Copy → Markdown + rich HTML. URL over selection → link. Pasted images saved to `attachments/`. `⌘/Ctrl+Shift+V` pastes plain text
 - Autosave to plain `.md` files (`YYYY/MM/YYYY-MM-DD-HHMM-slug.md`) with minimal frontmatter. Files are written atomically and never rewritten behind your back
 - Optional title, labels (Gmail-style, many per note) and source (title, URL), all hidden until you hover. Whether a note is personal or source-based is inferred from whether it has a source
+- **Activity map** at the top of the Journal: a year of writing, one square per day, with notes this year, active days, current and longest streak. Informational only: no goals, reminders or badges
 - A Write page that is only the editor. Separate pages for All notes (chronological, every note), Collections (by label) and the Journal (personal notes by day, week or month). The note list can be shown under the editor from the `⌘K` palette. Lists scroll infinitely and render only what's on screen
 - Full-text search (SQLite FTS5) with `#label`, `type:personal|source`, `"phrases"`, prefix matching: `⌘/Ctrl+K`
 - Opening a vault never blocks capture: catching up with changes runs in the background (10k notes: under 1 s first time, ~40 ms after)

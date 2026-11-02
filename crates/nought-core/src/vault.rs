@@ -156,6 +156,9 @@ impl Vault {
     pub fn month_log(&self, month: &str) -> Result<MonthLog> {
         self.ix().month_log(month)
     }
+    pub fn day_counts(&self, from_day: &str) -> Result<Vec<crate::index::DayCount>> {
+        self.ix().day_counts(from_day)
+    }
     pub fn months(&self) -> Result<Vec<String>> {
         self.ix().months()
     }

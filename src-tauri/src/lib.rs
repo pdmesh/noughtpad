@@ -276,6 +276,12 @@ async fn list_months(state: State<'_, AppState>) -> CmdResult<Vec<String>> {
     Ok(state.vault()?.months()?)
 }
 
+/// Notes per day from `from_day` (`YYYY-MM-DD`), for the activity map.
+#[tauri::command]
+async fn day_counts(state: State<'_, AppState>, from_day: String) -> CmdResult<Vec<nought_core::index::DayCount>> {
+    Ok(state.vault()?.day_counts(&from_day)?)
+}
+
 #[tauri::command]
 async fn month_log(state: State<'_, AppState>, month: String) -> CmdResult<MonthLog> {
     Ok(state.vault()?.month_log(&month)?)
@@ -384,6 +390,7 @@ pub fn run() {
             list_days,
             list_months,
             month_log,
+            day_counts,
             rebuild_index,
             save_attachment,
             semantic::semantic_status,

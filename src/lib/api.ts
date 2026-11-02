@@ -212,6 +212,7 @@ export const api = {
   days: (query: ListQuery = {}) => call<DaySummary[]>("list_days", { query }),
   months: () => call<string[]>("list_months"),
   monthLog: (month: string) => call<MonthLog>("month_log", { month }),
+  dayCounts: (fromDay: string) => call<Array<{ day: string; count: number }>>("day_counts", { fromDay }),
   rebuildIndex: () => call<{ indexed: number; unchanged: number; removed: number }>("rebuild_index"),
   semanticStatus: () => call<SemanticStatus>("semantic_status"),
   enableSemantic: () => call<SemanticStatus>("enable_semantic"),
