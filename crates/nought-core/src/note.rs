@@ -138,7 +138,12 @@ pub struct Note {
 
 impl Note {
     pub fn new(meta: NoteMeta, body: impl Into<String>) -> Self {
-        Note { meta, body: body.into(), original: None, extra: Mapping::new() }
+        Note {
+            meta,
+            body: body.into(),
+            original: None,
+            extra: Mapping::new(),
+        }
     }
 
     /// Parse a note file. Never fails: invalid frontmatter is treated as body
@@ -174,13 +179,20 @@ impl Note {
         let yaml = render_meta(&self.meta, &self.extra);
         // A blank line after the fence keeps the file pleasant to read; it is
         // only added for new notes whose body doesn't already start with one.
-        let sep = if self.original.is_none() && !self.body.starts_with('\n') { "\n" } else { "" };
+        let sep = if self.original.is_none() && !self.body.starts_with('\n') {
+            "\n"
+        } else {
+            ""
+        };
         format!("---\n{yaml}---\n{sep}{}", self.body)
     }
 
     /// Body without the leading blank line conventionally placed after frontmatter.
     pub fn content(&self) -> &str {
-        self.body.strip_prefix("\r\n").or_else(|| self.body.strip_prefix('\n')).unwrap_or(&self.body)
+        self.body
+            .strip_prefix("\r\n")
+            .or_else(|| self.body.strip_prefix('\n'))
+            .unwrap_or(&self.body)
     }
 
     /// A display title derived from the first non-empty line.
@@ -197,7 +209,10 @@ pub fn derive_title(body: &str) -> String {
         .find(|l| !l.is_empty() && !l.starts_with("```") && !l.starts_with("---"))
         .unwrap_or("");
     let line = line.trim_start_matches(['#', '>', '-', '*', '+', ' ']);
-    let line = line.strip_prefix("[ ] ").or_else(|| line.strip_prefix("[x] ")).unwrap_or(line);
+    let line = line
+        .strip_prefix("[ ] ")
+        .or_else(|| line.strip_prefix("[x] "))
+        .unwrap_or(line);
     let mut out: String = line.chars().take(120).collect();
     if line.chars().count() > 120 {
         out.push('…');
@@ -227,7 +242,11 @@ pub fn slugify(title: &str, max_words: usize) -> String {
     let slug = words.join("-");
     let slug: String = slug.chars().take(60).collect();
     let slug = slug.trim_end_matches('-').to_string();
-    if slug.is_empty() { "note".into() } else { slug }
+    if slug.is_empty() {
+        "note".into()
+    } else {
+        slug
+    }
 }
 
 fn split_frontmatter(text: &str) -> Option<(&str, &str)> {
@@ -298,8 +317,14 @@ fn parse_source(v: &Value) -> Option<Source> {
             url: m.get("url").and_then(scalar_string),
         }),
         // `source: The Mom Test` or `source: https://…`
-        Value::String(s) if looks_like_url(s) => Some(Source { title: None, url: Some(s.clone()) }),
-        Value::String(s) => Some(Source { title: Some(s.clone()), url: None }),
+        Value::String(s) if looks_like_url(s) => Some(Source {
+            title: None,
+            url: Some(s.clone()),
+        }),
+        Value::String(s) => Some(Source {
+            title: Some(s.clone()),
+            url: None,
+        }),
         _ => None,
     }
 }
@@ -317,14 +342,24 @@ pub fn parse_datetime(s: &str) -> Option<DateTime<FixedOffset>> {
     }
     let local = |naive: chrono::NaiveDateTime| {
         use chrono::TimeZone;
-        chrono::Local.from_local_datetime(&naive).earliest().map(|d| d.fixed_offset())
+        chrono::Local
+            .from_local_datetime(&naive)
+            .earliest()
+            .map(|d| d.fixed_offset())
     };
-    for fmt in ["%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M", "%Y-%m-%d %H:%M"] {
+    for fmt in [
+        "%Y-%m-%dT%H:%M:%S",
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%dT%H:%M",
+        "%Y-%m-%d %H:%M",
+    ] {
         if let Ok(n) = chrono::NaiveDateTime::parse_from_str(s, fmt) {
             return local(n);
         }
     }
-    chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d").ok().and_then(|d| local(d.and_hms_opt(0, 0, 0)?))
+    chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d")
+        .ok()
+        .and_then(|d| local(d.and_hms_opt(0, 0, 0)?))
 }
 
 fn render_meta(meta: &NoteMeta, extra: &Mapping) -> String {
@@ -334,7 +369,10 @@ fn render_meta(meta: &NoteMeta, extra: &Mapping) -> String {
         out.push_str(&format!("id: {}\n", yaml_scalar(id)));
     }
     if let Some(c) = &meta.created {
-        out.push_str(&format!("created: {}\n", c.to_rfc3339_opts(chrono::SecondsFormat::Secs, false)));
+        out.push_str(&format!(
+            "created: {}\n",
+            c.to_rfc3339_opts(chrono::SecondsFormat::Secs, false)
+        ));
     }
     if !meta.labels.is_empty() {
         let items: Vec<String> = meta.labels.iter().map(|l| yaml_scalar(l)).collect();
@@ -397,7 +435,10 @@ mod tests {
         assert_eq!(n.meta.labels, vec!["VC", "Product"]);
         assert_eq!(n.meta.effective_kind(), NoteKind::Source);
         assert_eq!(n.meta.created.unwrap().to_rfc3339(), "2026-09-12T23:10:00+05:30");
-        assert_eq!(n.title(), "Ownership seems to matter more than I initially thought in VC.");
+        assert_eq!(
+            n.title(),
+            "Ownership seems to matter more than I initially thought in VC."
+        );
     }
 
     #[test]
@@ -476,7 +517,10 @@ mod tests {
 
     #[test]
     fn slugs() {
-        assert_eq!(slugify("Ownership seems to matter more than I thought", 6), "ownership-seems-to-matter-more-than");
+        assert_eq!(
+            slugify("Ownership seems to matter more than I thought", 6),
+            "ownership-seems-to-matter-more-than"
+        );
         assert_eq!(slugify("  ", 6), "note");
         assert_eq!(slugify("The user's café — notes!", 6), "the-users-café-notes");
     }

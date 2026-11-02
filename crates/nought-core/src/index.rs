@@ -175,8 +175,9 @@ impl Index {
 
     pub fn remove_path(&mut self, path: &str) -> Result<bool> {
         let tx = self.conn.transaction()?;
-        let id: Option<String> =
-            tx.query_row("SELECT id FROM notes WHERE path = ?1", [path], |r| r.get(0)).optional()?;
+        let id: Option<String> = tx
+            .query_row("SELECT id FROM notes WHERE path = ?1", [path], |r| r.get(0))
+            .optional()?;
         if let Some(id) = &id {
             tx.execute("DELETE FROM notes_fts WHERE note_id = ?1", [id])?;
             tx.execute("DELETE FROM notes WHERE id = ?1", [id])?;
@@ -193,11 +194,17 @@ impl Index {
     }
 
     pub fn path_of(&self, id: &str) -> Result<Option<String>> {
-        Ok(self.conn.query_row("SELECT path FROM notes WHERE id = ?1", [id], |r| r.get(0)).optional()?)
+        Ok(self
+            .conn
+            .query_row("SELECT path FROM notes WHERE id = ?1", [id], |r| r.get(0))
+            .optional()?)
     }
 
     pub fn hash_of_path(&self, path: &str) -> Result<Option<String>> {
-        Ok(self.conn.query_row("SELECT hash FROM notes WHERE path = ?1", [path], |r| r.get(0)).optional()?)
+        Ok(self
+            .conn
+            .query_row("SELECT hash FROM notes WHERE path = ?1", [path], |r| r.get(0))
+            .optional()?)
     }
 
     pub fn count(&self) -> Result<i64> {
@@ -214,7 +221,11 @@ impl Index {
         let mut where_ = Vec::new();
         let mut args: Vec<rusqlite::types::Value> = Vec::new();
         push_filters(q, &mut where_, &mut args);
-        let where_sql = if where_.is_empty() { String::new() } else { format!("WHERE {}", where_.join(" AND ")) };
+        let where_sql = if where_.is_empty() {
+            String::new()
+        } else {
+            format!("WHERE {}", where_.join(" AND "))
+        };
         let limit = q.limit.unwrap_or(100).min(1000);
         let sql = format!(
             "SELECT {SUMMARY_COLS} FROM notes n {where_sql} ORDER BY n.created_ms DESC, n.id DESC LIMIT {limit}"
@@ -228,13 +239,22 @@ impl Index {
     /// `"exact phrases"`, and prefix matching on the last word.
     pub fn search(&self, input: &str, limit: u32) -> Result<Vec<SearchHit>> {
         let parsed = parse_query(input);
-        let q = ListQuery { label: parsed.label.clone(), kind: parsed.kind, limit: Some(limit), ..Default::default() };
+        let q = ListQuery {
+            label: parsed.label.clone(),
+            kind: parsed.kind,
+            limit: Some(limit),
+            ..Default::default()
+        };
         let Some(fts) = parsed.fts else {
             // Filters only: behave like a filtered list.
             return Ok(self
                 .list(&q)?
                 .into_iter()
-                .map(|note| SearchHit { snippet: note.excerpt.clone(), note, score: 0.0 })
+                .map(|note| SearchHit {
+                    snippet: note.excerpt.clone(),
+                    note,
+                    score: 0.0,
+                })
                 .collect());
         };
         let mut where_ = vec!["notes_fts MATCH ?".to_string()];
@@ -257,8 +277,16 @@ impl Index {
             let snip: String = r.get("snip")?;
             let rank: f64 = r.get("rank")?;
             // If the match was only in title/labels/source the body snippet has no marks.
-            let snippet = if snip.contains('\u{2}') { snip } else { note.excerpt.clone() };
-            Ok(SearchHit { note, snippet, score: -rank })
+            let snippet = if snip.contains('\u{2}') {
+                snip
+            } else {
+                note.excerpt.clone()
+            };
+            Ok(SearchHit {
+                note,
+                snippet,
+                score: -rank,
+            })
         })?;
         Ok(rows.collect::<rusqlite::Result<_>>()?)
     }
@@ -268,7 +296,12 @@ impl Index {
         let mut stmt = self.conn.prepare(
             "SELECT MIN(label), COUNT(*) AS c FROM note_labels GROUP BY label_key ORDER BY c DESC, label_key ASC",
         )?;
-        let rows = stmt.query_map([], |r| Ok(LabelCount { label: r.get(0)?, count: r.get(1)? }))?;
+        let rows = stmt.query_map([], |r| {
+            Ok(LabelCount {
+                label: r.get(0)?,
+                count: r.get(1)?,
+            })
+        })?;
         Ok(rows.collect::<rusqlite::Result<_>>()?)
     }
 
@@ -302,7 +335,12 @@ impl Index {
              WHERE n.day BETWEEN ?1 AND ?2 GROUP BY l.label_key ORDER BY c DESC, l.label_key LIMIT 8",
         )?;
         let top_labels = stmt
-            .query_map(params![from, to], |r| Ok(LabelCount { label: r.get(0)?, count: r.get(1)? }))?
+            .query_map(params![from, to], |r| {
+                Ok(LabelCount {
+                    label: r.get(0)?,
+                    count: r.get(1)?,
+                })
+            })?
             .collect::<rusqlite::Result<_>>()?;
         let days = self.days(&ListQuery {
             kind: Some(NoteKind::Personal),
@@ -310,18 +348,28 @@ impl Index {
             to_day: Some(to.clone()),
             ..Default::default()
         })?;
-        Ok(MonthLog { month: month.to_string(), personal_count, source_count, active_days, top_labels, days })
+        Ok(MonthLog {
+            month: month.to_string(),
+            personal_count,
+            source_count,
+            active_days,
+            top_labels,
+            days,
+        })
     }
 
     /// Distinct months that have notes, newest first (`YYYY-MM`).
     pub fn months(&self) -> Result<Vec<String>> {
-        let mut stmt = self.conn.prepare("SELECT DISTINCT substr(day, 1, 7) AS m FROM notes ORDER BY m DESC")?;
+        let mut stmt = self
+            .conn
+            .prepare("SELECT DISTINCT substr(day, 1, 7) AS m FROM notes ORDER BY m DESC")?;
         let rows = stmt.query_map([], |r| r.get(0))?;
         Ok(rows.collect::<rusqlite::Result<_>>()?)
     }
 
     pub fn clear(&mut self) -> Result<()> {
-        self.conn.execute_batch("DELETE FROM notes_fts; DELETE FROM note_labels; DELETE FROM notes;")?;
+        self.conn
+            .execute_batch("DELETE FROM notes_fts; DELETE FROM note_labels; DELETE FROM notes;")?;
         Ok(())
     }
 }
@@ -376,7 +424,10 @@ fn summary_from_row(r: &Row) -> rusqlite::Result<NoteSummary> {
         kind: NoteKind::parse(&kind).unwrap_or(NoteKind::Personal),
         labels: serde_json::from_str(&labels).unwrap_or_default(),
         source: if src_title.is_some() || src_url.is_some() {
-            Some(Source { title: src_title, url: src_url })
+            Some(Source {
+                title: src_title,
+                url: src_url,
+            })
         } else {
             None
         },
@@ -420,7 +471,10 @@ fn group_by_day(notes: Vec<NoteSummary>) -> Vec<DaySummary> {
     for n in notes {
         match days.last_mut() {
             Some(d) if d.day == n.day => d.notes.push(n),
-            _ => days.push(DaySummary { day: n.day.clone(), notes: vec![n] }),
+            _ => days.push(DaySummary {
+                day: n.day.clone(),
+                notes: vec![n],
+            }),
         }
     }
     days
@@ -455,7 +509,11 @@ fn parse_query(input: &str) -> ParsedQuery {
         }
         let word: String = std::iter::from_fn(|| chars.next_if(|c| !c.is_whitespace())).collect();
         let lower = word.to_lowercase();
-        if let Some(l) = lower.strip_prefix("label:").map(|_| &word[6..]).or_else(|| word.strip_prefix('#')) {
+        if let Some(l) = lower
+            .strip_prefix("label:")
+            .map(|_| &word[6..])
+            .or_else(|| word.strip_prefix('#'))
+        {
             if !l.is_empty() {
                 out.label = Some(l.to_string());
             }
@@ -464,7 +522,10 @@ fn parse_query(input: &str) -> ParsedQuery {
             out.kind = NoteKind::parse(k);
             trailing_word = false;
         } else {
-            let clean: String = word.chars().filter(|c| c.is_alphanumeric() || *c == '\'' || *c == '-').collect();
+            let clean: String = word
+                .chars()
+                .filter(|c| c.is_alphanumeric() || *c == '\'' || *c == '-')
+                .collect();
             let clean = clean.trim_matches(['-', '\'']).to_string();
             if !clean.is_empty() {
                 terms.push(format!("\"{clean}\""));
@@ -494,11 +555,18 @@ mod tests {
             path: format!("{id}.md"),
             created: parse_datetime(created).unwrap(),
             modified_ms: 0,
-            kind: if source.is_some() { NoteKind::Source } else { NoteKind::Personal },
+            kind: if source.is_some() {
+                NoteKind::Source
+            } else {
+                NoteKind::Personal
+            },
             title: crate::note::derive_title(body),
             body: body.into(),
             labels: labels.iter().map(|s| s.to_string()).collect(),
-            source: source.map(|t| Source { title: Some(t.into()), url: None }),
+            source: source.map(|t| Source {
+                title: Some(t.into()),
+                url: None,
+            }),
             hash: id.into(),
         }
     }
@@ -506,10 +574,34 @@ mod tests {
     fn fixture() -> Index {
         let mut ix = Index::open_in_memory().unwrap();
         for n in [
-            note("a", "2026-01-10T09:00:00+05:30", "Read about VC power-law returns.", &["VC"], Some("Venture Deals")),
-            note("b", "2026-03-02T22:00:00+05:30", "Ownership may matter more than I expected.", &["VC", "Product"], None),
-            note("c", "2026-03-02T23:30:00+05:30", "Tokyo and Kyoto itinerary ideas", &["Travel"], None),
-            note("d", "2026-09-12T08:00:00+05:30", "Is good company the right VC framework?", &["vc"], None),
+            note(
+                "a",
+                "2026-01-10T09:00:00+05:30",
+                "Read about VC power-law returns.",
+                &["VC"],
+                Some("Venture Deals"),
+            ),
+            note(
+                "b",
+                "2026-03-02T22:00:00+05:30",
+                "Ownership may matter more than I expected.",
+                &["VC", "Product"],
+                None,
+            ),
+            note(
+                "c",
+                "2026-03-02T23:30:00+05:30",
+                "Tokyo and Kyoto itinerary ideas",
+                &["Travel"],
+                None,
+            ),
+            note(
+                "d",
+                "2026-09-12T08:00:00+05:30",
+                "Is good company the right VC framework?",
+                &["vc"],
+                None,
+            ),
         ] {
             ix.upsert(&n).unwrap();
         }
@@ -520,11 +612,24 @@ mod tests {
     fn list_is_newest_first_with_labels() {
         let ix = fixture();
         let all = ix.list(&ListQuery::default()).unwrap();
-        assert_eq!(all.iter().map(|n| n.id.as_str()).collect::<Vec<_>>(), ["d", "c", "b", "a"]);
+        assert_eq!(
+            all.iter().map(|n| n.id.as_str()).collect::<Vec<_>>(),
+            ["d", "c", "b", "a"]
+        );
         assert_eq!(all[2].labels, ["VC", "Product"]);
-        let vc = ix.list(&ListQuery { label: Some("vc".into()), ..Default::default() }).unwrap();
+        let vc = ix
+            .list(&ListQuery {
+                label: Some("vc".into()),
+                ..Default::default()
+            })
+            .unwrap();
         assert_eq!(vc.len(), 3);
-        let page = ix.list(&ListQuery { before_ms: Some(all[1].created_ms()), ..Default::default() }).unwrap();
+        let page = ix
+            .list(&ListQuery {
+                before_ms: Some(all[1].created_ms()),
+                ..Default::default()
+            })
+            .unwrap();
         assert_eq!(page[0].id, "b");
     }
 
@@ -559,14 +664,28 @@ mod tests {
     fn labels_merge_case() {
         let ix = fixture();
         let labels = ix.labels().unwrap();
-        assert_eq!(labels[0], LabelCount { label: "VC".into(), count: 3 });
+        assert_eq!(
+            labels[0],
+            LabelCount {
+                label: "VC".into(),
+                count: 3
+            }
+        );
     }
 
     #[test]
     fn journal_and_month_log() {
         let ix = fixture();
-        let days = ix.days(&ListQuery { kind: Some(NoteKind::Personal), ..Default::default() }).unwrap();
-        assert_eq!(days.iter().map(|d| d.day.as_str()).collect::<Vec<_>>(), ["2026-09-12", "2026-03-02"]);
+        let days = ix
+            .days(&ListQuery {
+                kind: Some(NoteKind::Personal),
+                ..Default::default()
+            })
+            .unwrap();
+        assert_eq!(
+            days.iter().map(|d| d.day.as_str()).collect::<Vec<_>>(),
+            ["2026-09-12", "2026-03-02"]
+        );
         assert_eq!(days[1].notes.len(), 2);
         let log = ix.month_log("2026-03").unwrap();
         assert_eq!(log.personal_count, 2);
@@ -578,7 +697,13 @@ mod tests {
     #[test]
     fn upsert_replaces_and_remove() {
         let mut ix = fixture();
-        let mut b = note("b", "2026-03-02T22:00:00+05:30", "Changed text about fund construction", &[], None);
+        let mut b = note(
+            "b",
+            "2026-03-02T22:00:00+05:30",
+            "Changed text about fund construction",
+            &[],
+            None,
+        );
         b.path = "moved/b.md".into();
         ix.upsert(&b).unwrap();
         assert_eq!(ix.count().unwrap(), 4);

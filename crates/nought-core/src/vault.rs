@@ -100,13 +100,19 @@ impl Vault {
             fs::write(&ignore, "index.sqlite*\ntrash/\n").at(&ignore)?;
         }
         let index = Index::open(&data.join(INDEX_FILE))?;
-        Ok(Vault { root, index: Mutex::new(index) })
+        Ok(Vault {
+            root,
+            index: Mutex::new(index),
+        })
     }
 
     /// An in-memory index over `root`; for tests.
     pub fn open_ephemeral(root: impl AsRef<Path>) -> Result<Self> {
         let root = root.as_ref().canonicalize().at(root.as_ref())?;
-        Ok(Vault { root, index: Mutex::new(Index::open_in_memory()?) })
+        Ok(Vault {
+            root,
+            index: Mutex::new(Index::open_in_memory()?),
+        })
     }
 
     pub fn root(&self) -> &Path {
@@ -213,7 +219,11 @@ impl Vault {
         let rel = self.ix().path_of(id)?.ok_or_else(|| Error::NotFound(id.to_string()))?;
         let from = self.abs(&rel)?;
         let stamp = Local::now().format("%Y%m%d-%H%M%S");
-        let to = self.root.join(DATA_DIR).join(TRASH_DIR).join(format!("{stamp}-{}", rel.replace('/', "__")));
+        let to = self
+            .root
+            .join(DATA_DIR)
+            .join(TRASH_DIR)
+            .join(format!("{stamp}-{}", rel.replace('/', "__")));
         fs::create_dir_all(to.parent().unwrap()).at(&to)?;
         fs::rename(&from, &to).at(&from)?;
         self.ix().remove_path(&rel)?;
@@ -227,9 +237,9 @@ impl Vault {
         let mut report = ScanReport::default();
         let known = self.ix().fingerprints()?;
         let mut seen = std::collections::HashSet::new();
-        let walker = walkdir::WalkDir::new(&self.root).into_iter().filter_entry(|e| {
-            e.depth() == 0 || !is_ignored_name(&e.file_name().to_string_lossy())
-        });
+        let walker = walkdir::WalkDir::new(&self.root)
+            .into_iter()
+            .filter_entry(|e| e.depth() == 0 || !is_ignored_name(&e.file_name().to_string_lossy()));
         for entry in walker {
             let entry = match entry {
                 Ok(e) => e,
@@ -284,7 +294,10 @@ impl Vault {
                     return Ok(Change::Unchanged);
                 }
                 let id = self.index_text(rel, &text)?;
-                Ok(Change::Upserted { id, path: rel.to_string() })
+                Ok(Change::Upserted {
+                    id,
+                    path: rel.to_string(),
+                })
             }
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
                 if self.ix().remove_path(rel)? {
@@ -337,16 +350,28 @@ impl Vault {
                 return d;
             }
         }
-        let t = fs::metadata(abs).and_then(|m| m.created().or_else(|_| m.modified())).ok();
-        let ms = t.and_then(|t| t.duration_since(UNIX_EPOCH).ok()).map_or(0, |d| d.as_millis() as i64);
-        Local.timestamp_millis_opt(ms).single().unwrap_or_else(Local::now).fixed_offset()
+        let t = fs::metadata(abs)
+            .and_then(|m| m.created().or_else(|_| m.modified()))
+            .ok();
+        let ms = t
+            .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
+            .map_or(0, |d| d.as_millis() as i64);
+        Local
+            .timestamp_millis_opt(ms)
+            .single()
+            .unwrap_or_else(Local::now)
+            .fixed_offset()
     }
 
     fn unique_path(&self, note: &Note, now: DateTime<FixedOffset>) -> Result<String> {
         let dir = now.format("%Y/%m").to_string();
         let stem = format!("{}-{}", now.format("%Y-%m-%d-%H%M"), slugify(&note.title(), 6));
         for n in 1.. {
-            let name = if n == 1 { format!("{stem}.md") } else { format!("{stem}-{n}.md") };
+            let name = if n == 1 {
+                format!("{stem}.md")
+            } else {
+                format!("{stem}-{n}.md")
+            };
             let rel = format!("{dir}/{name}");
             if !self.root.join(&rel).exists() {
                 return Ok(rel);
@@ -359,16 +384,28 @@ impl Vault {
         let abs = self.abs(rel)?;
         let dir = abs.parent().expect("note path has a parent");
         fs::create_dir_all(dir).at(dir)?;
-        let mut tmp = tempfile::Builder::new().prefix(".nought-tmp-").tempfile_in(dir).at(dir)?;
+        let mut tmp = tempfile::Builder::new()
+            .prefix(".nought-tmp-")
+            .tempfile_in(dir)
+            .at(dir)?;
         std::io::Write::write_all(&mut tmp, text.as_bytes()).at(tmp.path())?;
         tmp.as_file().sync_all().at(&abs)?;
-        tmp.persist(&abs).map_err(|e| Error::Io { path: abs.clone(), source: e.error })?;
+        tmp.persist(&abs).map_err(|e| Error::Io {
+            path: abs.clone(),
+            source: e.error,
+        })?;
         Ok(())
     }
 
     fn rel(&self, abs: &Path) -> Result<String> {
-        let rel = abs.strip_prefix(&self.root).map_err(|_| Error::OutsideVault(abs.to_path_buf()))?;
-        Ok(rel.components().map(|c| c.as_os_str().to_string_lossy()).collect::<Vec<_>>().join("/"))
+        let rel = abs
+            .strip_prefix(&self.root)
+            .map_err(|_| Error::OutsideVault(abs.to_path_buf()))?;
+        Ok(rel
+            .components()
+            .map(|c| c.as_os_str().to_string_lossy())
+            .collect::<Vec<_>>()
+            .join("/"))
     }
 
     /// Resolve a vault-relative path, refusing anything that escapes the vault.
@@ -414,7 +451,8 @@ fn is_ignored_name(name: &str) -> bool {
 }
 
 fn is_markdown(p: &Path) -> bool {
-    p.extension().is_some_and(|e| e.eq_ignore_ascii_case("md") || e.eq_ignore_ascii_case("markdown"))
+    p.extension()
+        .is_some_and(|e| e.eq_ignore_ascii_case("md") || e.eq_ignore_ascii_case("markdown"))
 }
 
 fn mtime_ms(p: &Path) -> i64 {
@@ -441,10 +479,17 @@ mod tests {
         let doc = v
             .create(NewNote {
                 content: "Ownership seems to matter more than I thought in VC.\n".into(),
-                meta: EditableMeta { labels: vec!["VC".into()], ..Default::default() },
+                meta: EditableMeta {
+                    labels: vec!["VC".into()],
+                    ..Default::default()
+                },
             })
             .unwrap();
-        assert!(doc.path.ends_with("-ownership-seems-to-matter-more-than.md"), "{}", doc.path);
+        assert!(
+            doc.path.ends_with("-ownership-seems-to-matter-more-than.md"),
+            "{}",
+            doc.path
+        );
         let text = fs::read_to_string(v.root().join(&doc.path)).unwrap();
         assert!(text.starts_with("---\nid: "));
         assert!(text.contains("labels: [VC]\n"));
@@ -456,14 +501,33 @@ mod tests {
     #[test]
     fn update_preserves_body_and_detects_conflicts() {
         let (_d, v) = vault();
-        let doc = v.create(NewNote { content: "first".into(), ..Default::default() }).unwrap();
+        let doc = v
+            .create(NewNote {
+                content: "first".into(),
+                ..Default::default()
+            })
+            .unwrap();
         let doc2 = v
-            .update(&doc.id, NoteUpdate { content: Some("first\n\n  second *line*  ".into()), base_hash: Some(doc.hash.clone()), ..Default::default() })
+            .update(
+                &doc.id,
+                NoteUpdate {
+                    content: Some("first\n\n  second *line*  ".into()),
+                    base_hash: Some(doc.hash.clone()),
+                    ..Default::default()
+                },
+            )
             .unwrap();
         assert_eq!(doc2.content, "first\n\n  second *line*  ");
         assert_eq!(doc2.path, doc.path, "file is never renamed after creation");
         // Stale hash -> conflict.
-        let err = v.update(&doc.id, NoteUpdate { content: Some("x".into()), base_hash: Some(doc.hash), ..Default::default() });
+        let err = v.update(
+            &doc.id,
+            NoteUpdate {
+                content: Some("x".into()),
+                base_hash: Some(doc.hash),
+                ..Default::default()
+            },
+        );
         assert!(matches!(err, Err(Error::Conflict(_))));
         // Metadata change keeps body.
         let doc3 = v
@@ -472,7 +536,10 @@ mod tests {
                 NoteUpdate {
                     meta: Some(EditableMeta {
                         labels: vec!["Books".into()],
-                        source: Some(Source { title: Some("The Mom Test".into()), url: None }),
+                        source: Some(Source {
+                            title: Some("The Mom Test".into()),
+                            url: None,
+                        }),
                         kind_override: None,
                     }),
                     ..Default::default()
@@ -488,19 +555,41 @@ mod tests {
     fn external_files_and_rescan() {
         let (_d, v) = vault();
         fs::create_dir_all(v.root().join("misc")).unwrap();
-        fs::write(v.root().join("misc/2026-02-03 thoughts.md"), "# Plain file\nNo frontmatter here").unwrap();
+        fs::write(
+            v.root().join("misc/2026-02-03 thoughts.md"),
+            "# Plain file\nNo frontmatter here",
+        )
+        .unwrap();
         fs::create_dir_all(v.root().join(".obsidian")).unwrap();
         fs::write(v.root().join(".obsidian/ignored.md"), "ignored").unwrap();
         fs::write(v.root().join("readme.txt"), "not markdown").unwrap();
         let r = v.rescan().unwrap();
-        assert_eq!(r, ScanReport { indexed: 1, unchanged: 0, removed: 0 });
+        assert_eq!(
+            r,
+            ScanReport {
+                indexed: 1,
+                unchanged: 0,
+                removed: 0
+            }
+        );
         let n = &v.list(&ListQuery::default()).unwrap()[0];
         assert_eq!(n.title, "Plain file");
         assert_eq!(n.day, "2026-02-03");
         assert!(n.id.starts_with("p-"));
         // Editing an external file through Nought keeps it frontmatter-free.
-        let doc = v.update(&n.id, NoteUpdate { content: Some("# Plain file\nEdited".into()), ..Default::default() }).unwrap();
-        assert_eq!(fs::read_to_string(v.root().join(&doc.path)).unwrap(), "# Plain file\nEdited");
+        let doc = v
+            .update(
+                &n.id,
+                NoteUpdate {
+                    content: Some("# Plain file\nEdited".into()),
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+        assert_eq!(
+            fs::read_to_string(v.root().join(&doc.path)).unwrap(),
+            "# Plain file\nEdited"
+        );
         // Second scan is a no-op; deletion is noticed.
         assert_eq!(v.rescan().unwrap().indexed, 0);
         fs::remove_file(v.root().join("misc/2026-02-03 thoughts.md")).unwrap();
@@ -511,7 +600,12 @@ mod tests {
     #[test]
     fn sync_path_handles_external_edit_and_delete() {
         let (_d, v) = vault();
-        let doc = v.create(NewNote { content: "alpha".into(), ..Default::default() }).unwrap();
+        let doc = v
+            .create(NewNote {
+                content: "alpha".into(),
+                ..Default::default()
+            })
+            .unwrap();
         let abs = v.root().join(&doc.path);
         assert_eq!(v.sync_path(&abs).unwrap(), Change::Unchanged, "own writes are no-ops");
         let text = fs::read_to_string(&abs).unwrap().replace("alpha", "beta");
@@ -525,8 +619,18 @@ mod tests {
     #[test]
     fn trash_and_rebuild() {
         let (_d, v) = vault();
-        let a = v.create(NewNote { content: "keep me".into(), ..Default::default() }).unwrap();
-        let b = v.create(NewNote { content: "bin me".into(), ..Default::default() }).unwrap();
+        let a = v
+            .create(NewNote {
+                content: "keep me".into(),
+                ..Default::default()
+            })
+            .unwrap();
+        let b = v
+            .create(NewNote {
+                content: "bin me".into(),
+                ..Default::default()
+            })
+            .unwrap();
         v.trash(&b.id).unwrap();
         assert_eq!(v.count().unwrap(), 1);
         assert_eq!(v.rebuild().unwrap().indexed, 1, "trash is not indexed");

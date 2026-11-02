@@ -21,6 +21,8 @@ This document turns that thesis into a concrete architecture and build plan. Ite
 | 2026-11-02 | Source metadata entered manually in v1; no web clipper. |
 | 2026-11-02 | Distraction-free capture: metadata/chrome hidden, revealed on hover/focus or a toggle. |
 | 2026-11-02 | Primary user is the product owner (dogfooding). |
+| 2026-11-02 | Desktop shell: **Tauri 2** with a Rust core. |
+| 2026-11-02 | Extensions reuse the CodeMirror 6 and unified (remark/rehype) ecosystems; no bespoke plugin ecosystem. |
 
 ---
 
@@ -96,7 +98,7 @@ Key idea: **three kinds of data, three lifetimes.**
 | Clustering / themes | **HDBSCAN** (`hdbscan` crate) on embeddings + c-TF-IDF keywords (BERTopic-style, deterministic) | Themes without an LLM; an LLM only *names* them, optionally | MIT/Apache |
 | Small local classifier (optional, Tier 2) | Encoder models (ModernBERT-class, e.g. **Laya**, ~400M, Apache-2.0) run via **ort** (ONNX Runtime) | Non-generative, so it can't invent text. Used for yes/no and label decisions (§6.5) | Apache-2.0 / MIT |
 | LLM, bring your own (optional, Tier 3) | One `LlmProvider` trait: OpenAI-compatible HTTP (covers Ollama, llama.cpp, LM Studio, OpenRouter) and Anthropic native | Explicit opt-in. A per-request banner shows which notes leave the machine | — |
-| Markdown ↔ HTML on paste/copy | **turndown** + `turndown-plugin-gfm` (HTML→MD), **markdown-it** (MD→HTML) | Clipboard behaves the way it does in Obsidian (§7.1) | MIT |
+| Markdown ↔ HTML on paste/copy | **unified**: `rehype-parse` → `rehype-remark` → `remark-stringify` (HTML→MD); `remark-parse` → `remark-gfm`/`remark-math` → `remark-rehype` → `rehype-katex` (MD→HTML) | Clipboard behaves the way it does in Obsidian (§7.1). One ecosystem for paste, copy and export | MIT |
 | Diagrams / math | **mermaid**, **KaTeX** | Rendered in the editor's live preview | MIT |
 | Background jobs | Tokio task queue inside core, persisted in SQLite (`jobs` table) | No extra service | MIT |
 | Migrations | **rusqlite_migration** | Simple | Apache-2.0 |
@@ -249,7 +251,7 @@ which notes before a remote call.
   tables). The raw syntax reappears only on the line the cursor is on. A source-mode toggle is
   available. The file on disk is exactly what you typed.
 - **Paste:** plain text or Markdown is inserted as-is. HTML from a browser or Docs is converted
-  to Markdown (turndown + GFM tables). Pasting an image saves it to `attachments/` and inserts
+  to Markdown (unified: rehype-remark + GFM tables). Pasting an image saves it to `attachments/` and inserts
   `![](…)`. Pasting a URL over selected text makes a link.
 - **Copy:** puts the Markdown text on the clipboard as `text/plain`, plus rendered HTML as
   `text/html`. Pasting into a Markdown tool gives Markdown; pasting into email or Docs gives
@@ -257,9 +259,22 @@ which notes before a remote call.
 - **Fenced-block renderers:** ```` ```mermaid ````, `$$math$$` (KaTeX) and syntax-highlighted code
   are rendered as widgets when the cursor is outside them. This is the same idea as Obsidian's
   code-block processors.
-- **Plugins:** Obsidian's own plugins can't run, because they depend on Obsidian's closed API. Nought
-  instead exposes a small plugin API: block renderers keyed by fence language, CM6 extensions,
-  and commands. Mermaid, KaTeX and callouts ship as built-in plugins written against that same API.
+- **Plugins: piggyback on existing open ecosystems; no Nought-specific plugin ecosystem.**
+  Obsidian's plugins can't run because they depend on Obsidian's closed API. Instead, Nought
+  extensions are packages from two large, open, MIT-licensed ecosystems that the app already uses:
+  1. **CodeMirror 6 extensions:** editing behaviour such as keymaps, autocomplete, vim mode, decorations and
+     linting (e.g. `@replit/codemirror-vim`, `@codemirror/autocomplete`).
+  2. **unified plugins (remark/rehype):** Markdown syntax and rendering such as math, callouts/directives,
+     wiki-links, footnotes, emoji and diagram renderers (e.g. `remark-wiki-link`, `remark-directive`,
+     `rehype-mermaid`). Hundreds of these exist, and they power MDX, Docusaurus, Astro and GitHub-style
+     renderers.
+
+  The only Nought-specific piece is a thin registry of **block renderers**
+  (`{ languages, render(code, el) }`, see `src/editor/blocks.ts`) for fenced blocks shown in live
+  preview, such as mermaid and math. A later step lets a block renderer delegate to a rehype plugin, so
+  that preview, copy and export share one rendering path.
+  Tiptap/ProseMirror were considered. Their ecosystem is large but built around a rich-text
+  document model, which would make Markdown a lossy export format instead of the source of truth.
 - Reference implementations to study: SilverBullet (MIT, CM6 live preview) and Zettlr (GPL;
   ideas only, no code reuse).
 
@@ -310,7 +325,7 @@ Each milestone ships something that is usable on its own. M1 needs no ML.
 
 ## 10. Open questions
 
-1. Desktop shell & language comfort (Tauri/Rust vs Electron/all-TypeScript).
+None blocking M1.
 
 ---
 

@@ -58,3 +58,32 @@ where
     debouncer.watch(&root, RecursiveMode::Recursive)?;
     Ok(VaultWatcher { _debouncer: debouncer })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::mpsc;
+
+    #[test]
+    fn external_edits_reach_the_index() {
+        let dir = tempfile::tempdir().unwrap();
+        let vault = Arc::new(Vault::open(dir.path()).unwrap());
+        let (tx, rx) = mpsc::channel();
+        let _w = watch(vault.clone(), move |c| {
+            let _ = tx.send(c);
+        })
+        .unwrap();
+        std::fs::write(vault.root().join("from-another-app.md"), "Written by another editor").unwrap();
+        let deadline = std::time::Instant::now() + Duration::from_secs(10);
+        let mut seen = false;
+        while std::time::Instant::now() < deadline && !seen {
+            if let Ok(changes) = rx.recv_timeout(Duration::from_millis(500)) {
+                seen = changes
+                    .iter()
+                    .any(|c| matches!(c, Change::Upserted { path, .. } if path == "from-another-app.md"));
+            }
+        }
+        assert!(seen, "watcher did not report the external file");
+        assert_eq!(vault.search("another editor", 5).unwrap().len(), 1);
+    }
+}
