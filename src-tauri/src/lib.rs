@@ -115,7 +115,7 @@ fn default_vault_path() -> PathBuf {
 }
 
 /// Open a vault, index it, and start watching it.
-fn activate(app: &AppHandle, state: &AppState, path: &Path) -> CmdResult<VaultInfo> {
+fn activate(app: &AppHandle, state: &AppState, path: &Path, remember: bool) -> CmdResult<VaultInfo> {
     let vault = Arc::new(Vault::open(path)?);
     // Let the webview load images (attachments) from inside this vault only.
     if let Err(e) = app.asset_protocol_scope().allow_directory(vault.root(), true) {
@@ -164,9 +164,11 @@ fn activate(app: &AppHandle, state: &AppState, path: &Path) -> CmdResult<VaultIn
     });
     *state.watcher.lock().unwrap_or_else(|e| e.into_inner()) = Some(watcher);
     *state.vault.write().unwrap_or_else(|e| e.into_inner()) = Some(vault.clone());
-    let mut cfg = load_config(app);
-    cfg.vault_path = Some(vault.root().to_path_buf());
-    save_config(app, &cfg);
+    if remember {
+        let mut cfg = load_config(app);
+        cfg.vault_path = Some(vault.root().to_path_buf());
+        save_config(app, &cfg);
+    }
     Ok(VaultInfo {
         path: vault.root().display().to_string(),
         note_count: vault.count()?,
@@ -186,8 +188,13 @@ async fn vault_info(app: AppHandle, state: State<'_, AppState>) -> CmdResult<Opt
             default_path: default_vault_path().display().to_string(),
         }));
     }
+    // `NOUGHT_VAULT` (e.g. from `pnpm dev:sample`) opens a folder for this
+    // session only, without replacing the remembered notes folder.
+    if let Some(p) = std::env::var_os("NOUGHT_VAULT").map(PathBuf::from) {
+        return activate(&app, &state, &p, false).map(Some);
+    }
     match load_config(&app).vault_path {
-        Some(p) if p.exists() => activate(&app, &state, &p).map(Some),
+        Some(p) if p.exists() => activate(&app, &state, &p, true).map(Some),
         _ => Ok(None),
     }
 }
@@ -209,7 +216,7 @@ fn default_vault() -> String {
 
 #[tauri::command]
 async fn open_vault(app: AppHandle, state: State<'_, AppState>, path: String) -> CmdResult<VaultInfo> {
-    activate(&app, &state, Path::new(&path))
+    activate(&app, &state, Path::new(&path), true)
 }
 
 #[tauri::command]

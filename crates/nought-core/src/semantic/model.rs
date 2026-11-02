@@ -7,15 +7,16 @@
 use super::embedder::ModelSpec;
 
 /// BGE small English v1.5, statically quantised ONNX export (MIT licence).
-/// 384 dimensions, ~35 MB, CLS pooling.
+/// 384 dimensions, ~65 MB, CLS pooling.
 pub const BGE_SMALL_EN_V15_Q: ModelSpec = ModelSpec {
     id: "bge-small-en-v1.5-q",
     dims: 384,
     query_prefix: "",
     passage_prefix: "",
-    // BGE v1.5 similarities sit in a compressed band; these were chosen from
-    // its published behaviour and should be re-tuned on real notes.
-    min_related: 0.62,
+    // Measured (examples/semantic.rs): related note pairs 0.66–0.88, unrelated
+    // up to ~0.57. 0.60 favours precision: a missed link is better than a
+    // false one. Re-tune on real notebooks.
+    min_related: 0.60,
     strong_related: 0.78,
     min_search: 0.55,
 };
@@ -184,7 +185,7 @@ mod model_tests {
     use super::*;
 
     #[test]
-    #[ignore = "downloads the model (~35 MB)"]
+    #[ignore = "downloads the model (~65 MB)"]
     fn model_thresholds_separate_related_from_unrelated() {
         let dir = std::env::var_os("NOUGHT_MODEL_DIR")
             .map(std::path::PathBuf::from)

@@ -20,9 +20,21 @@ Notes are plain Markdown files you own. AI stays out of the way during capture a
 - Opening a vault never blocks capture: catching up with changes runs in the background (10k notes: under 1 s first time, ~40 ms after)
 - Edits from other apps (Obsidian, git, sync) are picked up live. The index in `.nought/` is disposable and rebuildable
 - Distraction-free by default: toolbar and sidebar appear on hover. `⌘/Ctrl+\` pins them
-- **Related notes** (`⌘/Ctrl+J`, or the hover button on a note): notes that appear connected, each with the passage that matched, shared labels, same source and how far apart in time. "Not related" hides a suggestion for good, with undo
-- **Search by meaning**: once turned on, `⌘K` finds notes by meaning as well as words. Opt-in: a ~35 MB local model is downloaded once, and notes never leave your computer
+- **Related notes** (`⌘/Ctrl+J`, or the button in the top bar): notes that appear connected, each with the passage that matched, shared labels, same source and how far apart in time. "Not related" hides a suggestion for good, with undo
+- **Search by meaning**: once turned on, `⌘K` finds notes by meaning as well as words. Opt-in: a ~65 MB local model is downloaded once, and notes never leave your computer
 - Global quick capture: `⌘⇧Space` (macOS) / `Ctrl+Shift+Space`
+
+## Sample notebook
+
+`samples/vault` holds about 30 realistic notes from 2026: a VC thesis that evolves over the year, customer-discovery notes from *The Mom Test*, presentation-software ideas, travel plans, sourdough, a Mermaid diagram, maths, tasks, a titled note and a plain Markdown file with no frontmatter.
+
+```sh
+pnpm dev:sample           # copy to ~/Nought Sample and run the app on it
+pnpm sample --reset       # restore the pristine samples (only deletes a folder it created)
+pnpm sample --to <dir>    # copy somewhere else
+```
+
+`dev:sample` opens the copy for that session only, via the `NOUGHT_VAULT` environment variable. Your remembered notes folder is left alone, and edits made while testing survive re-runs.
 
 ## Development
 

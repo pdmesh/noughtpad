@@ -112,7 +112,7 @@ function EnableCard() {
         Related notes and search by meaning use a small language model that runs entirely on this computer. Your notes
         never leave it.
       </p>
-      <p className="faint">One-time download of about 35 MB from Hugging Face. You can turn it off any time.</p>
+      <p className="faint">One-time download of about 65 MB from Hugging Face. You can turn it off any time.</p>
       <button className="btn btn-primary" onClick={() => void api.enableSemantic()}>
         Turn on
       </button>

@@ -50,6 +50,13 @@ export function SearchPalette({ open, onClose, ...actions }: Props) {
     if (open) setInput("");
   }, [open]);
 
+  // Results arrive asynchronously; keep the top one selected so Enter opens it.
+  const [selected, setSelected] = useState("");
+  const firstHit = query ? hits[0]?.note.id : undefined;
+  useEffect(() => {
+    setSelected(firstHit ?? "New note");
+  }, [firstHit, query]);
+
   if (!open) return null;
   const run = (fn: () => void) => () => {
     onClose();
@@ -63,6 +70,8 @@ export function SearchPalette({ open, onClose, ...actions }: Props) {
         className="palette"
         label="Search notes"
         shouldFilter={false}
+        value={selected}
+        onValueChange={setSelected}
         onMouseDown={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.key === "Escape" && onClose()}
       >

@@ -712,6 +712,35 @@ mod tests {
     }
 
     #[test]
+    fn sample_notebook_indexes_cleanly() {
+        let src = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../samples/vault");
+        let dir = tempfile::tempdir().unwrap();
+        for e in walkdir::WalkDir::new(&src)
+            .into_iter()
+            .flatten()
+            .filter(|e| e.file_type().is_file())
+        {
+            let to = dir.path().join(e.path().strip_prefix(&src).unwrap());
+            fs::create_dir_all(to.parent().unwrap()).unwrap();
+            fs::copy(e.path(), to).unwrap();
+        }
+        let v = Vault::open(dir.path()).unwrap();
+        assert_eq!(v.rescan().unwrap().indexed, 33);
+        let notes = v
+            .list(&ListQuery {
+                limit: Some(100),
+                ..Default::default()
+            })
+            .unwrap();
+        assert!(
+            notes.iter().filter(|n| !n.id.starts_with("p-")).count() == 32,
+            "all but the imported file have ids"
+        );
+        assert_eq!(v.search("ownership", 50).unwrap().len(), 5);
+        assert!(v.labels().unwrap().iter().any(|l| l.label == "VC" && l.count == 10));
+    }
+
+    #[test]
     fn rejects_path_escape() {
         let (_d, v) = vault();
         assert!(matches!(v.abs("../etc/passwd"), Err(Error::OutsideVault(_))));

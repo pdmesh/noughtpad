@@ -9,7 +9,9 @@
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "sample": "node scripts/sample-vault.mjs",
+    "dev:sample": "node scripts/sample-vault.mjs --run"
   },
   "dependencies": {
     "@codemirror/commands": "^6.11.1",

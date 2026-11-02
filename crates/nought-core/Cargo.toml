@@ -35,3 +35,7 @@ embedding-dynamic = ["embedding", "fastembed/ort-load-dynamic"]
 
 [dev-dependencies]
 pretty_assertions = "1"
+
+[[example]]
+name = "semantic"
+required-features = ["embedding"]

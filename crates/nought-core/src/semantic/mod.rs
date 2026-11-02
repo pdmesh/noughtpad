@@ -140,6 +140,9 @@ impl Semantic {
         }
         *cur = s.clone();
         drop(cur);
+        if !matches!(s, Status::Downloading { .. } | Status::Indexing { .. }) {
+            tracing::info!(status = ?s, "semantic status");
+        }
         if let Some(f) = lock(&self.listener).as_ref() {
             f(&s);
         }
@@ -237,6 +240,27 @@ impl Semantic {
                 }
             }
         }
+    }
+
+    /// Index everything pending right away, ignoring the quiet period
+    /// (for tools, benchmarks and tests; the app uses the background worker).
+    pub fn index_now(&self) -> Result<()> {
+        let Some(spec) = self.spec.read().unwrap_or_else(|e| e.into_inner()).clone() else {
+            return Ok(());
+        };
+        loop {
+            let pending = self
+                .vault
+                .with_index(|ix| store::pending(ix.conn(), spec.id, i64::MAX, BATCH))?;
+            if pending.is_empty() {
+                break;
+            }
+            for n in &pending {
+                self.embed_note(&spec, n)?;
+            }
+        }
+        self.update_progress();
+        Ok(())
     }
 
     /// Embed one batch of pending notes. Returns how many were processed.
@@ -417,7 +441,7 @@ impl Semantic {
                     Strength::Possible
                 },
                 score,
-                passage: clip(&passage, PASSAGE_CHARS),
+                passage: clip(without_title(&passage, &note), PASSAGE_CHARS),
                 source_passage: source_passage.map(|s| clip(&s, PASSAGE_CHARS)),
                 shared_labels,
                 same_source,
@@ -509,7 +533,7 @@ impl Semantic {
                         .with_index(|ix| store::chunk_text(ix.conn(), &id, ord))?
                         .unwrap_or_else(|| note.excerpt.clone());
                     SearchHit {
-                        snippet: clip(&passage, 240),
+                        snippet: clip(without_title(&passage, &note), 240),
                         note,
                         score: 0.0,
                         matched: MatchKind::Meaning,
@@ -540,6 +564,17 @@ fn day_number(day: &str) -> i64 {
 }
 
 use chrono::Datelike;
+
+/// Chunk 0 of a titled note starts with the title (for embedding context);
+/// drop it when showing the passage, since the title is displayed separately.
+fn without_title<'a>(passage: &'a str, note: &NoteSummary) -> &'a str {
+    if note.has_title {
+        if let Some(rest) = passage.strip_prefix(note.title.as_str()) {
+            return rest.trim_start();
+        }
+    }
+    passage
+}
 
 fn clip(s: &str, max: usize) -> String {
     let s = s.trim();

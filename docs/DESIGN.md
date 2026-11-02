@@ -26,7 +26,7 @@ This document turns that thesis into a concrete architecture and build plan. Ite
 | 2026-11-02 | No note-type control in the UI: a note with a source is a source note, otherwise personal. A hand-written `type:` in frontmatter is still respected. |
 | 2026-11-02 | Note lists (All notes, Collections, Journal) scroll infinitely: keyset pages of 100 and windowed rendering, so the page stays light at any vault size. |
 | 2026-11-02 | The Write page shows only the editor. The note stream moves to its own "All notes" page; a palette toggle can put it back under the editor. |
-| 2026-11-02 | M2 semantic features are opt-in (one click, ~35 MB model download, local only). Related notes open on demand (⌘J / hover button), never during capture. |
+| 2026-11-02 | M2 semantic features are opt-in (one click, ~65 MB model download, local only). Related notes open on demand (⌘J or the top-bar button), never during capture. |
 | 2026-11-02 | Extensions reuse the CodeMirror 6 and unified (remark/rehype) ecosystems; no bespoke plugin ecosystem. |
 
 ---
@@ -99,7 +99,7 @@ Key idea: **three kinds of data, three lifetimes.**
 | Database | **SQLite** via **rusqlite** (`bundled`, FTS5 on) | Single file, zero ops | MIT |
 | Full-text search | **SQLite FTS5** (BM25, `porter unicode61` tokenizer) | Tier 0 search, explainable | Public domain |
 | Vector search | Exact scan over an **in-memory flat index** (vectors persisted as BLOBs in `index.sqlite`, cached by chunk-text hash) | At personal scale (≤ ~100k chunks) an exact scan takes milliseconds. sqlite-vec also scans exhaustively, and it is pre-1.0 and a native extension, so it was dropped | — |
-| Embeddings | **fastembed-rs** (ONNX Runtime, statically linked) with **BGE-small-en-v1.5, quantised** (`Qdrant/bge-small-en-v1.5-onnx-Q`, 384-d, ~35 MB, MIT). Downloaded on opt-in into the app data folder, never the vault. Models sit behind an `Embedder` trait with a per-model `ModelSpec` (thresholds, query/passage prefixes), so `multilingual-e5-small` can be swapped in later | In-process, CPU, capped at half the cores | Apache-2.0 (lib), MIT (model) |
+| Embeddings | **fastembed-rs** (ONNX Runtime, statically linked) with **BGE-small-en-v1.5, quantised** (`Qdrant/bge-small-en-v1.5-onnx-Q`, 384-d, ~65 MB, MIT). Downloaded on opt-in into the app data folder, never the vault. Models sit behind an `Embedder` trait with a per-model `ModelSpec` (thresholds, query/passage prefixes), so `multilingual-e5-small` can be swapped in later | In-process, CPU, capped at half the cores | Apache-2.0 (lib), MIT (model) |
 | Clustering / themes | **HDBSCAN** (`hdbscan` crate) on embeddings + c-TF-IDF keywords (BERTopic-style, deterministic) | Themes without an LLM; an LLM only *names* them, optionally | MIT/Apache |
 | Small local classifier (optional, Tier 2) | Encoder models (ModernBERT-class, e.g. **Laya**, ~400M, Apache-2.0) run via **ort** (ONNX Runtime) | Non-generative, so it can't invent text. Used for yes/no and label decisions (§6.5) | Apache-2.0 / MIT |
 | LLM, bring your own (optional, Tier 3) | One `LlmProvider` trait: OpenAI-compatible HTTP (covers Ollama, llama.cpp, LM Studio, OpenRouter) and Anthropic native | Explicit opt-in. A per-request banner shows which notes leave the machine | — |
@@ -329,14 +329,14 @@ Each milestone ships something that is usable on its own. M1 needs no ML.
 
 Reproduce with `cargo run --release -p nought-core --example bench -- 10000`.
 
-**M2 status (2026-11-02): implemented, pending a real-model check.**
+**M2 status (2026-11-02): complete, verified with the real model** in the desktop app on the sample notebook. 33 notes were connected about 3 s after launch. Indexing runs at about 37 notes/s using 2 CPU threads. Related-note lookup takes about 3 ms and hybrid search about 25 ms, including the query embedding. On a hand-written 13-note test set, all 20 related suggestions were on the same topic.
 - Background worker: notes are embedded only after 3 s without edits, newest first, in batches of 16, yielding between batches.
 - Vectors are cached by `(model, chunk-text hash)`, so index rebuilds, renames and unchanged saves never re-run the model.
 - Related notes score each note against all others with `0.5·mean-vector similarity + 0.5·best passage-pair similarity`. A note is kept only above the model's `min_related` and at least 1σ above that note's own similarity distribution, which filters "everything looks alike" notes. Small boosts apply for shared labels and the same source.
 - Each related note shows the matching passage, the passage it matched in your note, shared labels, same source and time apart. Wording is cautious: "These ideas appear connected" / "Possibly related".
 - Dismissals live in `.nought/user-state.sqlite`. They are not disposable and apply in both directions.
 - Hybrid search fuses FTS5 and vector ranks (reciprocal rank fusion, k = 60). Meaning-only hits are marked "similar meaning", and label/type filters apply to them too.
-- The CI `model` job downloads the real model and checks that the thresholds separate related from unrelated sentences. Thresholds will be re-tuned on real notes. The app logs `editor ready ms=…` on every launch.
+- The CI `model` job downloads the real model and checks that the thresholds separate related from unrelated sentences. Measured: related pairs 0.66–0.88, unrelated pairs up to 0.57, so `min_related` is 0.60. This favours precision: two short sourdough notes with no shared vocabulary are missed rather than letting false links in. `examples/semantic.rs` reproduces the quality and speed check. The app logs `editor ready ms=…` on every launch.
 
 ---
 

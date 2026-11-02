@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarDays, FilePlus2, FolderOpen, Notebook, PanelLeft, PenLine, Search, X } from "lucide-react";
+import { CalendarDays, FilePlus2, FolderOpen, Notebook, PanelLeft, PenLine, Search, Waypoints, X } from "lucide-react";
 import { api, isApiError, onEvent, pickFolder, type VaultInfo } from "./lib/api";
 import { NotePane } from "./components/NotePane";
 import { Stream } from "./components/Stream";
@@ -220,6 +220,18 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
         <button className="icon-btn" onClick={() => setPaletteOpen(true)} title="Search (⌘K)" aria-label="Search">
           <Search size={16} />
         </button>
+        <button
+          className={`icon-btn ${relatedOpen && view.kind === "write" ? "is-on" : ""}`}
+          onClick={() => {
+            setView({ kind: "write" });
+            setRelatedOpen((o) => !o);
+          }}
+          title="Related notes (⌘J)"
+          aria-label="Related notes"
+          aria-pressed={relatedOpen && view.kind === "write"}
+        >
+          <Waypoints size={16} />
+        </button>
         <button className="icon-btn" onClick={newNote} title="New note (⌘N)" aria-label="New note">
           <FilePlus2 size={16} />
         </button>
@@ -246,7 +258,6 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
             onCreated={setCurrentId}
             onTrashed={newNote}
             onNotice={setNotice}
-            onShowRelated={() => setRelatedOpen(true)}
             editorRef={editorRef}
           />
           {listUnderEditor && <Stream query={{}} currentId={currentId} onOpen={openNote} onLabel={showLabel} />}

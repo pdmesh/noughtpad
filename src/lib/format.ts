@@ -59,6 +59,7 @@ export function plainExcerpt(md: string): string {
     .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
     .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
     .replace(/^\s{0,3}(#{1,6}|>|[-*+]\s+\[[ xX]\]|[-*+]|\d+\.)\s+/gm, "")
+    .replace(/\$\$[\s\S]*?\$\$/g, " ")
     .replace(/(\*\*|__|\*|_|~~|`)/g, "")
     .replace(/\s+/g, " ")
     .trim();

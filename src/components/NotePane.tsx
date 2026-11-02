@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Trash2, Waypoints } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { api, assetUrl, isApiError, onEvent, openExternal, type Change, type EditableMeta, type NoteDoc } from "../lib/api";
 import { Editor, type EditorHandle } from "../editor/Editor";
 import { MetaStrip } from "./MetaStrip";
@@ -18,8 +18,6 @@ interface Props {
   onCreated?: (id: string) => void;
   onTrashed?: () => void;
   onNotice?: (msg: string) => void;
-  /** Open the related-notes panel for this note. */
-  onShowRelated?: () => void;
   editorRef?: React.RefObject<EditorHandle | null>;
 }
 
@@ -27,7 +25,7 @@ interface Props {
  * One note: optional metadata strip + the editor, with debounced autosave.
  * Saving is serialised; the first save of a blank page creates the file.
  */
-export function NotePane({ noteId, vaultRoot, presetLabels, onCreated, onTrashed, onNotice, onShowRelated, editorRef }: Props) {
+export function NotePane({ noteId, vaultRoot, presetLabels, onCreated, onTrashed, onNotice, editorRef }: Props) {
   const qc = useQueryClient();
   const [doc, setDoc] = useState<NoteDoc | null>(null);
   const [loaded, setLoaded] = useState(noteId === null);
@@ -200,11 +198,6 @@ export function NotePane({ noteId, vaultRoot, presetLabels, onCreated, onTrashed
         <MetaStrip meta={meta} onChange={onMeta} />
         <div className="note-header-right chrome">
           {doc && <span className="note-date" title={doc.path}>{formatDateTime(doc.created)}</span>}
-          {onShowRelated && (
-            <button className="icon-btn" onClick={onShowRelated} title="Related notes (⌘J)" aria-label="Related notes">
-              <Waypoints size={15} />
-            </button>
-          )}
           <span className={`save-dot save-${status}`} title={statusLabel(status)} aria-label={statusLabel(status)} />
           {doc && (
             <button className="icon-btn" onClick={trash} title="Move to trash" aria-label="Move to trash">

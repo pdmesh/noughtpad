@@ -23,3 +23,9 @@ describe("weekStart", () => {
     expect(weekStart("2026-03-01")).toBe("2026-02-23"); // across months
   });
 });
+
+describe("plainExcerpt maths", () => {
+  it("drops display maths blocks", () => {
+    expect(plainExcerpt("Value is\n\n$$\nV = 3F/o\n$$\n\nso big")).toBe("Value is so big");
+  });
+});

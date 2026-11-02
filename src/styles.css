@@ -281,6 +281,9 @@ button {
   background: transparent;
   color: var(--fg-muted);
 }
+.icon-btn.is-on {
+  color: var(--accent);
+}
 .icon-btn:hover {
   background: var(--border);
   color: var(--fg);
