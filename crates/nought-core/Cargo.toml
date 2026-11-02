@@ -1,0 +1,24 @@
+[package]
+name = "nought-core"
+description = "Vault, index and search engine for Nought"
+version.workspace = true
+edition.workspace = true
+license-file.workspace = true
+repository.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+yaml_serde = "0.10"
+rusqlite = { version = "0.41", features = ["bundled"] }
+chrono = { version = "0.4", features = ["serde"] }
+ulid = "1"
+blake3 = "1"
+walkdir = "2"
+notify-debouncer-full = "0.5"
+tempfile = "3"
+
+[dev-dependencies]
+pretty_assertions = "1"
