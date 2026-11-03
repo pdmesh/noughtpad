@@ -16,15 +16,15 @@ use crate::CmdError;
 pub const HIDDEN_ARG: &str = "--hidden";
 
 pub fn autostart_plugin<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
-    tauri_plugin_autostart::Builder::new()
-        .args([HIDDEN_ARG])
-        .build()
+    tauri_plugin_autostart::Builder::new().args([HIDDEN_ARG]).build()
 }
 
 /// Shows the main window at startup unless the app was launched at login.
 /// The window is created hidden (`visible: false`) so a login launch never flashes it.
 pub fn show_at_startup(app: &AppHandle) {
-    let Some(w) = app.get_webview_window("main") else { return };
+    let Some(w) = app.get_webview_window("main") else {
+        return;
+    };
     if !std::env::args().any(|a| a == HIDDEN_ARG) {
         let _ = w.show();
         let _ = w.set_focus();

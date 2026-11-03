@@ -377,7 +377,7 @@ budget that matters is quick capture into an app that's already running.
 - Each related note shows the matching passage, the passage it matched in your note, shared labels, same source and time apart. Wording is cautious: "These ideas appear connected" / "Possibly related".
 - Dismissals live in `.noughtpad/user-state.sqlite`. They are not disposable and apply in both directions.
 - Hybrid search fuses FTS5 and vector ranks (reciprocal rank fusion, k = 60). Meaning-only hits are marked "similar meaning", and label/type filters apply to them too.
-- The CI `model` job downloads the real model and checks that the thresholds separate related from unrelated sentences. Measured: related pairs 0.66–0.88, unrelated pairs up to 0.57, so `min_related` is 0.60. This favours precision: two short sourdough notes with no shared vocabulary are missed rather than letting false links in. `examples/semantic.rs` reproduces the quality and speed check. The app logs `editor ready ms=…` on every launch.
+- The CI `model` job downloads the real model and checks that the thresholds separate related from unrelated sentences. Measured: related pairs 0.66–0.88, unrelated pairs up to 0.57, so `min_related` was 0.60; raised to 0.63 in M5 after the Mac UX pass, where short notes on different topics (a run log next to a bread note) scored 0.60–0.63 on the sample notebook and no same-topic suggestion fell below 0.63. This favours precision: two short sourdough notes with no shared vocabulary are missed rather than letting false links in. `examples/semantic.rs` reproduces the quality and speed check. The app logs `editor ready ms=…` on every launch.
 
 ---
 

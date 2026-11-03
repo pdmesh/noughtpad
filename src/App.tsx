@@ -205,30 +205,70 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
     );
   }, []);
 
+  // App commands, run from the keyboard and from the macOS menu bar. On a Mac a shortcut can reach
+  // both the page and the menu, so a command that just ran is ignored for a moment.
+  const lastRun = useRef<{ id: string; at: number }>({ id: "", at: 0 });
+  const runCommand = useCallback(
+    (id: string) => {
+      const now = performance.now();
+      if (lastRun.current.id === id && now - lastRun.current.at < 300) return;
+      lastRun.current = { id, at: now };
+      switch (id) {
+        case "search":
+          setPaletteOpen((o) => !o);
+          break;
+        case "new-note":
+          newNote();
+          break;
+        case "toggle-sidebar":
+          toggleChrome();
+          break;
+        case "related":
+          setView({ kind: "write" });
+          setRelatedOpen((o) => !o);
+          break;
+        case "chat":
+          openChat();
+          break;
+        case "settings":
+          setView({ kind: "settings" });
+          break;
+        case "go-write":
+          setView({ kind: "write" });
+          break;
+        case "go-notes":
+          setView({ kind: "notes" });
+          break;
+        case "go-journal":
+          setView({ kind: "journal" });
+          break;
+        case "go-ideas":
+          setView({ kind: "ideas" });
+          break;
+        case "go-models":
+          setView({ kind: "models" });
+          break;
+      }
+    },
+    [newNote, toggleChrome, openChat],
+  );
+  useEvent<string>("menu", runCommand);
+
   // Keyboard shortcuts.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const mod = e.metaKey || e.ctrlKey;
-      if (mod && e.key.toLowerCase() === "k") {
+      const id = !mod ? null : e.key.toLowerCase() === "k" ? "search" : e.key.toLowerCase() === "n" && !e.shiftKey ? "new-note" : e.key === "\\" ? "toggle-sidebar" : e.key.toLowerCase() === "j" ? "related" : null;
+      if (id) {
         e.preventDefault();
-        setPaletteOpen((o) => !o);
-      } else if (mod && e.key.toLowerCase() === "n" && !e.shiftKey) {
-        e.preventDefault();
-        newNote();
-      } else if (mod && e.key === "\\") {
-        e.preventDefault();
-        toggleChrome();
-      } else if (mod && e.key.toLowerCase() === "j") {
-        e.preventDefault();
-        setView({ kind: "write" });
-        setRelatedOpen((o) => !o);
+        runCommand(id);
       } else if (e.key === "Escape" && relatedOpen && !paletteOpen) {
         setRelatedOpen(false);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [newNote, toggleChrome, relatedOpen, paletteOpen]);
+  }, [runCommand, relatedOpen, paletteOpen]);
 
   // Backend events: external file changes and the global quick-capture shortcut.
   useEvent("vault-changed", () => void qc.invalidateQueries({ queryKey: ["notes"] }));
@@ -240,12 +280,12 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
       if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "l") {
         e.preventDefault();
         e.stopPropagation();
-        openChat();
+        runCommand("chat");
       }
     };
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
-  }, [openChat]);
+  }, [runCommand]);
 
   // While typing, chrome stays hidden even if the pointer rests on it; moving the mouse brings it back.
   const [typing, setTyping] = useState(false);

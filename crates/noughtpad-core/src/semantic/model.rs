@@ -14,9 +14,11 @@ pub const BGE_SMALL_EN_V15_Q: ModelSpec = ModelSpec {
     query_prefix: "",
     passage_prefix: "",
     // Measured (examples/semantic.rs): related note pairs 0.66–0.88, unrelated
-    // up to ~0.57. 0.60 favours precision: a missed link is better than a
-    // false one. Re-tune on real notebooks.
-    min_related: 0.60,
+    // up to ~0.57. On the 37-note sample notebook, short notes on different
+    // topics scored 0.60–0.63 (a run log next to a bread note), and no
+    // same-topic suggestion was below 0.63. Favours precision: a missed link is
+    // better than a false one. Re-tune on real notebooks.
+    min_related: 0.63,
     strong_related: 0.78,
     min_search: 0.55,
 };

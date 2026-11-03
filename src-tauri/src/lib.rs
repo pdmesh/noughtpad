@@ -4,6 +4,8 @@
 mod chat;
 #[cfg(desktop)]
 mod lifecycle;
+#[cfg(target_os = "macos")]
+mod menu;
 mod semantic;
 mod think;
 
@@ -372,6 +374,10 @@ pub fn run() {
         builder = builder
             .plugin(lifecycle::autostart_plugin())
             .on_window_event(lifecycle::on_window_event);
+        #[cfg(target_os = "macos")]
+        {
+            builder = builder.menu(|app| menu::build(app)).on_menu_event(menu::on_menu_event);
+        }
         builder = builder.setup(move |app| {
             tracing::info!(ms = since_start(), "setup");
             lifecycle::show_at_startup(app.handle());
