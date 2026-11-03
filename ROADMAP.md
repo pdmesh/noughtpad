@@ -22,7 +22,9 @@ The goal is a build on your own Mac, used daily for two weeks.
 - [x] Settings page (folder, connections, models, layout, shortcuts)
 - [x] Capture-speed budget in CI (open → typing; ~0.4 s, budget 1.5 s)
 - [x] Renamed from Nought (taken) to Noughtpad before daily use: bundle ID, keychain service, `.noughtpad` data folder, crates, packages, docs
-- [ ] Run the Mac build: check speed (startup, local model with Metal), keychain and quick capture. See `docs/HANDOFF.md`
+- [x] Mac build with Metal; startup and 10k-note speed measured (`docs/DESIGN.md` § M5 measurements); startup bundle split
+- [x] Platform window lifecycle: on macOS closing hides and ⌘⇧Space/Dock bring it back; "Open at login" setting
+- [ ] Mac checks still open: local model speed with Metal, keychain, "Open at login" switch
 - [ ] UX pass on macOS using computer use: writing, related notes, ideas, chat, models
 - [ ] Real providers: an Anthropic or OpenAI key, Ollama and LM Studio, including tool use
 - [ ] Full 2.5 GB model download through the app (resume after quitting midway)

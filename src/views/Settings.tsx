@@ -1,4 +1,4 @@
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronRight, FolderOpen } from "lucide-react";
 import { api, type VaultInfo } from "../lib/api";
 import { describeStatus, useSemanticStatus } from "../lib/useSemantic";
@@ -42,6 +42,7 @@ export function SettingsView({
   const semantic = useSemanticStatus();
   const { data: llm } = useLlm();
   const semanticOn = semantic.state !== "off";
+  const { data: autostart = false } = useQuery({ queryKey: ["autostart"], queryFn: api.autostartEnabled });
   const semanticLine =
     describeStatus(semantic) ?? (semantic.state === "ready" ? `On · ${semantic.notes.toLocaleString()} notes connected` : "Off");
 
@@ -102,6 +103,24 @@ export function SettingsView({
         </Row>
         <Row label="Show recent notes under the editor" hint="The writing page is a blank page by default.">
           <Toggle on={listUnderEditor} label="Show recent notes under the editor" onChange={toggleListUnderEditor} />
+        </Row>
+      </section>
+
+      <section className="settings-section">
+        <h3 className="ideas-section-title">Start-up</h3>
+        <Row
+          label="Open at login"
+          hint={
+            isMac
+              ? "Starts in the background, so ⌘ ⇧ Space works straight away. Closing the window keeps Noughtpad running; ⌘ Q quits."
+              : "Starts minimised, so Ctrl ⇧ Space works straight away. Closing the window quits Noughtpad."
+          }
+        >
+          <Toggle
+            on={autostart}
+            label="Open at login"
+            onChange={() => void api.setAutostart(!autostart).then((on) => qc.setQueryData(["autostart"], on))}
+          />
         </Row>
       </section>
 

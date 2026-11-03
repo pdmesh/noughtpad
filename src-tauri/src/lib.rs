@@ -2,6 +2,8 @@
 //! filesystem changes as events.
 
 mod chat;
+#[cfg(desktop)]
+mod lifecycle;
 mod semantic;
 mod think;
 
@@ -361,18 +363,18 @@ pub fn run() {
             tauri_plugin_global_shortcut::Builder::new()
                 .with_handler(move |app, shortcut, event| {
                     if event.state() == ShortcutState::Pressed && (shortcut == &capture || shortcut == &capture_alt) {
-                        if let Some(w) = app.get_webview_window("main") {
-                            let _ = w.unminimize();
-                            let _ = w.show();
-                            let _ = w.set_focus();
-                        }
+                        lifecycle::show_main(app);
                         let _ = app.emit("quick-capture", ());
                     }
                 })
                 .build(),
         );
+        builder = builder
+            .plugin(lifecycle::autostart_plugin())
+            .on_window_event(lifecycle::on_window_event);
         builder = builder.setup(move |app| {
             tracing::info!(ms = since_start(), "setup");
+            lifecycle::show_at_startup(app.handle());
             let shortcut = if cfg!(target_os = "macos") {
                 capture
             } else {
@@ -432,7 +434,15 @@ pub fn run() {
             chat::chat_delete,
             chat::chat_send,
             chat::chat_cancel,
+            #[cfg(desktop)]
+            lifecycle::autostart_enabled,
+            #[cfg(desktop)]
+            lifecycle::set_autostart,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running Noughtpad");
+        .build(tauri::generate_context!())
+        .expect("error while running Noughtpad")
+        .run(|_app, _event| {
+            #[cfg(desktop)]
+            lifecycle::on_run_event(_app, &_event);
+        });
 }

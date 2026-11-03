@@ -159,6 +159,7 @@ function emit(name: string, payload: unknown) {
 }
 
 let semantic: SemanticStatus = { state: "off" };
+let autostart = false;
 function setSemantic(s: SemanticStatus) {
   semantic = s;
   emit("semantic-status", s);
@@ -323,6 +324,10 @@ export async function mock(cmd: string, a: Record<string, any> = {}): Promise<un
       return Math.round(performance.now());
     case "default_vault":
       return "/mock/Noughtpad";
+    case "autostart_enabled":
+      return autostart;
+    case "set_autostart":
+      return (autostart = Boolean(a.on));
     case "open_vault":
       return { path: a.path, noteCount: notes.length, defaultPath: "/mock/Noughtpad" };
     case "list_notes":

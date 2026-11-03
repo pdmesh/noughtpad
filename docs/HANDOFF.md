@@ -9,8 +9,13 @@ Read this first next session, then `ROADMAP.md` (what's next) and
 - **Everything has been verified only on Linux:** in a cloud container, with the real Tauri app
   under a virtual display, the real BGE embedding model, the real Qwen3-4B (CPU, about 45–60 s per
   answer) and a fake OpenAI-compatible provider.
+- **Verified on a Mac (2026-11-03):** a local `--features local-llm-metal` build, startup time
+  (345–366 ms warm, mostly WKWebView creation), the 10k-note benchmark, and the window lifecycle:
+  closing hides the window, ⌘⇧Space and the Dock icon bring it back, ⌘Q quits, and `--hidden`
+  starts with no window.
 - **Never verified:**
-  - macOS, including the Keychain, Metal speed and the ⌘⇧Space quick-capture shortcut.
+  - On macOS: the Keychain, Metal model speed, and the "Open at login" switch actually adding the
+    login item (`~/Library/LaunchAgents`).
   - A real Anthropic, OpenAI or Ollama provider.
   - A full 2.5 GB model download through the app.
 - **M5 so far:**
