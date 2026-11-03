@@ -18,9 +18,10 @@ The working plan. Design detail and the reasons behind decisions are in
 
 The goal is a build on your own Mac, used daily for two weeks.
 
-- [x] Release workflow builds installers on demand (Actions → Release) and on `v*` tags
+- [x] Release workflow builds installers on demand (Actions → Release) and on `v*` tags. All three platforms are green
 - [x] Settings page (folder, connections, models, layout, shortcuts)
 - [x] Capture-speed budget in CI (open → typing; ~0.4 s, budget 1.5 s)
+- [ ] Pick a new name (Nought.app is taken) and rename before daily use
 - [ ] Run the Mac build: check speed (startup, local model with Metal), keychain and quick capture. See `docs/HANDOFF.md`
 - [ ] UX pass on macOS using computer use: writing, related notes, ideas, chat, models
 - [ ] Real providers: an Anthropic or OpenAI key, Ollama and LM Studio, including tool use

@@ -50,7 +50,10 @@ the screen.
 
 ### 1. Get a build
 Choose one:
-- **From CI:** GitHub → Actions → Release → latest run → artifact `nought-macos-arm64`. It's
+- **From CI:** GitHub → Actions → Release → latest run → artifact `nought-macos-arm64`. The
+  first green run with all three platforms is
+  [run #2](https://github.com/pdmesh/nought/actions/runs/41607043430): macOS arm64 with Metal
+  115 MB, Windows 66 MB, Linux 167 MB. It's
   ad-hoc signed and not notarised. Unzip it, then `xattr -cr Nought.app` (or right-click → Open
   the first time).
 - **Local build**, which also gives Metal:
@@ -98,7 +101,13 @@ Run the same question with each provider:
 Also check that the key ends up in Keychain Access (service `app.nought.llm`), not in
 `~/Library/Application Support/app.nought.desktop/config.json`.
 
-### 5. Then
+### 5. Name
+`Nought.app` is taken. Candidates: Mull, Quire, Strata. Check the App Store, domains and
+trademarks (class 9), then rename everywhere **before** daily use. The name is in the bundle ID
+`app.nought.desktop`, the keychain service `app.nought.llm`, the `.nought` data folder, crate and
+package names, and the docs. Changing it later means migrating data.
+
+### 6. Then
 - **Auto-update:** run `pnpm tauri signer generate`, add the public key and updater endpoint, and
   store the private key as `TAURI_SIGNING_PRIVATE_KEY`.
 - **Signing**, once you decide to pay: Apple Developer Program, then the secrets listed at the top
