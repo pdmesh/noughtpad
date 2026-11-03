@@ -21,7 +21,7 @@ Notes are plain Markdown files you own. AI stays out of the way during capture a
 - Opening a vault never blocks capture: catching up with changes runs in the background (10k notes: under 1 s first time, ~40 ms after)
 - Edits from other apps (Obsidian, git, sync) are picked up live. The index in `.nought/` is disposable and rebuildable
 - Distraction-free by default: toolbar and sidebar appear on hover. `⌘/Ctrl+\` pins them
-- **Related notes** (`⌘/Ctrl+J`, or the button in the top bar): notes that appear connected, each with the passage that matched, shared labels, same source and how far apart in time. "Not related" hides a suggestion for good, with undo
+- **Related notes** (`⌘/Ctrl+J`, or the button in the top bar): notes that appear connected, each with the passage that matched, shared labels, same source and how far apart in time. "Not related" hides a suggestion for good, with undo. Suggestions quietly adapt to what you open and dismiss (no buttons to press; resettable from `⌘K`)
 - **Search by meaning**: once turned on, `⌘K` finds notes by meaning as well as words. Opt-in: a ~65 MB local model is downloaded once, and notes never leave your computer
 - **Ideas over time**: threads you keep returning to, ideas forming in recent weeks, dormant ideas, what you read that seems to have shaped later notes, and questions you never came back to. Open a thread to see it month by month: which source a note may build on, which earlier note it returns to, and where you may be rethinking it. Deterministic and local; nothing is generated
 - Global quick capture: `⌘⇧Space` (macOS) / `Ctrl+Shift+Space`

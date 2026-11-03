@@ -1004,7 +1004,7 @@ button {
 .related-tension {
   color: var(--accent);
 }
-.related-open {
+.related-link {
   display: block;
   width: 100%;
   text-align: left;
@@ -1030,7 +1030,7 @@ button {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-.related-open:hover .related-passage {
+.related-link:hover .related-passage {
   border-left-color: var(--accent);
 }
 .related-source {

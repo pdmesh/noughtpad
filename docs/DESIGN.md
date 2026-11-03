@@ -395,6 +395,17 @@ Reproduce with `cargo run --release -p nought-core --example bench -- 10000`.
   - learning from the user's own "Not related" feedback (a linear head on existing embeddings, no new model);
   - concept extraction (GLiNER-style), for concept timelines and better theme names.
 
+**Feedback learning (2026-11-03): built.** Related notes learn what *this* user considers related, with no new model and no approval queue.
+- **Signals:** opening a suggestion from the Related panel counts as useful; "Not related" counts as not useful.
+- **Storage:** both are stored in `.nought/user-state.sqlite` with the pair's features at that moment.
+- **Features:** note similarity, best-passage similarity, shared labels, same source, time apart, both personal, and labels that don't overlap.
+- **Model:** a class-balanced logistic regression, regularised towards a prior that *is* today's hand-tuned rule.
+  - It switches on only after 3 or more opens and 3 or more dismissals.
+  - Until then, behaviour is unchanged.
+  - When active, candidates come from a slightly wider net (`min_related − 0.08`), and the model's probability (≥ 0.5) decides what is shown and in what order.
+- **Visibility and control:** the panel says "Tuned to what you open and dismiss here". `⌘K → Reset what related notes learned` clears it; dismissals stay hidden.
+- **Tests:** unit tests cover the prior and the learning. An integration test checks that feedback on other notes stops cross-topic look-alikes from appearing for a new note while same-topic suggestions remain.
+
 ## 9. Risks I would watch from day one
 
 - **Capture friction creep:** add a performance budget test (time-to-type) to CI.

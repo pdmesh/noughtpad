@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Command } from "cmdk";
 import { useQuery } from "@tanstack/react-query";
-import { BookOpen, CalendarDays, FilePlus2, Notebook, PanelLeft, RefreshCw, Rows3, Sparkle, Sprout, Tag, Waypoints } from "lucide-react";
+import { BookOpen, CalendarDays, FilePlus2, Notebook, PanelLeft, RefreshCw, RotateCcw, Rows3, Sparkle, Sprout, Tag, Waypoints } from "lucide-react";
 import { api } from "../lib/api";
 import { formatDay, plainExcerpt, snippetParts } from "../lib/format";
 
@@ -17,6 +17,7 @@ export interface PaletteActions {
   toggleChrome: () => void;
   rebuildIndex: () => void;
   toggleRelated: () => void;
+  resetRelatedFeedback: () => void;
   semanticOn: boolean;
   toggleSemantic: () => void;
 }
@@ -69,6 +70,7 @@ export function SearchPalette({ open, onClose, ...actions }: Props) {
       run: actions.toggleSemantic,
     },
     { label: "Rebuild search index", icon: <RefreshCw size={14} />, run: actions.rebuildIndex },
+    { label: "Reset what related notes learned", icon: <RotateCcw size={14} />, run: actions.resetRelatedFeedback },
   ];
   // With a query, commands whose name contains every typed word come first.
   const words = input.toLowerCase().split(/\s+/).filter(Boolean);

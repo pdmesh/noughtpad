@@ -137,6 +137,8 @@ export interface RelatedNotes {
   enabled: boolean;
   pending: boolean;
   items: Related[];
+  /** Suggestions are tuned by this user's own feedback. */
+  personalized: boolean;
 }
 
 export interface LabelCount {
@@ -222,6 +224,8 @@ export const api = {
   related: (id: string, limit = 8) => call<RelatedNotes>("related_notes", { id, limit }),
   dismissRelated: (a: string, b: string) => call<void>("dismiss_related", { a, b }),
   undismissRelated: (a: string, b: string) => call<void>("undismiss_related", { a, b }),
+  relatedOpened: (a: string, b: string) => call<void>("related_opened", { a, b }),
+  resetRelatedFeedback: () => call<void>("reset_related_feedback"),
   ideasOverview: () => call<IdeasOverview>("ideas_overview"),
   themeTimeline: (id: string) => call<ThemeTimeline | null>("theme_timeline", { id }),
   noteTheme: (id: string) => call<ThemeSummary | null>("note_theme", { id }),

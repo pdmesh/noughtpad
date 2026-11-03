@@ -85,6 +85,9 @@ export function RelatedPanel({ noteId, onOpen, onOpenTheme, onClose, onNotice }:
         <p className="related-hint faint">No clear connections yet. They appear as your notebook grows.</p>
       )}
 
+      {active && data?.personalized && (
+        <p className="related-hint faint">Tuned to what you open and dismiss here.</p>
+      )}
       {active && data && data.items.length > 0 && (
         <ul className="related-list">
           {data.items.map((r) => (
@@ -93,7 +96,14 @@ export function RelatedPanel({ noteId, onOpen, onOpenTheme, onClose, onNotice }:
                 <span className={r.relation === "tension" ? "related-tension" : undefined}>{describe(r)}</span>
                 <span className="faint"> · {timeRelation(r.daysApart)}</span>
               </div>
-              <button className="related-open" onClick={() => onOpen(r.note.id)}>
+              <button
+                className="related-link"
+                onClick={() => {
+                  // Opening a suggestion is the "this was useful" signal; no buttons to press.
+                  if (noteId) void api.relatedOpened(noteId, r.note.id);
+                  onOpen(r.note.id);
+                }}
+              >
                 {r.note.hasTitle && <span className="related-title">{r.note.title}</span>}
                 <blockquote className="related-passage">{plainExcerpt(r.passage)}</blockquote>
               </button>

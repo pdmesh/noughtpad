@@ -399,6 +399,8 @@ pub fn run() {
             semantic::related_notes,
             semantic::dismiss_related,
             semantic::undismiss_related,
+            semantic::related_opened,
+            semantic::reset_related_feedback,
             semantic::ideas_overview,
             semantic::theme_timeline,
             semantic::note_theme,

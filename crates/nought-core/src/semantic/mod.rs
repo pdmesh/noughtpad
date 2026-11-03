@@ -8,6 +8,7 @@
 
 pub mod chunk;
 pub mod embedder;
+pub mod feedback;
 pub mod ideas;
 pub mod judge;
 pub mod model;
@@ -107,6 +108,8 @@ pub struct RelatedNotes {
     /// True when this note hasn't been embedded yet (e.g. just edited).
     pub pending: bool,
     pub items: Vec<Related>,
+    /// True when suggestions are tuned by this user's own feedback.
+    pub personalized: bool,
 }
 
 type Listener = Box<dyn Fn(&Status) + Send + Sync>;
@@ -128,6 +131,8 @@ pub struct Semantic {
     judge: Mutex<Option<(Box<dyn judge::Judge>, judge::JudgeSpec)>>,
     /// Judge results by hashed text pair, so a pair is never judged twice.
     judged: Mutex<HashMap<String, f32>>,
+    /// Learned relatedness model, keyed by the feedback count it was fitted on.
+    learned: Mutex<Option<(usize, Option<feedback::Model>)>>,
     inferred: Mutex<HashMap<String, judge::Nli>>,
 }
 
@@ -153,6 +158,7 @@ impl Semantic {
             ideas_listener: Mutex::new(None),
             judge: Mutex::new(None),
             judged: Mutex::new(HashMap::new()),
+            learned: Mutex::new(None),
             inferred: Mutex::new(HashMap::new()),
         }))
     }
@@ -478,13 +484,15 @@ impl Semantic {
                 enabled: false,
                 pending: false,
                 items: vec![],
+                personalized: false,
             });
         };
         let dismissed = self.user.dismissed_for(id)?;
         let jspec = self.judge_spec();
-        // With a judge, the embeddings cast a slightly wider net and the judge
-        // decides what is shown.
-        let floor = if jspec.is_some() {
+        let learned = self.learned_model(&spec)?;
+        // With a judge or a learned model, the embeddings cast a slightly wider
+        // net and the judge / model decides what is shown.
+        let floor = if jspec.is_some() || learned.is_some() {
             spec.min_related - JUDGE_WIDEN
         } else {
             spec.min_related
@@ -494,6 +502,8 @@ impl Semantic {
         struct Cand {
             id: String,
             score: f32,
+            mean_sim: f32,
+            chunk_sim: f32,
             q_ord: u32,
             c_ord: u32,
         }
@@ -504,6 +514,7 @@ impl Semantic {
                     enabled: true,
                     pending: true,
                     items: vec![],
+                    personalized: false,
                 });
             };
             let sims: Vec<(&String, f32)> = vectors
@@ -536,6 +547,8 @@ impl Semantic {
                     (score >= floor).then(|| Cand {
                         id: other.clone(),
                         score,
+                        mean_sim,
+                        chunk_sim,
                         q_ord,
                         c_ord,
                     })
@@ -549,6 +562,7 @@ impl Semantic {
                 enabled: true,
                 pending: false,
                 items: vec![],
+                personalized: false,
             });
         };
         let my_labels: HashSet<String> = me.labels.iter().map(|l| l.to_lowercase()).collect();
@@ -572,7 +586,14 @@ impl Semantic {
                 _ => None,
             };
             let boost = 0.02 * shared_labels.len().min(3) as f32 + if same_source.is_some() { 0.03 } else { 0.0 };
-            let score = c.score + boost;
+            let mut score = c.score + boost;
+            if let Some(m) = &learned {
+                let p = m.probability(&pair_features(c.mean_sim, c.chunk_sim, &me, &note));
+                if p < 0.5 {
+                    continue;
+                }
+                score = p;
+            }
             let (passage, mine) = self.vault.with_index(|ix| -> Result<_> {
                 let p = store::chunk_text(ix.conn(), &c.id, c.c_ord)?.unwrap_or_default();
                 let sp = store::chunk_text(ix.conn(), id, c.q_ord)?.unwrap_or_default();
@@ -605,7 +626,76 @@ impl Semantic {
             enabled: true,
             pending: false,
             items,
+            personalized: learned.is_some(),
         })
+    }
+
+    // ---- learning from feedback --------------------------------------------
+
+    /// The relatedness model fitted on this user's feedback, if there is enough.
+    fn learned_model(&self, spec: &ModelSpec) -> Result<Option<feedback::Model>> {
+        let examples: Vec<(feedback::PairFeatures, bool)> = self
+            .user
+            .feedback(spec.id)?
+            .into_iter()
+            .filter_map(|(json, useful)| serde_json::from_str(&json).ok().map(|f| (f, useful)))
+            .collect();
+        let mut cache = lock(&self.learned);
+        if let Some((n, m)) = cache.as_ref() {
+            if *n == examples.len() {
+                return Ok(*m);
+            }
+        }
+        let m = feedback::Model::fit(feedback::Model::prior(spec.min_related), &examples);
+        *cache = Some((examples.len(), m));
+        Ok(m)
+    }
+
+    /// Features of a pair right now (needs both notes embedded).
+    fn features_now(&self, a: &str, b: &str) -> Result<Option<feedback::PairFeatures>> {
+        let sims = {
+            let v = self.vectors.read().unwrap_or_else(|e| e.into_inner());
+            match (v.notes.get(a), v.notes.get(b)) {
+                (Some(x), Some(y)) => {
+                    let best = x
+                        .chunks
+                        .iter()
+                        .flat_map(|(_, xv)| y.chunks.iter().map(move |(_, yv)| dot(xv, yv)))
+                        .fold(f32::MIN, f32::max);
+                    Some((dot(&x.mean, &y.mean), best))
+                }
+                _ => None,
+            }
+        };
+        let (Some((mean_sim, chunk_sim)), Some(me), Some(other)) =
+            (sims, self.vault.summary(a)?, self.vault.summary(b)?)
+        else {
+            return Ok(None);
+        };
+        Ok(Some(pair_features(mean_sim, chunk_sim, &me, &other)))
+    }
+
+    fn record(&self, a: &str, b: &str, useful: bool) -> Result<()> {
+        let Some(spec) = self.spec.read().unwrap_or_else(|e| e.into_inner()).clone() else {
+            return Ok(());
+        };
+        if let Some(f) = self.features_now(a, b)? {
+            let json = serde_json::to_string(&f).unwrap_or_default();
+            self.user.record_feedback(a, b, useful, spec.id, &json)?;
+        }
+        Ok(())
+    }
+
+    /// The user opened suggestion `b` from note `a`'s related notes: useful.
+    pub fn opened_related(&self, a: &str, b: &str) -> Result<()> {
+        self.record(a, b, true)
+    }
+
+    /// Forget everything learned from related-note feedback (dismissals stay).
+    pub fn reset_feedback(&self) -> Result<()> {
+        self.user.clear_feedback()?;
+        *lock(&self.learned) = None;
+        Ok(())
     }
 
     // ---- ideas over time (M3) ----------------------------------------------
@@ -887,11 +977,14 @@ impl Semantic {
         Ok(kept.into_iter().map(|(i, _)| i).collect())
     }
 
+    /// "Not related": hide the pair for good, and learn from it.
     pub fn dismiss(&self, a: &str, b: &str) -> Result<()> {
+        self.record(a, b, false)?;
         self.user.dismiss(a, b)
     }
 
     pub fn undismiss(&self, a: &str, b: &str) -> Result<()> {
+        self.user.remove_feedback(a, b, false)?;
         self.user.undismiss(a, b)
     }
 
@@ -1027,6 +1120,29 @@ impl Semantic {
 impl Drop for Semantic {
     fn drop(&mut self) {
         self.stop.store(true, Ordering::SeqCst);
+    }
+}
+
+fn pair_features(mean_sim: f32, chunk_sim: f32, a: &NoteSummary, b: &NoteSummary) -> feedback::PairFeatures {
+    let la: HashSet<String> = a.labels.iter().map(|l| l.to_lowercase()).collect();
+    let lb: HashSet<String> = b.labels.iter().map(|l| l.to_lowercase()).collect();
+    let shared = la.intersection(&lb).count();
+    let same_source = match (
+        a.source.as_ref().and_then(|s| s.title.as_ref()),
+        b.source.as_ref().and_then(|s| s.title.as_ref()),
+    ) {
+        (Some(x), Some(y)) => x.eq_ignore_ascii_case(y),
+        _ => false,
+    };
+    use crate::note::NoteKind;
+    feedback::PairFeatures {
+        note_sim: mean_sim,
+        passage_sim: chunk_sim,
+        shared_labels: (shared.min(3) as f32) / 3.0,
+        same_source: same_source as u8 as f32,
+        time_apart: feedback::PairFeatures::time_feature(day_number(&b.day) - day_number(&a.day)),
+        both_personal: (a.kind == NoteKind::Personal && b.kind == NoteKind::Personal) as u8 as f32,
+        label_mismatch: (!la.is_empty() && !lb.is_empty() && shared == 0) as u8 as f32,
     }
 }
 
@@ -1492,5 +1608,84 @@ mod judge_tests {
             .iter()
             .all(|h| h.matched != MatchKind::Meaning || h.score >= LexicalJudge::SPEC.min_relevance as f64));
         assert!(!hits.iter().any(|h| h.note.title.contains("Kyoto")));
+    }
+}
+
+#[cfg(test)]
+mod feedback_tests {
+    use super::embedder::HashEmbedder;
+    use super::*;
+    use crate::vault::{EditableMeta, NewNote};
+
+    fn note(v: &Vault, label: &str, text: &str) -> String {
+        v.create(NewNote {
+            content: text.into(),
+            meta: EditableMeta {
+                labels: vec![label.into()],
+                ..Default::default()
+            },
+        })
+        .unwrap()
+        .id
+    }
+
+    #[test]
+    fn suggestions_adapt_to_this_users_feedback() {
+        let dir = tempfile::tempdir().unwrap();
+        let v = Arc::new(Vault::open(dir.path()).unwrap());
+        // Two topics that share vocabulary (returns, ownership, growth…).
+        let vc: Vec<String> = [
+            "Fund returns depend on ownership of outlier companies and growth.",
+            "Ownership of outlier companies drives fund returns and growth.",
+            "Outlier companies, ownership and fund returns: growth matters.",
+            "Growth of outlier companies and ownership decide fund returns.",
+            "Fund returns, ownership and outlier growth in venture portfolios.",
+        ]
+        .iter()
+        .map(|t| note(&v, "VC", t))
+        .collect();
+        let garden: Vec<String> = [
+            "Garden returns: ownership of the allotment and tomato growth.",
+            "Tomato growth returns each spring; allotment ownership matters.",
+            "Allotment ownership and garden growth returns for tomatoes.",
+        ]
+        .iter()
+        .map(|t| note(&v, "Garden", t))
+        .collect();
+        let sem = Semantic::new(v.clone(), Arc::new(UserState::open_in_memory().unwrap())).unwrap();
+        sem.set_embedder(Box::new(HashEmbedder::default())).unwrap();
+        sem.index_now().unwrap();
+
+        let labels = |r: &RelatedNotes| r.items.iter().map(|i| i.note.labels[0].clone()).collect::<Vec<_>>();
+        let target = &vc[4];
+        let before = sem.related(target, 10).unwrap();
+        assert!(!before.personalized);
+        assert!(
+            labels(&before).contains(&"Garden".to_string()),
+            "cross-topic look-alike shown before: {:?}",
+            labels(&before)
+        );
+
+        // Feedback on *other* notes: open same-topic, dismiss cross-topic.
+        for (i, a) in vc[..3].iter().enumerate() {
+            sem.opened_related(a, &vc[(i + 1) % 3]).unwrap();
+            sem.dismiss(a, &garden[i]).unwrap();
+        }
+        let after = sem.related(target, 10).unwrap();
+        assert!(after.personalized);
+        assert!(
+            !labels(&after).contains(&"Garden".to_string()),
+            "learned to skip: {:?}",
+            labels(&after)
+        );
+        assert!(
+            labels(&after).iter().filter(|l| *l == "VC").count() >= 2,
+            "{:?}",
+            labels(&after)
+        );
+
+        // Undo and reset are honoured.
+        sem.reset_feedback().unwrap();
+        assert!(!sem.related(target, 10).unwrap().personalized);
     }
 }

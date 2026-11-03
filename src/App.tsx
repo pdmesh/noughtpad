@@ -311,6 +311,12 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
           setView({ kind: "write" });
           setRelatedOpen((o) => !o);
         }}
+        resetRelatedFeedback={() =>
+          void api.resetRelatedFeedback().then(() => {
+            setNotice("Related notes are back to their defaults.");
+            void qc.invalidateQueries({ queryKey: ["related"] });
+          })
+        }
         semanticOn={semantic.state !== "off"}
         toggleSemantic={() =>
           void (semantic.state === "off" ? api.enableSemantic() : api.disableSemantic()).then(() =>

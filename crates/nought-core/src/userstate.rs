@@ -41,6 +41,17 @@ impl UserState {
                  b  TEXT NOT NULL,
                  at INTEGER NOT NULL,
                  PRIMARY KEY (a, b)
+             );
+             -- Implicit feedback on related-note suggestions, with the pair's
+             -- features at that moment (so learning survives index rebuilds).
+             CREATE TABLE IF NOT EXISTS relation_feedback (
+                 a        TEXT NOT NULL,
+                 b        TEXT NOT NULL,
+                 useful   INTEGER NOT NULL,
+                 model    TEXT NOT NULL,
+                 features TEXT NOT NULL,
+                 at       INTEGER NOT NULL,
+                 PRIMARY KEY (a, b, useful)
              );",
         )?;
         Ok(UserState { conn: Mutex::new(conn) })
@@ -64,6 +75,39 @@ impl UserState {
         let (a, b) = pair(a, b);
         self.conn()
             .execute("DELETE FROM dismissed_relations WHERE a = ?1 AND b = ?2", params![a, b])?;
+        Ok(())
+    }
+
+    /// Record feedback on a suggestion (latest wins for the same pair and kind).
+    pub fn record_feedback(&self, a: &str, b: &str, useful: bool, model: &str, features: &str) -> Result<()> {
+        let (a, b) = pair(a, b);
+        self.conn().execute(
+            "INSERT OR REPLACE INTO relation_feedback (a, b, useful, model, features, at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            params![a, b, useful, model, features, chrono::Utc::now().timestamp_millis()],
+        )?;
+        Ok(())
+    }
+
+    pub fn remove_feedback(&self, a: &str, b: &str, useful: bool) -> Result<()> {
+        let (a, b) = pair(a, b);
+        self.conn().execute(
+            "DELETE FROM relation_feedback WHERE a = ?1 AND b = ?2 AND useful = ?3",
+            params![a, b, useful],
+        )?;
+        Ok(())
+    }
+
+    /// `(features JSON, useful)` recorded with `model`.
+    pub fn feedback(&self, model: &str) -> Result<Vec<(String, bool)>> {
+        let conn = self.conn();
+        let mut stmt = conn.prepare("SELECT features, useful FROM relation_feedback WHERE model = ?1")?;
+        let rows = stmt.query_map([model], |r| Ok((r.get(0)?, r.get(1)?)))?;
+        Ok(rows.collect::<rusqlite::Result<_>>()?)
+    }
+
+    pub fn clear_feedback(&self) -> Result<()> {
+        self.conn().execute("DELETE FROM relation_feedback", [])?;
         Ok(())
     }
 

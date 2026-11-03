@@ -166,3 +166,15 @@ pub async fn theme_timeline(state: State<'_, AppState>, id: String) -> CmdResult
 pub async fn note_theme(state: State<'_, AppState>, id: String) -> CmdResult<Option<ThemeSummary>> {
     Ok(state.semantic()?.note_theme(&id)?)
 }
+
+/// The user opened a suggested note from the Related panel (implicit "useful").
+#[tauri::command]
+pub async fn related_opened(state: State<'_, AppState>, a: String, b: String) -> CmdResult<()> {
+    Ok(state.semantic()?.opened_related(&a, &b)?)
+}
+
+/// Forget what related notes learned from feedback (dismissals stay hidden).
+#[tauri::command]
+pub async fn reset_related_feedback(state: State<'_, AppState>) -> CmdResult<()> {
+    Ok(state.semantic()?.reset_feedback()?)
+}

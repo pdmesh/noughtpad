@@ -179,13 +179,15 @@ async function simulateEnable() {
 }
 
 const dismissed = new Set<string>();
+// Mirrors the real rule: personalised after 3+ opens and 3+ dismissals.
+const feedback = { opened: 0, dismissed: 0 };
 const pairKey = (a: string, b: string) => [a, b].sort().join("|");
 const stop = new Set("the and that this with for are was not but what they how have from more than just into about".split(" "));
 const wordsOf = (t: string) =>
   new Set(t.toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 3 && !stop.has(w)).map((w) => w.replace(/s$/, "")));
 
 function related(id: string, limit: number): RelatedNotes {
-  if (semantic.state !== "ready" && semantic.state !== "indexing") return { enabled: false, pending: false, items: [] };
+  if (semantic.state !== "ready" && semantic.state !== "indexing") return { enabled: false, pending: false, items: [], personalized: false };
   const me = get(id);
   const mine = wordsOf(me.content);
   const items: Related[] = notes
@@ -210,7 +212,7 @@ function related(id: string, limit: number): RelatedNotes {
       daysApart: Math.round((Date.parse(n.created) - Date.parse(me.created)) / 86_400_000),
       relation: /\b(but|tension|however)\b/i.test(n.content + " " + me.content) ? "tension" : score >= 0.25 ? "supports" : "related",
     }));
-  return { enabled: true, pending: false, items };
+  return { enabled: true, pending: false, items, personalized: feedback.opened >= 3 && feedback.dismissed >= 3 };
 }
 
 // ---- ideas over time (mock: one thread per label with 3+ notes) -------------
@@ -379,7 +381,14 @@ export async function mock(cmd: string, a: Record<string, any> = {}): Promise<un
     case "related_notes":
       return related(a.id, a.limit ?? 8);
     case "dismiss_related":
+      feedback.dismissed++;
       dismissed.add(pairKey(a.a, a.b));
+      return null;
+    case "related_opened":
+      feedback.opened++;
+      return null;
+    case "reset_related_feedback":
+      feedback.opened = feedback.dismissed = 0;
       return null;
     case "undismiss_related":
       dismissed.delete(pairKey(a.a, a.b));
