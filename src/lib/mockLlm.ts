@@ -1,7 +1,7 @@
 // Browser-only stand-in for the M4 commands (models, providers, thinking).
 // Downloads and answers are simulated; the privacy rules mirror the backend.
 
-import type { ActiveModel, Kept, LlmOverview, LocalModelInfo, NoteSummary, Prepared, Remote, RemoteInput, ThinkScope } from "./api";
+import type { ActiveModel, Chat, ChatNote, ChatScope, LlmOverview, LocalModelInfo, NoteSummary, Remote, RemoteInput } from "./api";
 
 export interface MockHost {
   emit: (name: string, payload: unknown) => void;
@@ -80,9 +80,8 @@ const remotes: Remote[] = [];
 const keys = new Map<string, string>();
 let active: ActiveModel | null = preset === "ready" ? { kind: "local", model: catalog[0].id } : null;
 const consented = new Set<string>();
-let lastDestination: string | null = null;
 const runs = new Map<string, { cancelled: boolean }>();
-const kept: Kept[] = [];
+const chats = new Map<string, Chat>();
 let seq = 0;
 
 const destination = (r: Remote) => `${r.kind}:${r.baseUrl ?? providers.find((p) => p.kind === r.kind)?.defaultUrl ?? ""}`;
@@ -90,7 +89,6 @@ const activeRemote = () => {
   const a = active;
   return a?.kind === "remote" ? (remotes.find((r) => r.id === a.id) ?? null) : null;
 };
-const needsConsent = (r: Remote) => !consented.has(destination(r)) || (lastDestination !== null && lastDestination !== destination(r));
 
 function overview(): LlmOverview {
   const a = active;
@@ -114,6 +112,8 @@ function overview(): LlmOverview {
     localAvailable: true,
     remoteAvailable: true,
     keychain: true,
+    activeDestination: activeRemote() ? destination(activeRemote()!) : null,
+    activeWhere: activeRemote() ? (activeRemote()!.baseUrl ?? providers.find((p) => p.kind === activeRemote()!.kind)?.defaultUrl ?? providers.find((p) => p.kind === activeRemote()!.kind)!.label) : null,
   };
 }
 
@@ -121,7 +121,7 @@ function err(kind: string, message: string) {
   return { kind, message };
 }
 
-function context(host: MockHost, scope: ThinkScope, question: string): NoteSummary[] {
+function context(host: MockHost, scope: ChatScope, question: string): NoteSummary[] {
   const all = host.summaries();
   let picked: NoteSummary[];
   switch (scope.kind) {
@@ -152,18 +152,25 @@ function context(host: MockHost, scope: ThinkScope, question: string): NoteSumma
   return picked.slice(0, 8).sort((a, b) => a.created.localeCompare(b.created));
 }
 
-function fakeAnswer(question: string, notes: NoteSummary[], host: MockHost): string {
-  if (!notes.length) return "None of the notes you chose cover this.";
-  const lines = notes.slice(0, 4).map((n, i) => {
-    const first = host
-      .body(n.id)
+function fakeAnswer(question: string, notes: ChatNote[], host: MockHost): string {
+  if (!notes.length) return "Your notes don't cover this yet.";
+  const first = (id: string) =>
+    host
+      .body(id)
       .replace(/[#>*_`[\]-]/g, "")
       .split(/(?<=[.?!])\s/)[0]
-      .trim();
-    const verb = n.kind === "source" ? `you noted from ${n.source?.title ?? "a source"}` : "you wrote";
-    return `On ${n.day} ${verb}: “${first.slice(0, 140)}” [${i + 1}]`;
-  });
-  return `${lines.join("\n\n")}\n\n${/\bchang/i.test(question) ? "Read in order, the notes move from what you read to what you now question" : "These are the notes that speak to it most directly"}${notes.length > 1 ? ` [1][${Math.min(notes.length, 4)}]` : " [1]"}.`;
+      .trim()
+      .toLowerCase();
+  const a = notes[0];
+  const b = notes[notes.length - 1];
+  return [
+    `Short answer: ${/\bchang/i.test(question) ? "it shifted from something you read to something you now question" : "your notes keep returning to the same idea"}.`,
+    `It starts with “${first(a.id).slice(0, 90)}” [${a.n}], written on ${a.day}.`,
+    notes.length > 1 ? `By ${b.day} you had moved to “${first(b.id).slice(0, 90)}” [${b.n}].` : "",
+    "What's still open is whether this holds up when you test it against what you actually do.",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 }
 
 export async function mockLlm(cmd: string, a: Record<string, any>, host: MockHost): Promise<{ handled: boolean; value?: unknown }> {
@@ -238,72 +245,83 @@ export async function mockLlm(cmd: string, a: Record<string, any>, host: MockHos
       active = next;
       return done();
     }
+    case "llm_warm":
+      return done();
     case "llm_turn_off":
       active = null;
       return done();
-    case "think_prepare": {
-      const r = activeRemote();
-      const provider = !active
-        ? null
-        : active.kind === "local"
-          ? { label: catalog.find((m) => m.id === (active as { model: string }).model)!.name, model: "", onDevice: true, destination: "this computer" }
-          : { label: r!.label, model: r!.model, onDevice: false, destination: r!.baseUrl ?? providers.find((p) => p.kind === r!.kind)?.defaultUrl ?? r!.label };
-      const prepared: Prepared = { notes: context(host, a.scope, a.question), provider, needsConsent: !!r && needsConsent(r) };
-      return done(prepared);
+    case "chat_list":
+      return done(
+        [...chats.values()]
+          .sort((x, y) => y.updated.localeCompare(x.updated))
+          .map((c) => ({ id: c.id, title: c.title, updated: c.updated, scopeLabel: c.scopeLabel, questions: c.messages.filter((m) => m.role === "user").length })),
+      );
+    case "chat_get": {
+      const c = chats.get(a.id);
+      if (!c) throw err("notFound", "That chat was deleted");
+      return done(structuredClone(c));
     }
-    case "think_ask": {
-      if (!active) throw err("noModel", "Choose a model on the Models page first");
-      if (!a.noteIds.length) throw err("invalid", "No notes to think with");
-      const r = activeRemote();
-      if (r && needsConsent(r)) {
-        if (!a.consent) throw err("consent", "Confirm which notes are sent first");
-        consented.add(destination(r));
-        lastDestination = destination(r);
-      } else if (r) lastDestination = destination(r);
-      const all = host.summaries();
-      const notes = (a.noteIds as string[]).map((id) => all.find((n) => n.id === id)!).filter(Boolean);
-      notes.sort((x, y) => x.created.localeCompare(y.created));
-      const text = fakeAnswer(a.question, notes, host);
-      const run = { cancelled: false };
-      runs.set(a.requestId, run);
-      const pieces = text.match(/\S+\s*/g) ?? [];
-      const start = performance.now();
-      let i = 0;
-      const t = setInterval(() => {
-        if (run.cancelled || i >= pieces.length) {
-          clearInterval(t);
-          runs.delete(a.requestId);
-          const nums = [...text.matchAll(/\[(\d+)\]/g)].map((m) => Number(m[1]));
-          const cited = [...new Set(nums)].filter((n) => n >= 1 && n <= notes.length).map((n) => notes[n - 1].id);
-          host.emit("think-done", {
-            requestId: a.requestId,
-            cited: run.cancelled ? [] : cited,
-            usage: { promptTokens: 400, completionTokens: pieces.length, secs: (performance.now() - start) / 1000 },
-            error: null,
-            cancelled: run.cancelled,
-          });
-          return;
-        }
-        host.emit("think-delta", { requestId: a.requestId, text: pieces[i++] });
-      }, 25);
+    case "chat_delete":
+      chats.delete(a.id);
       return done();
-    }
-    case "think_cancel": {
-      const run = runs.get(a.requestId);
+    case "chat_cancel": {
+      const run = runs.get(a.id);
       if (run) run.cancelled = true;
       return done();
     }
-    case "keep_answer": {
-      const k: Kept = { file: `kept-${++seq}.md`, created: new Date().toISOString(), ...a.input };
-      kept.unshift(k);
-      return done(k);
-    }
-    case "kept_answers":
-      return done([...kept]);
-    case "forget_kept": {
-      const i = kept.findIndex((k) => k.file === a.file);
-      if (i >= 0) kept.splice(i, 1);
-      return done();
+    case "chat_send": {
+      if (!active) throw err("noModel", "Choose a model on the Models page first");
+      const text = String(a.text).trim();
+      const now = new Date().toISOString();
+      let chat = a.chatId ? chats.get(a.chatId) : undefined;
+      if (!chat) {
+        chat = { id: `chat${++seq}`, title: text.slice(0, 60), created: now, updated: now, scope: a.scope, scopeLabel: a.scopeLabel, approved: null, notes: [], messages: [] };
+      }
+      if (runs.has(chat.id)) throw err("invalid", "Wait for the answer, or stop it");
+      const r = activeRemote();
+      if (r && chat.approved !== destination(r)) {
+        if (!a.consent) throw err("consent", "Approve sending notes from this chat first");
+        chat.approved = destination(r);
+        consented.add(destination(r));
+      }
+      chat.messages.push({ role: "user", text, steps: [], model: null, error: null, at: now });
+      chat.updated = now;
+      chats.set(chat.id, chat);
+      const c = chat;
+      const run = { cancelled: false };
+      runs.set(c.id, run);
+      // Simulate: one step that surfaces notes, then a streamed answer.
+      const found = context(host, c.scope, text);
+      const nums: number[] = [];
+      for (const s of found) {
+        let cn = c.notes.find((x) => x.id === s.id);
+        if (!cn) {
+          cn = { n: c.notes.length + 1, id: s.id, title: s.title, day: s.day, source: s.source?.title ?? null };
+          c.notes.push(cn);
+        }
+        nums.push(cn.n);
+      }
+      const label = r ? `Searched “${text.split(/\s+/).slice(0, 3).join(" ")}”` : `Found ${found.length} notes`;
+      const step = { label, notes: nums };
+      const stepNotes = c.notes.filter((x) => nums.includes(x.n));
+      const answer = fakeAnswer(text, stepNotes, host);
+      const pieces = answer.match(/\S+\s*/g) ?? [];
+      let i = 0;
+      let out = "";
+      setTimeout(() => host.emit("chat-step", { chatId: c.id, step, notes: stepNotes }), 30);
+      const t = setInterval(() => {
+        if (run.cancelled || i >= pieces.length) {
+          clearInterval(t);
+          runs.delete(c.id);
+          c.messages.push({ role: "assistant", text: out.trim(), steps: [step], model: overview().activeLabel, error: null, at: new Date().toISOString() });
+          c.updated = new Date().toISOString();
+          host.emit("chat-done", { chatId: c.id });
+          return;
+        }
+        out += pieces[i];
+        host.emit("chat-delta", { chatId: c.id, text: pieces[i++] });
+      }, 20);
+      return done({ chatId: c.id });
     }
     default:
       return { handled: false };

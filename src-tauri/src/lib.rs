@@ -1,6 +1,7 @@
 //! Tauri shell: exposes `nought-core` to the UI as commands and forwards
 //! filesystem changes as events.
 
+mod chat;
 mod semantic;
 mod think;
 
@@ -418,12 +419,12 @@ pub fn run() {
             think::llm_remove_remote,
             think::llm_use,
             think::llm_turn_off,
-            think::think_prepare,
-            think::think_ask,
-            think::think_cancel,
-            think::keep_answer,
-            think::kept_answers,
-            think::forget_kept,
+            think::llm_warm,
+            chat::chat_list,
+            chat::chat_get,
+            chat::chat_delete,
+            chat::chat_send,
+            chat::chat_cancel,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Nought");

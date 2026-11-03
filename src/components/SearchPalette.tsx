@@ -61,7 +61,7 @@ export function SearchPalette({ open, onClose, ...actions }: Props) {
     { label: "All notes", icon: <Notebook size={14} />, run: actions.showNotes },
     { label: "Journal", icon: <CalendarDays size={14} />, run: actions.showJournal },
     { label: "Ideas over time", icon: <Sprout size={14} />, run: actions.showIdeas },
-    { label: "Think with your notes", icon: <MessageSquareText size={14} />, run: actions.showThink },
+    { label: "Chat with your notes", icon: <MessageSquareText size={14} />, hint: "⌘L", run: actions.showThink },
     ...(actions.askAboutNote ? [{ label: "Ask about this note", icon: <MessageSquareText size={14} />, run: actions.askAboutNote }] : []),
     { label: "Related notes", icon: <Waypoints size={14} />, hint: "⌘J", run: actions.toggleRelated },
     { label: "Toggle sidebar & toolbar", icon: <PanelLeft size={14} />, hint: "⌘\\", run: actions.toggleChrome },

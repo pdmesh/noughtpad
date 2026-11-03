@@ -10,7 +10,7 @@ import { RelatedPanel } from "./components/RelatedPanel";
 import { describeStatus, useSemanticStatus } from "./lib/useSemantic";
 import { Journal } from "./views/Journal";
 import { IdeasView, ThemeView } from "./views/Ideas";
-import { ThinkView, type ScopeChoice } from "./views/Think";
+import { ChatPanel, type ChatStart, type ScopeChoice } from "./components/ChatPanel";
 import { ModelsView } from "./views/Models";
 import type { EditorHandle } from "./editor/Editor";
 
@@ -21,7 +21,6 @@ type View =
   | { kind: "journal" }
   | { kind: "ideas" }
   | { kind: "theme"; id: string }
-  | { kind: "think"; scope?: ScopeChoice }
   | { kind: "models"; focus?: "local" | "remote" };
 
 export function App() {
@@ -83,10 +82,24 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
 
   const { data: labels = [] } = useQuery({ queryKey: ["notes", "labels"], queryFn: api.labels });
 
-  // The scope Think was last opened with (`undefined` until first opened).
-  const [thinkScope, setThinkScope] = useState<ScopeChoice | null | undefined>(undefined);
+  // Chat with your notes: the right-hand panel (shares the slot with Related).
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatStart, setChatStart] = useState<ChatStart | null>(null);
+  const openChat = useCallback((start?: ScopeChoice) => {
+    setRelatedOpen(false);
+    setChatOpen(true);
+    if (start) setChatStart({ ...start, nonce: Date.now() });
+  }, []);
+  const { data: currentNoteChoice = null } = useQuery({
+    queryKey: ["notes", "chat-label", currentId],
+    enabled: !!currentId,
+    queryFn: async (): Promise<ScopeChoice> => {
+      const doc = await api.getNote(currentId!);
+      const first = (doc.title ?? doc.content.split("\n").find((l) => l.trim()) ?? "").replace(/^[#>\-*+\s]+/, "").trim();
+      return { scope: { kind: "note", id: doc.id }, label: first ? (first.length > 32 ? `${first.slice(0, 32)}…` : first) : "This note" };
+    },
+  });
   useEffect(() => {
-    if (view.kind === "think") setThinkScope((s) => view.scope ?? s ?? null);
     // Pages other than Write start at the top.
     if (view.kind !== "write") window.scrollTo({ top: 0 });
   }, [view]);
@@ -132,19 +145,11 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
     window.scrollTo({ top: 0 });
   }, []);
 
-  // "Explore this note": think with the note and the notes related to it.
-  const askAboutNote = useCallback(async (id: string) => {
-    let label = "This note";
-    try {
-      const doc = await api.getNote(id);
-      const first = (doc.title ?? doc.content.split("\n").find((l) => l.trim()) ?? "").replace(/^[#>\-*+\s]+/, "").trim();
-      if (first) label = first.length > 40 ? `${first.slice(0, 40)}…` : first;
-    } catch {
-      /* keep the generic label */
-    }
-    setRelatedOpen(false);
-    setView({ kind: "think", scope: { scope: { kind: "note", id }, label } });
-  }, []);
+  // "Explore this note": chat about the note and the notes related to it.
+  const askAboutNote = useCallback(
+    (id: string) => openChat(currentNoteChoice && currentNoteChoice.scope.kind === "note" && currentNoteChoice.scope.id === id ? currentNoteChoice : { scope: { kind: "note", id }, label: "This note" }),
+    [openChat, currentNoteChoice],
+  );
 
   const rebuildIndex = useCallback(async () => {
     const r = await api.rebuildIndex();
@@ -178,6 +183,7 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
         e.preventDefault();
         setView({ kind: "write" });
         setRelatedOpen((o) => !o);
+        setChatOpen(false);
       } else if (e.key === "Escape" && relatedOpen && !paletteOpen) {
         setRelatedOpen(false);
       }
@@ -189,6 +195,20 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
   // Backend events: external file changes and the global quick-capture shortcut.
   useEvent("vault-changed", () => void qc.invalidateQueries({ queryKey: ["notes"] }));
   useEvent("quick-capture", () => newNote());
+
+  // ⌘L toggles chat. Caught before the editor, whose keymap uses Mod-L to select a line.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "l") {
+        e.preventDefault();
+        e.stopPropagation();
+        setChatOpen((o) => !o);
+        setRelatedOpen(false);
+      }
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, []);
 
   // While typing, chrome stays hidden even if the pointer rests on it; moving the mouse brings it back.
   const [typing, setTyping] = useState(false);
@@ -216,7 +236,7 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
 
   return (
     <div
-      className={`app ${chromePinned ? "chrome-pinned" : "chrome-auto"} ${typing ? "is-typing" : ""} ${relatedOpen && view.kind === "write" ? "related-open" : ""}`}
+      className={`app ${chromePinned ? "chrome-pinned" : "chrome-auto"} ${typing ? "is-typing" : ""} ${relatedOpen && view.kind === "write" ? "related-open" : ""} ${chatOpen ? "chat-open" : ""}`}
     >
       <div className="sidebar-hotzone" aria-hidden />
       <aside className="sidebar chrome" aria-label="Navigation">
@@ -230,7 +250,7 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
             active={view.kind === "ideas" || view.kind === "theme"}
             onClick={() => setView({ kind: "ideas" })}
           />
-          <SideItem icon={<MessageSquareText size={15} />} label="Think" active={view.kind === "think"} onClick={() => setView({ kind: "think" })} />
+          <SideItem icon={<MessageSquareText size={15} />} label="Chat" active={chatOpen} onClick={() => (chatOpen ? setChatOpen(false) : openChat())} />
         </nav>
         {labels.length > 0 && (
           <nav className="sidebar-section" aria-label="Collections">
@@ -264,12 +284,22 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
           onClick={() => {
             setView({ kind: "write" });
             setRelatedOpen((o) => !o);
+            setChatOpen(false);
           }}
           title="Related notes (⌘J)"
           aria-label="Related notes"
           aria-pressed={relatedOpen && view.kind === "write"}
         >
           <Waypoints size={16} />
+        </button>
+        <button
+          className={`icon-btn ${chatOpen ? "is-on" : ""}`}
+          onClick={() => (chatOpen ? setChatOpen(false) : openChat())}
+          title="Chat with your notes (⌘L)"
+          aria-label="Chat with your notes"
+          aria-pressed={chatOpen}
+        >
+          <MessageSquareText size={16} />
         </button>
         <button className="icon-btn" onClick={newNote} title="New note (⌘N)" aria-label="New note">
           <FilePlus2 size={16} />
@@ -321,14 +351,8 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
             id={view.id}
             onBack={() => setView({ kind: "ideas" })}
             onOpenNote={openNote}
-            onAsk={(name) => setView({ kind: "think", scope: { scope: { kind: "theme", id: view.id }, label: name } })}
+            onAsk={(name) => openChat({ scope: { kind: "theme", id: view.id }, label: name })}
           />
-        )}
-        {/* Like the editor, Think stays mounted once opened so this session's answers survive navigation. */}
-        {thinkScope !== undefined && (
-          <div hidden={view.kind !== "think"}>
-            <ThinkView initial={thinkScope ?? undefined} onOpenNote={openNote} onModels={(focus) => setView({ kind: "models", focus })} />
-          </div>
         )}
         {view.kind === "models" && <ModelsView focus={view.focus} />}
       </main>
@@ -343,15 +367,16 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
         toggleListUnderEditor={toggleListUnderEditor}
         showJournal={() => setView({ kind: "journal" })}
         showIdeas={() => setView({ kind: "ideas" })}
-        showThink={() => setView({ kind: "think" })}
+        showThink={() => openChat()}
         showModels={() => setView({ kind: "models" })}
-        askAboutNote={currentId ? () => void askAboutNote(currentId) : undefined}
+        askAboutNote={currentId ? () => askAboutNote(currentId) : undefined}
         showLabel={showLabel}
         toggleChrome={toggleChrome}
         rebuildIndex={() => void rebuildIndex()}
         toggleRelated={() => {
           setView({ kind: "write" });
           setRelatedOpen((o) => !o);
+          setChatOpen(false);
         }}
         resetRelatedFeedback={() =>
           void api.resetRelatedFeedback().then(() => {
@@ -366,12 +391,21 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
           )
         }
       />
+      {chatOpen && (
+        <ChatPanel
+          start={chatStart}
+          currentNote={view.kind === "write" ? currentNoteChoice : null}
+          onOpenNote={openNote}
+          onModels={(focus) => setView({ kind: "models", focus })}
+          onClose={() => setChatOpen(false)}
+        />
+      )}
       {relatedOpen && view.kind === "write" && (
         <RelatedPanel
           noteId={currentId}
           onOpen={openNote}
           onOpenTheme={(id) => setView({ kind: "theme", id })}
-          onAsk={currentId ? () => void askAboutNote(currentId) : undefined}
+          onAsk={currentId ? () => askAboutNote(currentId) : undefined}
           onClose={() => setRelatedOpen(false)}
           onNotice={setNotice}
         />

@@ -22,14 +22,16 @@ async fn main() {
         labels: vec!["VC".into()],
         body: body.into(),
     };
-    let notes = vec![
+    let notes = [
         note("2026-01-14", "Read about VC power-law returns. A handful of outliers return the fund.", Some("Venture Deals")),
         note("2026-03-03", "Ownership may matter more than I expected. If one company returns the fund, entry ownership decides how much it returns.", None),
         note("2026-05-22", "Talked to an angel friend: she thinks ownership targets make funds pass on the best rounds. Tension with my March note.", None),
     ];
+    let numbered: Vec<(usize, ContextNote)> = notes.iter().cloned().enumerate().map(|(i, n)| (i + 1, n)).collect();
     let req = ChatRequest {
-        system: prompt::SYSTEM.into(),
-        user: prompt::user_message("How has my thinking about ownership changed?", &notes),
+        system: prompt::system(false),
+        history: vec![],
+        user: prompt::with_notes("How has my thinking about ownership changed?", &numbered),
         max_tokens: 300,
         temperature: 0.2,
     };

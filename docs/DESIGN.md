@@ -33,6 +33,8 @@ This document turns that thesis into a concrete architecture and build plan. Ite
 | 2026-11-03 | M4 language models are **always explicit opt-in**, on a Models page: download a local model (several may be downloaded) or add your own provider and key, then press **Use**. Downloading or saving a provider does not switch anything on. |
 | 2026-11-03 | Built-in runtime: **mistral.rs** (Rust, MIT) running GGUF on CPU/Metal/CUDA. Default model **Qwen3-4B-Instruct-2507 Q4_K_M** (Apache-2.0, 2.5 GB). Bring-your-own via the **genai** crate (Anthropic, OpenAI, Gemini, Ollama, any OpenAI-compatible URL); keys live in the OS keychain. |
 | 2026-11-03 | Before notes go to a remote provider, Nought lists them and the destination and asks; the user can untick notes. It asks the first time and again whenever the destination changes. Local models never ask, because nothing leaves the machine. |
+| 2026-11-03 | No embedded third-party agent harness (e.g. pi): our Rust layer already routes models and keeps keys in the keychain. Chat gets a small built-in tool loop instead. Workflow files and cost display are dropped for now. |
+| 2026-11-03 | Chat lives in the right-hand panel (shares the slot with Related, ⌘L). Chats are saved to `.nought/chats/` as history, which replaces the separate Think page and "Kept". Online models search and read notes through read-only tools bounded by the chat's scope; the user approves a chat's scope and destination once. Local models get the most relevant notes per question. Answers don't re-list sources, because the steps already show which notes were read. |
 | 2026-11-02 | Extensions reuse the CodeMirror 6 and unified (remark/rehype) ecosystems; no bespoke plugin ecosystem. |
 
 ---
@@ -246,16 +248,21 @@ models be swapped. The fallback is zero-shot via embedding similarity to label d
 Tier 2 is never required. The candidate model gets evaluated on a hand-labelled set of my own
 note pairs before it is adopted. Model claims so far come from secondary write-ups.
 
-### 6.6 Thinking workspace (on demand)
-The user asks within a **scope**: the whole notebook (hybrid search), this month, open questions,
-one note plus its related notes ("Ask about this note"), a theme from Ideas over time (its timeline,
-spread evenly when long), or a collection. At most 8 notes are chosen, deterministically, and shown
-before or while the model reads them (`Semantic::context`). The prompt numbers the notes oldest
-first, marks each as the user's own or "from <source>", and requires `[n]` citations
-(`nought-llm::prompt`). Answers stream in; citations become buttons that open the note, and an
-answer that cites nothing is flagged. Nothing is saved unless the user clicks **Keep**, which writes
-Markdown to `.nought/artifacts/`, never among the notes. For remote providers the user sees, and can
-trim, the list of notes and the destination before anything is sent.
+### 6.6 Chat with your notes (on demand)
+A chat opens in the right-hand panel with a **scope**: the whole notebook, the current note and its
+related notes, a theme, a month, open questions or a collection.
+- **Online models** get four read-only tools, all bounded by the scope: `search_notes`, `read_note`,
+  `notes_in_month` and `open_questions`. They take up to 6 rounds.
+- **Local models**, and providers that reject tools, instead get the 6 most relevant notes for each
+  question, chosen by the app.
+- **Notes are numbered** the first time the model sees them and keep that number for the whole chat.
+  Every search and read appears as a step that expands to the notes involved.
+- **Answers** respond to the question directly and cite `[n]` only where pointing at a note helps.
+- **Earlier turns:** the last 6 are sent as text.
+- **Storage:** chats are saved as JSON in `.nought/chats/` and listed as history in the panel. Notes
+  are never written.
+- **Consent:** before an online provider sees anything, the user approves this chat's scope and
+  destination once per chat.
 
 ---
 
@@ -413,8 +420,7 @@ Reproduce with `cargo run --release -p nought-core --example bench -- 10000`.
 - **Downloads** are pinned to a Hugging Face revision, checked against SHA-256, resumable (HTTP Range) and cancellable. A file that fails the checksum is deleted.
 - **Privacy rules are enforced in the backend.** `think_ask` refuses a remote provider without consent for a new or changed destination, and reads only the note ids the user was shown.
 - **Known limits:**
-  - The context is at most 8 notes, so there is no map-reduce over long scopes yet.
-  - Exchanges are single-turn.
+  - Local models read at most 6 notes per question, so there is no map-reduce over long scopes yet.
   - Without the system keychain (for example, Linux without Secret Service), keys are kept only until quit, and the form says so.
 
 **Concept extraction (2026-11-03): evaluated, not shipped.** Scripts are in `tools/eval/`.
