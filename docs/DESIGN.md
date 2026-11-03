@@ -348,6 +348,16 @@ Each milestone ships something that is usable on its own. M1 needs no ML.
 
 Reproduce with `cargo run --release -p noughtpad-core --example bench -- 10000`.
 
+**M5 measurements (2026-11-03, Apple Silicon Mac, release build with Metal):**
+
+| Measure | Result |
+|---|---|
+| Process start to focused editor (`editor ready ms=`), sample notebook | 874 ms cold, 362–394 ms warm. Over the 300 ms goal (G1). The vault scan takes 0 ms and the ready log follows it by ~25 ms, so the time goes to webview start-up and loading the 1.6 MB main JS bundle |
+| First full index, 10,000 notes | ~2.9 s |
+| Startup rescan of an unchanged vault | ~25 ms |
+| Full-text search | ~7 ms |
+| Create a note (write + index) | ~5 ms |
+
 **M2 status (2026-11-02): complete, verified with the real model** in the desktop app on the sample notebook. 33 notes were connected about 3 s after launch. Indexing runs at about 37 notes/s using 2 CPU threads. Related-note lookup takes about 3 ms and hybrid search about 25 ms, including the query embedding. On a hand-written 13-note test set, all 20 related suggestions were on the same topic.
 - Background worker: notes are embedded only after 3 s without edits, newest first, in batches of 16, yielding between batches.
 - Vectors are cached by `(model, chunk-text hash)`, so index rebuilds, renames and unchanged saves never re-run the model.
