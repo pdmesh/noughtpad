@@ -6,10 +6,10 @@ mod chat;
 mod lifecycle;
 #[cfg(target_os = "macos")]
 mod menu;
-#[cfg(desktop)]
-mod updater;
 mod semantic;
 mod think;
+#[cfg(desktop)]
+mod updater;
 
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, RwLock};

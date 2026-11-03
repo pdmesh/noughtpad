@@ -83,10 +83,7 @@ pub fn build(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
     }
     let go = go.build()?;
 
-    let window = SubmenuBuilder::new(app, "Window")
-        .minimize()
-        .maximize()
-        .build()?;
+    let window = SubmenuBuilder::new(app, "Window").minimize().maximize().build()?;
 
     MenuBuilder::new(app)
         .items(&[&app_menu, &file, &edit, &view, &go, &window])
