@@ -374,7 +374,7 @@ Later the same day (after the window-lifecycle change, the menu bar and the lazy
 launches measured `setup` ~350–370 ms and `editor ready` ~545–600 ms. The extra ~180 ms is all
 before Tauri's setup, i.e. window and WKWebView creation. It's the same with the menu bar removed
 and with the window created visible, and `pnpm perf` is unchanged (81 ms), so it isn't from those
-changes; the cause is unknown. Recheck after a reboot. Quick capture into the running app (⌘⇧Space,
+changes; the cause is unknown. Decision (2026-11-03): under 1 s from a cold process is fine; optimise when there's an easy win. Quick capture into the running app (⌘⇧Space,
 then typing at once) lost no keystrokes.
 
 **Local model on Metal (2026-11-03, Apple M4, 16 GB, Qwen3 4B Instruct Q4_K_M):**

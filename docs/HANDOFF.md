@@ -59,30 +59,29 @@ State on this Mac: `~/Noughtpad Sample` has 2 test notes and 2 chats from the UX
 (`node scripts/sample-vault.mjs` recreates it). The app config has the local Qwen3 4B active and an
 Ollama provider (`qwen3.5:4b`) saved. "Open at login" is off.
 
-### 1. Finish the UX pass
-- Dark mode, the minimum window size (480×360), keyboard-only use.
-- Related notes: dismiss and undo; check the reasons. Chat: history delete and hide, leaving a chat
-  while it streams. Editor: images (drag and paste) and Mermaid.
-- Then the user's real notes (`~/Documents/Noughtpad`): does 0.63 still keep related notes on topic?
-- Recheck startup after a reboot: warm launches measured ~550 ms to `editor ready` late on
-  2026-11-03, against ~350 ms earlier that day, and none of the day's changes explain it (see
-  DESIGN.md).
+### 1. Auto-update (next)
+- `pnpm tauri signer generate` for the updater key pair. The public key goes in `tauri.conf.json`;
+  the user stores the private key (and its password) as GitHub secrets `TAURI_SIGNING_PRIVATE_KEY`
+  and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`. Never commit it.
+- Add `tauri-plugin-updater` with an endpoint on GitHub Releases, have `release.yml` publish
+  `latest.json` and the signed update bundles, and add a quiet "Check for updates" in Settings
+  (and the app menu).
+- Check the flow end to end on this Mac with two tagged releases. Builds are unsigned for Apple
+  until the user pays for the Developer Program; note what Gatekeeper does on an update.
 
-### 2. Providers
-- When the user has keys: Anthropic and OpenAI. The user pastes the key into Models → Add a
-  provider (the computer-use tool can't type into password fields anyway). Expect search/read steps
-  and an answer that doesn't list sources.
-- LM Studio, if installed, and the tool fallback (a model that rejects tools should get app-chosen
-  notes).
-- Read a key back after a rebuild: the build is ad-hoc signed, so macOS may ask for Keychain access.
-
-### 3. Then
-- **Auto-update:** run `pnpm tauri signer generate`, add the public key and updater endpoint, and
-  store the private key as `TAURI_SIGNING_PRIVATE_KEY`.
+### 2. Then
 - **Signing**, once the user decides to pay: Apple Developer Program, then the secrets listed at
   the top of `release.yml`.
-- **Start dogfooding** (ROADMAP M5 exit): install the app in /Applications, turn "Open at login" on
-  there, then M6 sync design.
+- **Start dogfooding** (ROADMAP M5 exit): install in /Applications, turn "Open at login" on there.
+- M6 sync design.
+
+### Parked (do when convenient, not blocking)
+- UX pass leftovers: dark mode, minimum window size, keyboard-only use, related-notes dismiss/undo,
+  chat history delete/hide, leaving a chat while it streams, images and Mermaid, the user's real
+  notes (and whether `min_related` 0.63 holds there).
+- Providers: Anthropic, OpenAI, LM Studio, the no-tools fallback, reading a key back after a rebuild.
+- Startup: under 1 s is fine. Optimise when there's an easy win; the ~550 ms seen late on
+  2026-11-03 (vs ~350 ms earlier) needs no chase.
 
 ### Done on 2026-11-03
 - Morning: renamed Nought → Noughtpad; Mac build with Metal and speed numbers; startup bundle split
