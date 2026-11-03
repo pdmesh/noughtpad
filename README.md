@@ -5,6 +5,7 @@ A local-first notebook: capture anything on a blank page, and let it gradually r
 Notes are plain Markdown files you own. AI stays out of the way during capture and works quietly in the background. It shows up through derived views (Journal, Connections, Ideas over time) or when you ask.
 
 - Design: [docs/DESIGN.md](docs/DESIGN.md)
+- Roadmap: [ROADMAP.md](ROADMAP.md) · Next session: [docs/HANDOFF.md](docs/HANDOFF.md)
 - Status: **M1–M3 complete** (notebook, quiet retrieval, temporal discovery). Next: M4, an on-demand thinking workspace with your own LLM
 
 ## What works today

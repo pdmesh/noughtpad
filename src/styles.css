@@ -2085,3 +2085,94 @@ button.cue:hover {
 .chat-history-delete:hover {
   color: var(--danger);
 }
+
+/* ---------- settings --------------------------------------------------------- */
+.settings-section {
+  margin-top: 28px;
+}
+.settings-section .ideas-section-title {
+  margin-bottom: 6px;
+}
+.settings-row,
+.settings-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.settings-link {
+  width: 100%;
+  border-width: 0 0 1px;
+  background: none;
+  text-align: left;
+  color: var(--fg-faint);
+}
+.settings-link:hover .settings-label {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.settings-text,
+.settings-link > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.settings-label {
+  color: var(--fg);
+  font-size: 0.92rem;
+  overflow-wrap: anywhere;
+}
+.settings-hint {
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+.switch {
+  flex-shrink: 0;
+  width: 36px;
+  height: 20px;
+  border-radius: 999px;
+  border: 0;
+  padding: 2px;
+  background: var(--border);
+  display: flex;
+  transition: background 0.15s ease;
+}
+.switch span {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--bg-elev);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.2);
+  transition: transform 0.15s ease;
+}
+.switch.is-on {
+  background: var(--accent);
+}
+.switch.is-on span {
+  transform: translateX(16px);
+}
+.switch:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.shortcuts {
+  margin: 0;
+  display: grid;
+  gap: 6px;
+}
+.shortcuts > div {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.88rem;
+}
+.shortcuts dt {
+  min-width: 110px;
+}
+.shortcuts dd {
+  margin: 0;
+  color: var(--fg);
+}

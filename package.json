@@ -11,7 +11,8 @@
     "test": "vitest run",
     "tauri": "tauri",
     "sample": "node scripts/sample-vault.mjs",
-    "dev:sample": "node scripts/sample-vault.mjs --run"
+    "dev:sample": "node scripts/sample-vault.mjs --run",
+    "perf": "node tests/perf/capture.mjs"
   },
   "dependencies": {
     "@codemirror/commands": "^6.11.1",
@@ -53,6 +54,7 @@
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6.2.1",
     "jsdom": "^27",
+    "playwright": "1.63.0",
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
     "vite": "^8.3.5",

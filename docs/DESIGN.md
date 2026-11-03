@@ -35,6 +35,8 @@ This document turns that thesis into a concrete architecture and build plan. Ite
 | 2026-11-03 | Before notes go to a remote provider, Nought lists them and the destination and asks; the user can untick notes. It asks the first time and again whenever the destination changes. Local models never ask, because nothing leaves the machine. |
 | 2026-11-03 | No embedded third-party agent harness (e.g. pi): our Rust layer already routes models and keeps keys in the keychain. Chat gets a small built-in tool loop instead. Workflow files and cost display are dropped for now. |
 | 2026-11-03 | Chat is a full page with the input docked at the bottom of the window; past chats are listed in a right-hand panel on the chat page (like Related; toggled from the top bar) and open as pages. Chats are saved to `.nought/chats/` (this replaces the Think page and "Kept"). Online models search and read notes through read-only tools bounded by the chat's scope; the user approves a chat's scope and destination once. Local models get the most relevant notes per question. Answers don't re-list sources, because the steps already show which notes were read. |
+| 2026-11-03 | M5 "ship it to yourself": release workflow (macOS with Metal, Windows, Linux; signing optional), Settings page, capture-speed budget in CI. Kept answers and workflow files are dropped. Plan in `ROADMAP.md`. |
+| 2026-11-03 | Built-in two-way sync (Google Drive everywhere; iCloud on Apple devices only, as iCloud has no API elsewhere) and iOS/Android apps are planned as a paid, proprietary add-on. The core stays FSL, with an open `SyncBackend` interface. |
 | 2026-11-02 | Extensions reuse the CodeMirror 6 and unified (remark/rehype) ecosystems; no bespoke plugin ecosystem. |
 
 ---

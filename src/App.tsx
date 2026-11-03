@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarDays, Cpu, History, FilePlus2, FolderOpen, MessageSquareText, Notebook, PanelLeft, PenLine, Search, Sprout, Waypoints, X } from "lucide-react";
+import { CalendarDays, History, Settings as SettingsIcon, FilePlus2, FolderOpen, MessageSquareText, Notebook, PanelLeft, PenLine, Search, Sprout, Waypoints, X } from "lucide-react";
 import { api, isApiError, pickFolder, type VaultInfo } from "./lib/api";
 import { useEvent } from "./lib/useEvent";
 import { NotePane } from "./components/NotePane";
@@ -14,6 +14,7 @@ import { ChatView } from "./views/Chat";
 import { ChatHistory } from "./components/ChatHistory";
 import { useChatLive, type ScopeChoice } from "./lib/chat";
 import { ModelsView } from "./views/Models";
+import { SettingsView } from "./views/Settings";
 import type { EditorHandle } from "./editor/Editor";
 
 /** "write" is the blank page; "notes" lists all notes (optionally one collection). */
@@ -24,6 +25,7 @@ type View =
   | { kind: "ideas" }
   | { kind: "theme"; id: string }
   | { kind: "models"; focus?: "local" | "remote" }
+  | { kind: "settings" }
   /** `key` stays the same when a new chat gets its id, so the page isn't remounted. */
   | { kind: "chat"; id: string | null; start?: ScopeChoice; key: string };
 
@@ -163,6 +165,15 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
     [openChat, currentNoteChoice],
   );
 
+  const resetRelated = useCallback(
+    () =>
+      void api.resetRelatedFeedback().then(() => {
+        setNotice("Related notes are back to their defaults.");
+        void qc.invalidateQueries({ queryKey: ["related"] });
+      }),
+    [qc, setNotice],
+  );
+
   const rebuildIndex = useCallback(async () => {
     const r = await api.rebuildIndex();
     setNotice(`Index rebuilt: ${r.indexed} notes.`);
@@ -272,8 +283,11 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
         )}
         <div className="sidebar-footer">
           {semanticLine && <p className="sidebar-status">{semanticLine}</p>}
-          <button className={`vault-path ${view.kind === "models" ? "is-active" : ""}`} onClick={() => setView({ kind: "models" })}>
-            <Cpu size={13} aria-hidden /> Models
+          <button
+            className={`vault-path ${view.kind === "settings" || view.kind === "models" ? "is-active" : ""}`}
+            onClick={() => setView({ kind: "settings" })}
+          >
+            <SettingsIcon size={13} aria-hidden /> Settings
           </button>
           <button className="vault-path" title={`${vault.path}\nClick to switch folder`} onClick={onSwitchVault}>
             <FolderOpen size={13} aria-hidden /> {vault.path.split(/[\\/]/).pop()}
@@ -374,6 +388,19 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
           />
         )}
         {view.kind === "models" && <ModelsView focus={view.focus} />}
+        {view.kind === "settings" && (
+          <SettingsView
+            vault={vault}
+            onSwitchVault={onSwitchVault}
+            chromePinned={chromePinned}
+            toggleChrome={toggleChrome}
+            listUnderEditor={listUnderEditor}
+            toggleListUnderEditor={toggleListUnderEditor}
+            onModels={() => setView({ kind: "models" })}
+            onRebuildIndex={() => void rebuildIndex()}
+            onResetRelated={resetRelated}
+          />
+        )}
         {view.kind === "chat" && (
           <ChatView
             key={view.key}
@@ -400,6 +427,7 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
         showJournal={() => setView({ kind: "journal" })}
         showIdeas={() => setView({ kind: "ideas" })}
         showThink={() => openChat()}
+        showSettings={() => setView({ kind: "settings" })}
         showModels={() => setView({ kind: "models" })}
         askAboutNote={currentId ? () => askAboutNote(currentId) : undefined}
         showLabel={showLabel}
@@ -409,12 +437,7 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
           setView({ kind: "write" });
           setRelatedOpen((o) => !o);
         }}
-        resetRelatedFeedback={() =>
-          void api.resetRelatedFeedback().then(() => {
-            setNotice("Related notes are back to their defaults.");
-            void qc.invalidateQueries({ queryKey: ["related"] });
-          })
-        }
+        resetRelatedFeedback={resetRelated}
         semanticOn={semantic.state !== "off"}
         toggleSemantic={() =>
           void (semantic.state === "off" ? api.enableSemantic() : api.disableSemantic()).then(() =>
