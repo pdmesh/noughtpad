@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, type ComponentType, useCallback, useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarDays, History, Settings as SettingsIcon, FilePlus2, FolderOpen, MessageSquareText, Notebook, PanelLeft, PenLine, Search, Sprout, Waypoints, X } from "lucide-react";
 import { api, isApiError, pickFolder, type VaultInfo } from "./lib/api";
@@ -15,21 +15,41 @@ import { loadMarkdownPipeline } from "./editor/clipboard";
 
 // Pages other than writing load after the editor is ready, keeping them out of
 // the startup bundle (G1: capture in < 300 ms).
-const loadJournal = () => import("./views/Journal");
-const loadIdeas = () => import("./views/Ideas");
-const loadChat = () => import("./views/Chat");
-const loadModels = () => import("./views/Models");
-const loadSettings = () => import("./views/Settings");
-const Journal = lazy(() => loadJournal().then((m) => ({ default: m.Journal })));
-const IdeasView = lazy(() => loadIdeas().then((m) => ({ default: m.IdeasView })));
-const ThemeView = lazy(() => loadIdeas().then((m) => ({ default: m.ThemeView })));
-const ChatView = lazy(() => loadChat().then((m) => ({ default: m.ChatView })));
-const ModelsView = lazy(() => loadModels().then((m) => ({ default: m.ModelsView })));
-const SettingsView = lazy(() => loadSettings().then((m) => ({ default: m.SettingsView })));
+/** An import that remembers its module once loaded. */
+function deferred<M>(importer: () => Promise<M>) {
+  let mod: M | undefined;
+  const load = () => importer().then((m) => (mod = m));
+  return { load, loaded: () => mod };
+}
+
+/**
+ * A lazy page. Once its module has been preloaded it renders on the first try:
+ * `lazy` accepts any thenable, and one that resolves synchronously skips the
+ * suspend-and-retry that otherwise shows a blank page for a moment.
+ */
+function page<M, P>(d: ReturnType<typeof deferred<M>>, pick: (m: M) => ComponentType<P>) {
+  return lazy(() => {
+    const m = d.loaded();
+    if (m) return { then: (resolve: (v: { default: ComponentType<P> }) => void) => resolve({ default: pick(m) }) } as unknown as Promise<{ default: ComponentType<P> }>;
+    return d.load().then((loaded) => ({ default: pick(loaded) }));
+  });
+}
+
+const journal = deferred(() => import("./views/Journal"));
+const ideas = deferred(() => import("./views/Ideas"));
+const chat = deferred(() => import("./views/Chat"));
+const models = deferred(() => import("./views/Models"));
+const settings = deferred(() => import("./views/Settings"));
+const Journal = page(journal, (m) => m.Journal);
+const IdeasView = page(ideas, (m) => m.IdeasView);
+const ThemeView = page(ideas, (m) => m.ThemeView);
+const ChatView = page(chat, (m) => m.ChatView);
+const ModelsView = page(models, (m) => m.ModelsView);
+const SettingsView = page(settings, (m) => m.SettingsView);
 
 /** Warm everything that was left out of the startup bundle, so first use is instant. */
 function preloadDeferred() {
-  for (const load of [loadMarkdownPipeline, loadChat, loadJournal, loadIdeas, loadSettings, loadModels]) void load();
+  for (const load of [loadMarkdownPipeline, chat.load, journal.load, ideas.load, settings.load, models.load]) void load();
 }
 
 /** "write" is the blank page; "notes" lists all notes (optionally one collection). */
