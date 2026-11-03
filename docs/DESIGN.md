@@ -29,6 +29,7 @@ This document turns that thesis into a concrete architecture and build plan. Ite
 | 2026-11-02 | M2 semantic features are opt-in (one click, ~65 MB model download, local only). Related notes open on demand (⌘J or the top-bar button), never during capture. |
 | 2026-11-02 | M3 is deterministic over local embeddings; AI-written monthly or topic syntheses move to M4 (bring-your-own LLM). |
 | 2026-11-02 | Journal shows a GitHub-style activity map with streaks. It is informational only (no goals, reminders or badges), so it never turns capture into a chore. Its levels adapt to the writer's own quartiles. The colour ramp is one hue (the amber accent), validated as an ordinal ramp against both surfaces (light end 2.12:1 on the light surface, 2.56:1 on dark). |
+| 2026-11-03 | Judge models (reranker, NLI) evaluated and kept optional: they did not beat embeddings + rules on our data (details under M3.5). One default download; advanced model choice later. |
 | 2026-11-02 | Extensions reuse the CodeMirror 6 and unified (remark/rehype) ecosystems; no bespoke plugin ecosystem. |
 
 ---
@@ -363,6 +364,36 @@ Reproduce with `cargo run --release -p nought-core --example bench -- 10000`.
   - a theme timeline with cues worded tentatively ("may build on", "returns to", "may rethink");
   - a "Part of a thread" link in the Related panel.
 - Reproduce with `cargo run --release -p nought-core --features embedding-static --example ideas -- <model-dir> samples/vault 2026-11-02`.
+
+**M3.5 status (2026-11-03): judge models built, measured, and not enabled by default.**
+- **Infrastructure:**
+  - a `Judge` trait (`rerank`, `nli`);
+  - adapters for a fastembed cross-encoder reranker and an ONNX Runtime NLI model, sharing one ONNX Runtime environment;
+  - cached pair judgements;
+  - judge-aware related notes, search and timeline cues;
+  - a calibration tool: `cargo run --release -p nought-core --features embedding-static --example judges -- <models> samples/vault [--nli]`.
+- **Candidates tried:** `jinaai/jina-reranker-v1-turbo-en` (int8, 38 MB, Apache-2.0) and `cross-encoder/nli-deberta-v3-xsmall` (int8, 87 MB, Apache-2.0).
+- **Results on the sample notebook:**
+  - **Reranker for related notes:**
+    - It separates topics well. Related pairs averaged 0.22–0.63 over both directions, unrelated ≤ 0.12.
+    - It is asymmetric for short-vs-long pairs.
+    - As a filter it removed genuine links that embeddings found (Tokyo ↔ Kyoto ryokan, sourdough ↔ third loaf). Embeddings were already 20/20 on precision there.
+  - **Reranker for search:** clearly worse, because it is trained on web query→passage pairs.
+    - "getting fit" and "tools for thinking" returned nothing (embeddings found the running and product notes).
+    - "baking bread" went from 3 to 1 result.
+    - Latency rose from about 15 ms to 30–125 ms.
+  - **NLI for "tension" or "may rethink":** unreliable on free-form notes, even checked in both directions and on the closest sentence pairs.
+    - False contradictions included "outlier companies return the fund" vs "one company returns the fund, ownership decides how much" (0.89), and user interviews vs "what job is a notes app hired for" (0.96/0.99).
+    - The genuine ownership ↔ angel-investor pushback scored 0.65/0.01.
+    - "Entails" almost never fired.
+- **Decision:**
+  - The default download stays the embedding model alone.
+  - Judges load only if their files are present (a future advanced setting) and use strict thresholds (`DEFAULT_JUDGE_SPEC`).
+  - The rule-based "may rethink" cue remains, worded tentatively. With a judge installed it is limited to pairs the reranker confirms.
+  - Any future candidate (a larger NLI model, Laya, a note-trained cross-encoder) must beat embeddings + rules on `examples/judges.rs` before it ships.
+- **Next non-LLM levers likely to pay off:**
+  - learning from the user's own "Not related" feedback (a linear head on existing embeddings, no new model);
+  - concept extraction (GLiNER-style), for concept timelines and better theme names.
 
 ## 9. Risks I would watch from day one
 

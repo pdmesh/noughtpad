@@ -21,6 +21,10 @@ notify-debouncer-full = "0.5"
 tempfile = "3"
 fastembed = { version = "7.5", default-features = false, optional = true }
 ureq = { version = "3", optional = true }
+# Same versions fastembed uses, for the inference (NLI) judge.
+ort = { version = "=2.0.0-rc.15", default-features = false, features = ["std", "ndarray", "api-24"], optional = true }
+tokenizers = { version = "0.23", default-features = false, features = ["onig"], optional = true }
+ndarray = { version = "0.17", optional = true }
 
 [features]
 default = []
@@ -29,7 +33,7 @@ download = ["dep:ureq"]
 # Local embeddings via fastembed/ONNX Runtime. `embedding-static` downloads and
 # statically links ONNX Runtime at build time (release builds, CI);
 # `embedding-dynamic` loads a system onnxruntime at run time (offline builds).
-embedding = ["dep:fastembed", "download"]
+embedding = ["dep:fastembed", "dep:ort", "dep:tokenizers", "dep:ndarray", "download"]
 embedding-static = ["embedding", "fastembed/ort-download-binaries-rustls-tls"]
 embedding-dynamic = ["embedding", "fastembed/ort-load-dynamic"]
 
@@ -42,4 +46,8 @@ required-features = ["embedding"]
 
 [[example]]
 name = "ideas"
+required-features = ["embedding"]
+
+[[example]]
+name = "judges"
 required-features = ["embedding"]

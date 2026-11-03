@@ -16,7 +16,7 @@ pub const AVAILABLE: bool = cfg!(any(feature = "embedding-static", feature = "em
 fn model_dir(app: &AppHandle) -> CmdResult<std::path::PathBuf> {
     app.path()
         .app_data_dir()
-        .map(|d| d.join("models").join(DEFAULT_MODEL.spec.id))
+        .map(|d| d.join("models"))
         .map_err(|e| CmdError {
             kind: "io",
             message: e.to_string(),
@@ -48,12 +48,19 @@ pub fn start(app: &AppHandle, sem: Arc<Semantic>) {
 }
 
 #[cfg(any(feature = "embedding-static", feature = "embedding-dynamic"))]
-fn load(sem: &Semantic, dir: &std::path::Path) -> nought_core::Result<()> {
-    use nought_core::semantic::model::{download, FastEmbedder};
-    if !DEFAULT_MODEL.is_downloaded(dir) {
+fn load(sem: &Semantic, models: &std::path::Path) -> nought_core::Result<()> {
+    use nought_core::semantic::model::{
+        bundle_dirs, bundle_downloaded, download_bundle, judge_installed, FastEmbedder, FastJudge, DEFAULT_JUDGE_SPEC,
+    };
+    // Background work should never make the machine hot: use at most half the cores.
+    let threads = std::thread::available_parallelism().map_or(2, |n| (n.get() / 2).clamp(1, 4));
+    let (edir, _, _) = bundle_dirs(models);
+
+    // One download for the default bundle.
+    if !bundle_downloaded(models) {
         sem.set_status(Status::Downloading { received: 0, total: 0 });
         let mut last = 0u64;
-        download(&DEFAULT_MODEL, dir, |received, total| {
+        download_bundle(models, |received, total| {
             // Report every ~1 MB to keep events cheap.
             if received - last >= 1 << 20 || received == total {
                 last = received;
@@ -62,10 +69,15 @@ fn load(sem: &Semantic, dir: &std::path::Path) -> nought_core::Result<()> {
         })?;
     }
     sem.set_status(Status::Loading);
-    // Background work should never make the machine hot: use at most half the cores.
-    let threads = std::thread::available_parallelism().map_or(2, |n| (n.get() / 2).clamp(1, 4));
-    let embedder = FastEmbedder::load(&DEFAULT_MODEL, dir, threads)?;
-    sem.set_embedder(Box::new(embedder))
+    sem.set_embedder(Box::new(FastEmbedder::load(&DEFAULT_MODEL, &edir, threads)?))?;
+    // Optional judge models, if someone installed them (future advanced setting).
+    if judge_installed(models) {
+        match FastJudge::load(models, threads) {
+            Ok(j) => sem.set_judge(Box::new(j), DEFAULT_JUDGE_SPEC),
+            Err(e) => tracing::warn!("could not load judge models: {e}"),
+        }
+    }
+    Ok(())
 }
 
 #[cfg(not(any(feature = "embedding-static", feature = "embedding-dynamic")))]

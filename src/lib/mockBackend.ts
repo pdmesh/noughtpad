@@ -208,6 +208,7 @@ function related(id: string, limit: number): RelatedNotes {
       sharedLabels: n.labels.filter((l) => me.labels.some((m) => m.toLowerCase() === l.toLowerCase())),
       sameSource: me.source?.title && n.source?.title === me.source.title ? n.source.title : null,
       daysApart: Math.round((Date.parse(n.created) - Date.parse(me.created)) / 86_400_000),
+      relation: /\b(but|tension|however)\b/i.test(n.content + " " + me.content) ? "tension" : score >= 0.25 ? "supports" : "related",
     }));
   return { enabled: true, pending: false, items };
 }

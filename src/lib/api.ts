@@ -72,6 +72,8 @@ export interface Related {
   sameSource: string | null;
   /** Days from the current note to the related one (negative = earlier). */
   daysApart: number;
+  /** How the later note relates to the earlier one (from the inference model). */
+  relation: "related" | "supports" | "tension";
 }
 
 export interface MonthCount {

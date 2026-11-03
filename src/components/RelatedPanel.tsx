@@ -90,7 +90,7 @@ export function RelatedPanel({ noteId, onOpen, onOpenTheme, onClose, onNotice }:
           {data.items.map((r) => (
             <li key={r.note.id} className="related-item">
               <div className="related-why">
-                {r.strength === "strong" ? "These ideas appear connected" : "Possibly related"}
+                <span className={r.relation === "tension" ? "related-tension" : undefined}>{describe(r)}</span>
                 <span className="faint"> · {timeRelation(r.daysApart)}</span>
               </div>
               <button className="related-open" onClick={() => onOpen(r.note.id)}>
@@ -128,8 +128,8 @@ export function EnableCard() {
   return (
     <div className="related-card">
       <p>
-        Related notes and search by meaning use a small language model that runs entirely on this computer. Your notes
-        never leave it.
+        Related notes, search by meaning and Ideas over time use a small language model that runs entirely on this
+        computer. Your notes never leave it.
       </p>
       <p className="faint">One-time download of about 65 MB from Hugging Face. You can turn it off any time.</p>
       <button className="btn btn-primary" onClick={() => void api.enableSemantic()}>
@@ -149,6 +149,13 @@ function Progress({ status }: { status: { state: "downloading"; received: number
       </div>
     </div>
   );
+}
+
+/** Cautious wording: the models suggest, they don't conclude. */
+function describe(r: Related): string {
+  if (r.relation === "tension") return "These notes seem to pull in different directions";
+  if (r.relation === "supports") return r.daysApart < 0 ? "This seems to build on it" : "This seems to build on your note";
+  return r.strength === "strong" ? "These ideas appear connected" : "Possibly related";
 }
 
 function timeRelation(days: number): string {

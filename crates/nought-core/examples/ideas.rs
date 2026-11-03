@@ -1,10 +1,13 @@
 //! Print themes, sections and a timeline for a notebook using the real model.
 //!
-//! cargo run --release -p nought-core --features embedding-static --example ideas -- <model-dir> <vault> [YYYY-MM-DD]
+//! cargo run --release -p nought-core --features embedding-static --example ideas -- <models-dir> <vault> [YYYY-MM-DD] [--no-judge]
 
 use std::sync::Arc;
 
-use nought_core::semantic::model::{download, FastEmbedder, DEFAULT_MODEL};
+use nought_core::index::NoteSummary;
+use nought_core::semantic::model::{
+    bundle_dirs, download_bundle, FastEmbedder, FastJudge, DEFAULT_JUDGE_SPEC, DEFAULT_MODEL,
+};
 use nought_core::semantic::Semantic;
 use nought_core::userstate::UserState;
 use nought_core::Vault;
@@ -16,7 +19,8 @@ fn main() {
         .get(2)
         .and_then(|d| chrono::NaiveDate::parse_from_str(d, "%Y-%m-%d").ok())
         .unwrap_or_else(|| chrono::Local::now().date_naive());
-    download(&DEFAULT_MODEL, &dir, |_, _| {}).unwrap();
+    download_bundle(&dir, |_, _| {}).unwrap();
+    let use_judge = !args.iter().any(|a| a == "--no-judge");
 
     // Work on a copy so the source folder is never touched.
     let tmp = tempfile::tempdir().unwrap();
@@ -31,9 +35,14 @@ fn main() {
     }
     let vault = Arc::new(Vault::open(tmp.path()).unwrap());
     vault.rescan().unwrap();
-    let sem = Semantic::new(vault, Arc::new(UserState::open_in_memory().unwrap())).unwrap();
-    sem.set_embedder(Box::new(FastEmbedder::load(&DEFAULT_MODEL, &dir, 2).unwrap()))
-        .unwrap();
+    let sem = Semantic::new(vault.clone(), Arc::new(UserState::open_in_memory().unwrap())).unwrap();
+    sem.set_embedder(Box::new(
+        FastEmbedder::load(&DEFAULT_MODEL, &bundle_dirs(&dir).0, 2).unwrap(),
+    ))
+    .unwrap();
+    if use_judge {
+        sem.set_judge(Box::new(FastJudge::load(&dir, 2).unwrap()), DEFAULT_JUDGE_SPEC);
+    }
     sem.index_now().unwrap();
     sem.refresh_ideas_at(today).unwrap();
     let o = sem.ideas_overview().unwrap();
@@ -70,6 +79,34 @@ fn main() {
     for q in &o.open_questions {
         println!("  [{}] {}", q.note.day, short(&q.note.title));
     }
+    for q in [
+        "how much of the fund comes from big winners",
+        "talking to users",
+        "baking bread",
+        "japan trip",
+        "getting fit",
+        "tools for thinking",
+    ] {
+        let t = std::time::Instant::now();
+        let hits = sem.search(q, 4).unwrap();
+        println!(
+            "\n== SEARCH {q:?} ({:?})\n{}",
+            t.elapsed(),
+            hits.iter()
+                .map(|h| format!(
+                    "   {:.3} {:?} [{}] {}",
+                    h.score,
+                    h.matched,
+                    h.note.labels.join(","),
+                    short(&h.note.title)
+                ))
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
+    }
+    print_related(&sem, &vault, "\"Ownership may matter more than I expected\"");
+    print_related(&sem, &vault, "sourdough starter");
+    print_related(&sem, &vault, "Tokyo itinerary draft");
     if let Some(t) = o.returning.first() {
         println!("\n== TIMELINE: {}", t.name);
         for e in sem.theme_timeline(&t.id).unwrap().unwrap().entries {
@@ -87,6 +124,26 @@ fn main() {
                 if e.may_revise { "  (may revise)" } else { "" }
             );
         }
+    }
+}
+
+fn print_related(sem: &Semantic, vault: &Vault, needle: &str) {
+    let hits = vault.search(needle, 1).unwrap();
+    let Some(n): Option<&NoteSummary> = hits.first().map(|h| &h.note) else {
+        return;
+    };
+    let t = std::time::Instant::now();
+    let r = sem.related(&n.id, 8).unwrap();
+    println!("\n== RELATED to «{}» ({:?})", short(&n.title), t.elapsed());
+    for i in r.items {
+        println!(
+            "  {:.3} {:?} {:?} [{}] {}",
+            i.score,
+            i.strength,
+            i.relation,
+            i.note.labels.join(","),
+            short(&i.note.title)
+        );
     }
 }
 
