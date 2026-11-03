@@ -18,10 +18,9 @@ Read this first next session, then `ROADMAP.md` (what's next) and
     login item (`~/Library/LaunchAgents`).
   - A real Anthropic, OpenAI or Ollama provider.
   - A full 2.5 GB model download through the app.
-- **M5 so far:**
-  - The release workflow (`.github/workflows/release.yml`).
-  - The Settings page.
-  - The capture-speed check in CI (`pnpm perf`: open → typing about 0.4 s; budget 1.5 s).
+- **M5 so far:** the release workflow, the Settings page, the capture-speed check in CI
+  (`pnpm perf`), the rename, the Mac build and speed numbers, the startup bundle split, and the
+  platform window lifecycle with "Open at login".
 
 ## Repo map
 
@@ -29,7 +28,7 @@ Read this first next session, then `ROADMAP.md` (what's next) and
 |---|---|
 | `crates/noughtpad-core` | Vault, SQLite index, FTS, embeddings, related notes, themes (`semantic/ideas.rs`), chat context scopes (`semantic/context.rs`) |
 | `crates/noughtpad-llm` | Model catalogue, checked and resumable downloads, local runtime (mistral.rs), remote providers and the tool loop (genai), keychain, prompts |
-| `src-tauri/src` | `lib.rs` (vault commands), `semantic.rs`, `think.rs` (Models page commands), `chat.rs` (chat, tools, consent, `.noughtpad/chats/`) |
+| `src-tauri/src` | `lib.rs` (vault commands), `lifecycle.rs` (window hide/reopen, open at login), `semantic.rs`, `think.rs` (Models page commands), `chat.rs` (chat, tools, consent, `.noughtpad/chats/`) |
 | `src/` | React UI. Views: `Chat`, `Models`, `Settings`, `Ideas`, `Journal`. `lib/mockBackend.ts` and `lib/mockLlm.ts` let the UI run in a plain browser |
 | `tests/perf/capture.mjs` | Capture-speed budget |
 | `tools/eval/` | Model evaluations (embeddings, judges, SLMs) |
@@ -50,54 +49,42 @@ cargo clippy -p noughtpad-llm --all-targets --features local,remote,keychain -- 
 
 ## Next session, step by step (on the Mac)
 
-The session needs the Mac. Use Remote Control or computer use so the agent can run commands and see
-the screen.
+Run on this Mac with computer use (background `app_*` tools work for the app window; global
+shortcuts need full-screen control). The local build is the quickest:
+`pnpm install && pnpm tauri build --features local-llm-metal --bundles app`, which lands in
+`target/release/bundle/macos/Noughtpad.app` (about 7 minutes from clean, about 1 minute after).
+Launch it on the sample notebook with
+`open --env NOUGHTPAD_VAULT="$HOME/Noughtpad Sample" target/release/bundle/macos/Noughtpad.app`
+(`node scripts/sample-vault.mjs` creates the folder). Rust must be 1.94 or newer for mistral.rs.
 
-### 1. Get a build
-Choose one:
-- **From CI:** GitHub → Actions → Release → latest run → artifact `noughtpad-macos-arm64`. The
-  first green run with all three platforms is
-  [run #2](https://github.com/pdmesh/noughtpad/actions/runs/41607043430): macOS arm64 with Metal
-  115 MB, Windows 66 MB, Linux 167 MB (built before the rename, so its artifact is still named
-  `nought-macos-arm64`). Builds are
-  ad-hoc signed and not notarised. Unzip it, then `xattr -cr Noughtpad.app` (or right-click → Open
-  the first time).
-- **Local build**, which also gives Metal:
-  `pnpm install && pnpm tauri build --features local-llm-metal`. The app lands in
-  `target/release/bundle/macos/`.
-
-### 2. Speed checks (record the numbers in DESIGN.md § M5)
-- **Startup to typing:** run `RUST_LOG=info /path/Noughtpad.app/Contents/MacOS/noughtpad-app` and read
-  the `editor ready ms=…` log line. Target: under 300 ms on Apple Silicon (M1's design goal).
-- **Large vault:** `cargo run --release -p noughtpad-core --example bench -- 10000`.
-- **Local model with Metal:**
+### 1. Open Mac checks
+- **Open at login:** the user turns it on in Settings → Start-up (the agent's auto mode blocks
+  adding login items). Expect a plist in `~/Library/LaunchAgents`; log out and in, and the app
+  should be running with no window. Turning it off removes the plist.
+- **Local model with Metal:** download in Settings → Language models (2.5 GB; also covers the
+  ROADMAP item "full download, resume after quitting midway"), then
   ```sh
   cargo run --release -p noughtpad-llm --features local-metal --example ask -- \
     ~/Library/Application\ Support/app.noughtpad.desktop/models/llm qwen3-4b-instruct-2507-q4km
   ```
-  First download the model in the app: Settings → Language models → Download. Compare with
-  about 8 tok/s on a 4-core CPU.
-- **In the app:** time the first chat answer after launch (the model is warmed when Chat opens),
-  then a follow-up.
+  Compare with about 8 tok/s on a 4-core CPU. In the app, time the first chat answer after launch
+  and a follow-up. Record the numbers in DESIGN.md § M5 measurements.
 
-### 3. UX pass with computer use
-On the sample notebook (`pnpm dev:sample`) and then on real notes:
+### 2. UX pass with computer use
+On the sample notebook and then on real notes:
 - **Capture:** ⌘⇧Space from another app, type at once, then check that labels, source and title
   appear on hover. Check that the sidebar and toolbar stay hidden while typing.
-- **Editor:** paste Markdown and rich text, copy out, Mermaid, maths, tasks, images (drag and paste).
+- **Editor:** paste Markdown and rich text, copy out, Mermaid, maths, tasks, images (drag and
+  paste). Paste/copy and inline maths now load lazily after startup; check them right after launch.
 - **Related notes:** ⌘J, open, dismiss and undo. Check that the reasons make sense.
 - **Ideas over time** and theme pages: check that themes and influences match the notebook.
-- **Chat:**
-  - Ask with each scope.
-  - Follow-ups.
-  - History panel: open, delete, hide.
-  - Navigate away while an answer streams.
-  - Click citations.
+- **Chat:** each scope, follow-ups, history panel (open, delete, hide), navigate away while an
+  answer streams, citations.
 - **Models:** download (pause and resume), Use, Turn off, add a provider, the consent card.
 - **Settings:** every switch and button. Check that preferences survive a restart.
 - Dark mode, small windows (minimum 480×360) and keyboard-only use.
 
-### 4. Real providers
+### 3. Real providers (needs the user's keys)
 Run the same question with each provider:
 - An **Anthropic** key, and an **OpenAI** key. Expect search/read steps to appear, and the answer
   not to list sources.
@@ -107,17 +94,19 @@ Run the same question with each provider:
 Also check that the key ends up in Keychain Access (service `app.noughtpad.llm`), not in
 `~/Library/Application Support/app.noughtpad.desktop/config.json`.
 
-### 5. Name (done 2026-11-03)
-Renamed from Nought (taken) to **Noughtpad** before any real install: bundle ID
-`app.noughtpad.desktop`, keychain service `app.noughtpad.llm`, the `.noughtpad` data folder, crates
-`noughtpad-core` / `noughtpad-llm`, packages and docs. No data migration was needed.
-
-### 6. Then
+### 4. Then
 - **Auto-update:** run `pnpm tauri signer generate`, add the public key and updater endpoint, and
   store the private key as `TAURI_SIGNING_PRIVATE_KEY`.
-- **Signing**, once you decide to pay: Apple Developer Program, then the secrets listed at the top
-  of `release.yml`.
+- **Signing**, once the user decides to pay: Apple Developer Program, then the secrets listed at
+  the top of `release.yml`.
 - **Start dogfooding** (ROADMAP M5 exit), then M6 sync design.
+
+### Done on 2026-11-03
+- Renamed Nought → Noughtpad everywhere (no data migration needed).
+- Mac build with Metal; speed numbers in DESIGN.md § M5 measurements. Startup is ~350 ms warm,
+  mostly WKWebView creation, so the 300 ms goal is met by keeping the app running instead.
+- Startup bundle split (1.6 MB → 0.6 MB main chunk).
+- Window lifecycle per platform (`src-tauri/src/lifecycle.rs`) and the "Open at login" switch.
 
 ## Known limits and gotchas
 
@@ -128,6 +117,7 @@ Renamed from Nought (taken) to **Noughtpad** before any real install: bundle ID
   you open Chat.
 - **Local chat** reads at most 6 notes per question. Big scopes need summarising in batches
   (Backlog).
+- **Release run #2** predates the rename, so its macOS artifact is named `nought-macos-arm64`.
 - **⌘L** opens chat; the editor's select-line binding is overridden.
 - **Release CI time:** the release build compiles mistral.rs, which takes 20–40 minutes per
   platform on GitHub runners.
