@@ -34,7 +34,7 @@ This document turns that thesis into a concrete architecture and build plan. Ite
 | 2026-11-03 | Built-in runtime: **mistral.rs** (Rust, MIT) running GGUF on CPU/Metal/CUDA. Default model **Qwen3-4B-Instruct-2507 Q4_K_M** (Apache-2.0, 2.5 GB). Bring-your-own via the **genai** crate (Anthropic, OpenAI, Gemini, Ollama, any OpenAI-compatible URL); keys live in the OS keychain. |
 | 2026-11-03 | Before notes go to a remote provider, Nought lists them and the destination and asks; the user can untick notes. It asks the first time and again whenever the destination changes. Local models never ask, because nothing leaves the machine. |
 | 2026-11-03 | No embedded third-party agent harness (e.g. pi): our Rust layer already routes models and keeps keys in the keychain. Chat gets a small built-in tool loop instead. Workflow files and cost display are dropped for now. |
-| 2026-11-03 | Chat lives in the right-hand panel (shares the slot with Related, ⌘L). Chats are saved to `.nought/chats/` as history, which replaces the separate Think page and "Kept". Online models search and read notes through read-only tools bounded by the chat's scope; the user approves a chat's scope and destination once. Local models get the most relevant notes per question. Answers don't re-list sources, because the steps already show which notes were read. |
+| 2026-11-03 | Chat is a full page with the input docked at the bottom of the window; past chats are listed in the left sidebar and open as pages. Chats are saved to `.nought/chats/` (this replaces the Think page and "Kept"). Online models search and read notes through read-only tools bounded by the chat's scope; the user approves a chat's scope and destination once. Local models get the most relevant notes per question. Answers don't re-list sources, because the steps already show which notes were read. |
 | 2026-11-02 | Extensions reuse the CodeMirror 6 and unified (remark/rehype) ecosystems; no bespoke plugin ecosystem. |
 
 ---
@@ -249,7 +249,7 @@ Tier 2 is never required. The candidate model gets evaluated on a hand-labelled 
 note pairs before it is adopted. Model claims so far come from secondary write-ups.
 
 ### 6.6 Chat with your notes (on demand)
-A chat opens in the right-hand panel with a **scope**: the whole notebook, the current note and its
+A chat is a page (⌘L, the sidebar's Chat item, "Ask about this note", or a theme page). It has a **scope**: the whole notebook, the current note and its
 related notes, a theme, a month, open questions or a collection.
 - **Online models** get four read-only tools, all bounded by the scope: `search_notes`, `read_note`,
   `notes_in_month` and `open_questions`. They take up to 6 rounds.
@@ -259,7 +259,7 @@ related notes, a theme, a month, open questions or a collection.
   Every search and read appears as a step that expands to the notes involved.
 - **Answers** respond to the question directly and cite `[n]` only where pointing at a note helps.
 - **Earlier turns:** the last 6 are sent as text.
-- **Storage:** chats are saved as JSON in `.nought/chats/` and listed as history in the panel. Notes
+- **Storage:** chats are saved as JSON in `.nought/chats/` and listed in the left sidebar. Notes
   are never written.
 - **Consent:** before an online provider sees anything, the user approves this chat's scope and
   destination once per chat.

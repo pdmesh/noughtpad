@@ -10,7 +10,9 @@ import { RelatedPanel } from "./components/RelatedPanel";
 import { describeStatus, useSemanticStatus } from "./lib/useSemantic";
 import { Journal } from "./views/Journal";
 import { IdeasView, ThemeView } from "./views/Ideas";
-import { ChatPanel, type ChatStart, type ScopeChoice } from "./components/ChatPanel";
+import { ChatView } from "./views/Chat";
+import { ChatHistory } from "./components/ChatHistory";
+import { useChatLive, type ScopeChoice } from "./lib/chat";
 import { ModelsView } from "./views/Models";
 import type { EditorHandle } from "./editor/Editor";
 
@@ -21,7 +23,9 @@ type View =
   | { kind: "journal" }
   | { kind: "ideas" }
   | { kind: "theme"; id: string }
-  | { kind: "models"; focus?: "local" | "remote" };
+  | { kind: "models"; focus?: "local" | "remote" }
+  /** `key` stays the same when a new chat gets its id, so the page isn't remounted. */
+  | { kind: "chat"; id: string | null; start?: ScopeChoice; key: string };
 
 export function App() {
   const [vault, setVault] = useState<VaultInfo | null | undefined>(undefined);
@@ -82,14 +86,13 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
 
   const { data: labels = [] } = useQuery({ queryKey: ["notes", "labels"], queryFn: api.labels });
 
-  // Chat with your notes: the right-hand panel (shares the slot with Related).
-  const [chatOpen, setChatOpen] = useState(false);
-  const [chatStart, setChatStart] = useState<ChatStart | null>(null);
+  // Chat with your notes: a page; past chats are listed in the sidebar.
+  const chatLive = useChatLive();
   const openChat = useCallback((start?: ScopeChoice) => {
     setRelatedOpen(false);
-    setChatOpen(true);
-    if (start) setChatStart({ ...start, nonce: Date.now() });
+    setView({ kind: "chat", id: null, start, key: `new-${Date.now()}` });
   }, []);
+  const showChat = useCallback((id: string) => setView({ kind: "chat", id, key: id }), []);
   const { data: currentNoteChoice = null } = useQuery({
     queryKey: ["notes", "chat-label", currentId],
     enabled: !!currentId,
@@ -100,8 +103,8 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
     },
   });
   useEffect(() => {
-    // Pages other than Write start at the top.
-    if (view.kind !== "write") window.scrollTo({ top: 0 });
+    // Pages other than Write start at the top (a chat scrolls itself to its end).
+    if (view.kind !== "write" && view.kind !== "chat") window.scrollTo({ top: 0 });
   }, [view]);
 
   // Optional: show the note list under the editor (off by default: the page stays blank).
@@ -183,7 +186,6 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
         e.preventDefault();
         setView({ kind: "write" });
         setRelatedOpen((o) => !o);
-        setChatOpen(false);
       } else if (e.key === "Escape" && relatedOpen && !paletteOpen) {
         setRelatedOpen(false);
       }
@@ -202,13 +204,12 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
       if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "l") {
         e.preventDefault();
         e.stopPropagation();
-        setChatOpen((o) => !o);
-        setRelatedOpen(false);
+        openChat();
       }
     };
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
-  }, []);
+  }, [openChat]);
 
   // While typing, chrome stays hidden even if the pointer rests on it; moving the mouse brings it back.
   const [typing, setTyping] = useState(false);
@@ -236,7 +237,7 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
 
   return (
     <div
-      className={`app ${chromePinned ? "chrome-pinned" : "chrome-auto"} ${typing ? "is-typing" : ""} ${relatedOpen && view.kind === "write" ? "related-open" : ""} ${chatOpen ? "chat-open" : ""}`}
+      className={`app ${chromePinned ? "chrome-pinned" : "chrome-auto"} ${typing ? "is-typing" : ""} ${relatedOpen && view.kind === "write" ? "related-open" : ""}`}
     >
       <div className="sidebar-hotzone" aria-hidden />
       <aside className="sidebar chrome" aria-label="Navigation">
@@ -250,8 +251,17 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
             active={view.kind === "ideas" || view.kind === "theme"}
             onClick={() => setView({ kind: "ideas" })}
           />
-          <SideItem icon={<MessageSquareText size={15} />} label="Chat" active={chatOpen} onClick={() => (chatOpen ? setChatOpen(false) : openChat())} />
+          <SideItem icon={<MessageSquareText size={15} />} label="Chat" active={view.kind === "chat" && view.id === null} onClick={() => openChat()} />
         </nav>
+        <ChatHistory
+          currentId={view.kind === "chat" ? view.id : null}
+          running={new Set(Object.keys(chatLive.live))}
+          onOpen={showChat}
+          onNew={() => openChat()}
+          onDeleted={(id) => {
+            if (view.kind === "chat" && view.id === id) openChat();
+          }}
+        />
         {labels.length > 0 && (
           <nav className="sidebar-section" aria-label="Collections">
             <h4 className="sidebar-heading">Collections</h4>
@@ -284,7 +294,6 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
           onClick={() => {
             setView({ kind: "write" });
             setRelatedOpen((o) => !o);
-            setChatOpen(false);
           }}
           title="Related notes (⌘J)"
           aria-label="Related notes"
@@ -293,11 +302,10 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
           <Waypoints size={16} />
         </button>
         <button
-          className={`icon-btn ${chatOpen ? "is-on" : ""}`}
-          onClick={() => (chatOpen ? setChatOpen(false) : openChat())}
+          className={`icon-btn ${view.kind === "chat" ? "is-on" : ""}`}
+          onClick={() => openChat()}
           title="Chat with your notes (⌘L)"
           aria-label="Chat with your notes"
-          aria-pressed={chatOpen}
         >
           <MessageSquareText size={16} />
         </button>
@@ -307,7 +315,7 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
       </div>
 
       <main
-        className="main"
+        className={`main ${view.kind === "chat" ? "is-chat" : ""}`}
         onMouseDown={(e) => {
           // On the writing page, clicking empty space puts the cursor at the end, like paper.
           const t = e.target as HTMLElement;
@@ -355,6 +363,19 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
           />
         )}
         {view.kind === "models" && <ModelsView focus={view.focus} />}
+        {view.kind === "chat" && (
+          <ChatView
+            key={view.key}
+            chatId={view.id}
+            start={view.start}
+            currentNote={currentNoteChoice}
+            live={view.id ? chatLive.live[view.id] : undefined}
+            onBegin={chatLive.begin}
+            onCreated={(id) => setView((v) => (v.kind === "chat" && v.id === null ? { ...v, id } : v))}
+            onOpenNote={openNote}
+            onModels={(focus) => setView({ kind: "models", focus })}
+          />
+        )}
       </main>
 
       <SearchPalette
@@ -376,7 +397,6 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
         toggleRelated={() => {
           setView({ kind: "write" });
           setRelatedOpen((o) => !o);
-          setChatOpen(false);
         }}
         resetRelatedFeedback={() =>
           void api.resetRelatedFeedback().then(() => {
@@ -391,15 +411,6 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
           )
         }
       />
-      {chatOpen && (
-        <ChatPanel
-          start={chatStart}
-          currentNote={view.kind === "write" ? currentNoteChoice : null}
-          onOpenNote={openNote}
-          onModels={(focus) => setView({ kind: "models", focus })}
-          onClose={() => setChatOpen(false)}
-        />
-      )}
       {relatedOpen && view.kind === "write" && (
         <RelatedPanel
           noteId={currentId}
