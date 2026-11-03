@@ -1,32 +1,32 @@
 [package]
-name = "nought-app"
-description = "Nought desktop app"
+name = "noughtpad-app"
+description = "Noughtpad desktop app"
 version.workspace = true
 edition.workspace = true
 license-file.workspace = true
 repository.workspace = true
 
 [lib]
-name = "nought_app_lib"
+name = "noughtpad_app_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [features]
 default = ["embedding-static", "local-llm"]
 # Local embeddings with ONNX Runtime linked statically (downloaded at build time).
-embedding-static = ["nought-core/embedding-static"]
+embedding-static = ["noughtpad-core/embedding-static"]
 # Same, but loading a system onnxruntime at run time (for offline builds).
-embedding-dynamic = ["nought-core/embedding-dynamic"]
+embedding-dynamic = ["noughtpad-core/embedding-dynamic"]
 # Built-in language models (mistral.rs). Without it, only bring-your-own providers work.
-local-llm = ["nought-llm/local"]
-local-llm-metal = ["nought-llm/local-metal"]
-local-llm-cuda = ["nought-llm/local-cuda"]
+local-llm = ["noughtpad-llm/local"]
+local-llm-metal = ["noughtpad-llm/local-metal"]
+local-llm-cuda = ["noughtpad-llm/local-cuda"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-nought-core.workspace = true
-nought-llm = { workspace = true, features = ["remote", "keychain"] }
+noughtpad-core.workspace = true
+noughtpad-llm = { workspace = true, features = ["remote", "keychain"] }
 serde.workspace = true
 serde_json.workspace = true
 tracing.workspace = true

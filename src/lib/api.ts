@@ -243,7 +243,7 @@ export interface LlmOverview {
   providers: ProviderInfo[];
   localAvailable: boolean;
   remoteAvailable: boolean;
-  /** Keys are kept in the OS keychain (false: only until Nought quits). */
+  /** Keys are kept in the OS keychain (false: only until Noughtpad quits). */
   keychain: boolean;
 }
 
@@ -417,7 +417,7 @@ export function assetUrl(vaultRoot: string, rel: string): string {
 }
 
 export async function pickFolder(): Promise<string | null> {
-  if (!isTauri) return "/mock/Nought";
+  if (!isTauri) return "/mock/Noughtpad";
   const { open } = await import("@tauri-apps/plugin-dialog");
   const res = await open({ directory: true, multiple: false, title: "Choose a folder for your notes" });
   return typeof res === "string" ? res : null;

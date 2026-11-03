@@ -1,4 +1,4 @@
-//! nought-llm: the language models Nought can think with (M4).
+//! noughtpad-llm: the language models Noughtpad can think with (M4).
 //!
 //! Nothing here runs until the user opts in on the Models page, either by
 //! downloading a local model ([`catalog`], [`download`], [`local`]) or by adding

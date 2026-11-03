@@ -28,7 +28,7 @@ script like `laya_eval.py` against `baseline_eval.py`.
 Rust-side tool (same model the app uses):
 
 ```sh
-cargo run --release -p nought-core --features embedding-static --example ideas -- <models> samples/vault 2026-11-02
+cargo run --release -p noughtpad-core --features embedding-static --example ideas -- <models> samples/vault 2026-11-02
 
 ## M4: local language models
 
@@ -45,5 +45,5 @@ curl -LO https://huggingface.co/unsloth/Qwen3-4B-Instruct-2507-GGUF/resolve/main
 The same through the app's own Rust runtime:
 
 ```sh
-cargo run --release -p nought-llm --features local --example ask -- <models-dir> qwen3-4b-instruct-2507-q4km
+cargo run --release -p noughtpad-llm --features local --example ask -- <models-dir> qwen3-4b-instruct-2507-q4km
 ```

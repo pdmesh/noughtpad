@@ -1,4 +1,4 @@
-# Nought
+# Noughtpad
 
 A local-first notebook: capture anything on a blank page, and let it gradually reveal the shape of your own ideas.
 
@@ -20,7 +20,7 @@ Notes are plain Markdown files you own. AI stays out of the way during capture a
 - A Write page that is only the editor. Separate pages for All notes (chronological, every note), Collections (by label) and the Journal (personal notes by day, week or month). The note list can be shown under the editor from the `⌘K` palette. Lists scroll infinitely and render only what's on screen
 - Full-text search (SQLite FTS5) with `#label`, `type:personal|source`, `"phrases"`, prefix matching: `⌘/Ctrl+K`
 - Opening a vault never blocks capture: catching up with changes runs in the background (10k notes: under 1 s first time, ~40 ms after)
-- Edits from other apps (Obsidian, git, sync) are picked up live. The index in `.nought/` is disposable and rebuildable
+- Edits from other apps (Obsidian, git, sync) are picked up live. The index in `.noughtpad/` is disposable and rebuildable
 - Distraction-free by default: toolbar and sidebar appear on hover. `⌘/Ctrl+\` pins them
 - **Related notes** (`⌘/Ctrl+J`, or the button in the top bar): notes that appear connected, each with the passage that matched, shared labels, same source and how far apart in time. "Not related" hides a suggestion for good, with undo. Suggestions quietly adapt to what you open and dismiss (no buttons to press; resettable from `⌘K`)
 - **Search by meaning**: once turned on, `⌘K` finds notes by meaning as well as words. Opt-in: a ~65 MB local model is downloaded once, and notes never leave your computer
@@ -32,12 +32,12 @@ Notes are plain Markdown files you own. AI stays out of the way during capture a
 `samples/vault` holds 37 realistic notes from 2026 (regenerate with `python3 scripts/generate-samples.py samples/vault`): a VC thesis that evolves over the year, a half-marathon plan begun in October, customer-discovery notes from *The Mom Test*, presentation-software ideas, travel plans, sourdough, a Mermaid diagram, maths, tasks, a titled note and a plain Markdown file with no frontmatter.
 
 ```sh
-pnpm dev:sample           # copy to ~/Nought Sample and run the app on it
+pnpm dev:sample           # copy to ~/Noughtpad Sample and run the app on it
 pnpm sample --reset       # restore the pristine samples (only deletes a folder it created)
 pnpm sample --to <dir>    # copy somewhere else
 ```
 
-`dev:sample` opens the copy for that session only, via the `NOUGHT_VAULT` environment variable. Your remembered notes folder is left alone, and edits made while testing survive re-runs.
+`dev:sample` opens the copy for that session only, via the `NOUGHTPAD_VAULT` environment variable. Your remembered notes folder is left alone, and edits made while testing survive re-runs.
 
 ## Development
 
@@ -51,13 +51,13 @@ cargo test --workspace
 pnpm test && pnpm typecheck
 ```
 
-Local embeddings use ONNX Runtime, statically linked by default; the build downloads it from `cdn.pyke.io`. Offline, build with `--no-default-features --features embedding-dynamic` and point `ORT_DYLIB_PATH` at a `libonnxruntime` (e.g. from the `onnxruntime` PyPI wheel). Real-model test: `cargo test -p nought-core --features embedding-static -- --ignored model_`.
+Local embeddings use ONNX Runtime, statically linked by default; the build downloads it from `cdn.pyke.io`. Offline, build with `--no-default-features --features embedding-dynamic` and point `ORT_DYLIB_PATH` at a `libonnxruntime` (e.g. from the `onnxruntime` PyPI wheel). Real-model test: `cargo test -p noughtpad-core --features embedding-static -- --ignored model_`.
 
 Layout:
 
 | Path | What |
 |---|---|
-| `crates/nought-core` | UI-agnostic engine: note format, vault, SQLite/FTS5 index, file watcher |
+| `crates/noughtpad-core` | UI-agnostic engine: note format, vault, SQLite/FTS5 index, file watcher |
 | `src-tauri` | Desktop shell: exposes the core as Tauri commands and events |
 | `src` | React + TypeScript UI. `src/editor` holds the CodeMirror live preview, clipboard and block renderers |
 
@@ -65,6 +65,6 @@ Layout:
 
 [Functional Source License 1.1, Apache-2.0 future license](LICENSE.md) (`FSL-1.1-ALv2`).
 
-You may use, modify and redistribute Nought for any purpose **except** a Competing Use, meaning offering it, or something substantially similar built from it, as a commercial product or service. Each release becomes available under Apache-2.0 two years after it is published.
+You may use, modify and redistribute Noughtpad for any purpose **except** a Competing Use, meaning offering it, or something substantially similar built from it, as a commercial product or service. Each release becomes available under Apache-2.0 two years after it is published.
 
 Contributions are accepted under the terms in [CONTRIBUTING.md](CONTRIBUTING.md).

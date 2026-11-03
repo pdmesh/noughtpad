@@ -66,7 +66,7 @@ export function ModelsView({ focus }: { focus?: "local" | "remote" }) {
     <div className="models">
       <h2 className="journal-heading">Models</h2>
       <p className="ideas-lede">
-        Nought can think with your notes using a language model. It's off until you choose one here, and every answer shows which notes it read.
+        Noughtpad can think with your notes using a language model. It's off until you choose one here, and every answer shows which notes it read.
       </p>
 
       <div className={`model-status ${data.active ? "is-on" : ""}`} role="status">
@@ -95,7 +95,7 @@ export function ModelsView({ focus }: { focus?: "local" | "remote" }) {
           <HardDrive size={15} aria-hidden /> On this computer
         </h3>
         <p className="ideas-hint faint">Private and free: runs offline, and your notes never leave this machine. Download once, then choose it.</p>
-        {!data.localAvailable && <p className="faint">This build of Nought doesn't include the local runtime.</p>}
+        {!data.localAvailable && <p className="faint">This build of Noughtpad doesn't include the local runtime.</p>}
         <ul className="model-list">
           {data.local.map((l) => (
             <LocalRow
@@ -117,7 +117,7 @@ export function ModelsView({ focus }: { focus?: "local" | "remote" }) {
           <Cloud size={15} aria-hidden /> With your own key
         </h3>
         <p className="ideas-hint faint">
-          Use a provider you already pay for, or a model server you run (Ollama, LM Studio). Before anything is sent, Nought shows which notes go where.
+          Use a provider you already pay for, or a model server you run (Ollama, LM Studio). Before anything is sent, Noughtpad shows which notes go where.
         </p>
         {data.remotes.length > 0 && (
           <ul className="model-list">
@@ -160,7 +160,7 @@ export function ModelsView({ focus }: { focus?: "local" | "remote" }) {
             ))}
           </ul>
         )}
-        {data.remoteAvailable ? <AddProvider data={data} onSaved={refresh} /> : <p className="faint">This build of Nought can't use online providers.</p>}
+        {data.remoteAvailable ? <AddProvider data={data} onSaved={refresh} /> : <p className="faint">This build of Noughtpad can't use online providers.</p>}
       </section>
     </div>
   );
@@ -324,7 +324,7 @@ function AddProvider({ data, onSaved }: { data: LlmOverview; onSaved: () => void
           <small className="faint">
             {data.keychain
               ? "Stored in your system keychain, never in your notes folder."
-              : "No system keychain found: the key is kept only until Nought quits."}
+              : "No system keychain found: the key is kept only until Noughtpad quits."}
           </small>
         </label>
       )}

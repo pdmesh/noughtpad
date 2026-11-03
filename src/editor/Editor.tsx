@@ -117,5 +117,5 @@ export function Editor({ initial, onChange, placeholder, autoFocus, resolveAsset
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return <div ref={host} className="nought-editor" />;
+  return <div ref={host} className="noughtpad-editor" />;
 }

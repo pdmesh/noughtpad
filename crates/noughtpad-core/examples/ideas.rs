@@ -1,14 +1,14 @@
 //! Print themes, sections and a timeline for a notebook using the real model.
 //!
-//! cargo run --release -p nought-core --features embedding-static --example ideas -- <models-dir> <vault> [YYYY-MM-DD]
+//! cargo run --release -p noughtpad-core --features embedding-static --example ideas -- <models-dir> <vault> [YYYY-MM-DD]
 
 use std::sync::Arc;
 
-use nought_core::index::NoteSummary;
-use nought_core::semantic::model::{download_bundle, model_dir, FastEmbedder, DEFAULT_MODEL};
-use nought_core::semantic::Semantic;
-use nought_core::userstate::UserState;
-use nought_core::Vault;
+use noughtpad_core::index::NoteSummary;
+use noughtpad_core::semantic::model::{download_bundle, model_dir, FastEmbedder, DEFAULT_MODEL};
+use noughtpad_core::semantic::Semantic;
+use noughtpad_core::userstate::UserState;
+use noughtpad_core::Vault;
 
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();

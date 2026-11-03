@@ -7,11 +7,11 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
-use nought_llm::catalog::{self, LocalModel};
-use nought_llm::download;
-use nought_llm::keys::{default_store, KeyStore};
-use nought_llm::local::LocalRuntime;
-use nought_llm::settings::{Active, LlmSettings, Remote, RemoteKind};
+use noughtpad_llm::catalog::{self, LocalModel};
+use noughtpad_llm::download;
+use noughtpad_llm::keys::{default_store, KeyStore};
+use noughtpad_llm::local::LocalRuntime;
+use noughtpad_llm::settings::{Active, LlmSettings, Remote, RemoteKind};
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager, State};
 
@@ -50,11 +50,11 @@ pub(crate) fn err(kind: &'static str, message: impl ToString) -> CmdError {
     }
 }
 
-impl From<nought_llm::Error> for CmdError {
-    fn from(e: nought_llm::Error) -> Self {
+impl From<noughtpad_llm::Error> for CmdError {
+    fn from(e: noughtpad_llm::Error) -> Self {
         let kind = match e {
-            nought_llm::Error::Cancelled => "cancelled",
-            nought_llm::Error::Provider(_) => "provider",
+            noughtpad_llm::Error::Cancelled => "cancelled",
+            noughtpad_llm::Error::Provider(_) => "provider",
             _ => "internal",
         };
         err(kind, e)
@@ -127,7 +127,7 @@ pub struct LlmOverview {
     providers: Vec<ProviderInfo>,
     local_available: bool,
     remote_available: bool,
-    /// Keys are kept in the OS keychain (false: only until Nought quits).
+    /// Keys are kept in the OS keychain (false: only until Noughtpad quits).
     keychain: bool,
 }
 
@@ -189,8 +189,8 @@ pub fn llm_overview(app: AppHandle, llm: State<'_, LlmState>) -> CmdResult<LlmOv
         local,
         remotes,
         providers,
-        local_available: nought_llm::local::AVAILABLE,
-        remote_available: nought_llm::remote::AVAILABLE,
+        local_available: noughtpad_llm::local::AVAILABLE,
+        remote_available: noughtpad_llm::remote::AVAILABLE,
         keychain: llm.keychain,
     })
 }
@@ -241,7 +241,7 @@ pub fn llm_download(app: AppHandle, llm: State<'_, LlmState>, id: String) -> Cmd
         st.downloads.lock().unwrap_or_else(|e| e.into_inner()).remove(m.id);
         match result {
             Ok(_) => emit("done", m.bytes, None),
-            Err(nought_llm::Error::Cancelled) => emit("cancelled", download::partial_bytes(&dir, m), None),
+            Err(noughtpad_llm::Error::Cancelled) => emit("cancelled", download::partial_bytes(&dir, m), None),
             Err(e) => {
                 tracing::warn!("downloading {} failed: {e}", m.id);
                 emit("error", download::partial_bytes(&dir, m), Some(e.to_string()))
@@ -286,7 +286,7 @@ pub async fn llm_list_remote_models(
             None => None,
         },
     };
-    Ok(nought_llm::remote::list_models(kind, base_url, key).await?)
+    Ok(noughtpad_llm::remote::list_models(kind, base_url, key).await?)
 }
 
 #[derive(Deserialize)]

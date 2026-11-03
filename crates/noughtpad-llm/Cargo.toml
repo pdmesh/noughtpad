@@ -1,6 +1,6 @@
 [package]
-name = "nought-llm"
-description = "Language-model providers for Nought: a local runtime and bring-your-own APIs"
+name = "noughtpad-llm"
+description = "Language-model providers for Noughtpad: a local runtime and bring-your-own APIs"
 version.workspace = true
 edition.workspace = true
 license-file.workspace = true

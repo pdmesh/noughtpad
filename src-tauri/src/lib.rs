@@ -1,4 +1,4 @@
-//! Tauri shell: exposes `nought-core` to the UI as commands and forwards
+//! Tauri shell: exposes `noughtpad-core` to the UI as commands and forwards
 //! filesystem changes as events.
 
 mod chat;
@@ -8,12 +8,12 @@ mod think;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, RwLock};
 
-use nought_core::index::{DaySummary, LabelCount, ListQuery, MonthLog, NoteSummary, SearchHit};
-use nought_core::semantic::Semantic;
-use nought_core::userstate::{UserState, USER_STATE_FILE};
-use nought_core::vault::{Change, NewNote, NoteDoc, NoteUpdate, ScanReport};
-use nought_core::watch::{watch, VaultWatcher};
-use nought_core::Vault;
+use noughtpad_core::index::{DaySummary, LabelCount, ListQuery, MonthLog, NoteSummary, SearchHit};
+use noughtpad_core::semantic::Semantic;
+use noughtpad_core::userstate::{UserState, USER_STATE_FILE};
+use noughtpad_core::vault::{Change, NewNote, NoteDoc, NoteUpdate, ScanReport};
+use noughtpad_core::watch::{watch, VaultWatcher};
+use noughtpad_core::Vault;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager, State};
 
@@ -55,9 +55,9 @@ pub(crate) struct CmdError {
     message: String,
 }
 
-impl From<nought_core::Error> for CmdError {
-    fn from(e: nought_core::Error) -> Self {
-        use nought_core::Error::*;
+impl From<noughtpad_core::Error> for CmdError {
+    fn from(e: noughtpad_core::Error) -> Self {
+        use noughtpad_core::Error::*;
         let kind = match &e {
             Conflict(_) => "conflict",
             NotFound(_) => "notFound",
@@ -81,7 +81,7 @@ struct Config {
     semantic: Option<bool>,
     /// Language models the user opted into (M4). Keys live in the keychain.
     #[serde(default)]
-    llm: nought_llm::settings::LlmSettings,
+    llm: noughtpad_llm::settings::LlmSettings,
 }
 
 fn config_path(app: &AppHandle) -> Option<PathBuf> {
@@ -116,7 +116,7 @@ fn default_vault_path() -> PathBuf {
     dirs::document_dir()
         .or_else(dirs::home_dir)
         .unwrap_or_else(|| PathBuf::from("."))
-        .join("Nought")
+        .join("Noughtpad")
 }
 
 /// Open a vault, index it, and start watching it.
@@ -131,7 +131,7 @@ fn activate(app: &AppHandle, state: &AppState, path: &Path, remember: bool) -> C
         old.shutdown();
     }
     let user = Arc::new(UserState::open(
-        &vault.root().join(nought_core::vault::DATA_DIR).join(USER_STATE_FILE),
+        &vault.root().join(noughtpad_core::vault::DATA_DIR).join(USER_STATE_FILE),
     )?);
     let sem = Semantic::new(vault.clone(), user)?;
     let handle = app.clone();
@@ -151,7 +151,7 @@ fn activate(app: &AppHandle, state: &AppState, path: &Path, remember: bool) -> C
         sem.nudge();
         let _ = handle.emit("vault-changed", changes);
     })?;
-    // Catch up with edits made while Nought was closed, without blocking the
+    // Catch up with edits made while Noughtpad was closed, without blocking the
     // editor: capture must be available immediately, even on a large vault.
     let (bg, handle) = (vault.clone(), app.clone());
     std::thread::spawn(move || {
@@ -197,9 +197,9 @@ async fn vault_info(app: AppHandle, state: State<'_, AppState>) -> CmdResult<Opt
             default_path: default_vault_path().display().to_string(),
         }));
     }
-    // `NOUGHT_VAULT` (e.g. from `pnpm dev:sample`) opens a folder for this
+    // `NOUGHTPAD_VAULT` (e.g. from `pnpm dev:sample`) opens a folder for this
     // session only, without replacing the remembered notes folder.
-    if let Some(p) = std::env::var_os("NOUGHT_VAULT").map(PathBuf::from) {
+    if let Some(p) = std::env::var_os("NOUGHTPAD_VAULT").map(PathBuf::from) {
         return activate(&app, &state, &p, false).map(Some);
     }
     match load_config(&app).vault_path {
@@ -283,7 +283,7 @@ async fn list_months(state: State<'_, AppState>) -> CmdResult<Vec<String>> {
 
 /// Notes per day from `from_day` (`YYYY-MM-DD`), for the activity map.
 #[tauri::command]
-async fn day_counts(state: State<'_, AppState>, from_day: String) -> CmdResult<Vec<nought_core::index::DayCount>> {
+async fn day_counts(state: State<'_, AppState>, from_day: String) -> CmdResult<Vec<noughtpad_core::index::DayCount>> {
     Ok(state.vault()?.day_counts(&from_day)?)
 }
 
@@ -427,5 +427,5 @@ pub fn run() {
             chat::chat_cancel,
         ])
         .run(tauri::generate_context!())
-        .expect("error while running Nought");
+        .expect("error while running Noughtpad");
 }

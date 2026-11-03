@@ -1,16 +1,16 @@
 //! Real-model check: indexing speed on a synthetic vault, and related-note
 //! quality on a small hand-written notebook.
 //!
-//! cargo run --release -p nought-core --features embedding-static --example semantic -- <model-dir> [notes]
+//! cargo run --release -p noughtpad-core --features embedding-static --example semantic -- <model-dir> [notes]
 
 use std::sync::Arc;
 use std::time::Instant;
 
-use nought_core::semantic::model::{download, FastEmbedder, DEFAULT_MODEL};
-use nought_core::semantic::Semantic;
-use nought_core::userstate::UserState;
-use nought_core::vault::{EditableMeta, NewNote};
-use nought_core::Vault;
+use noughtpad_core::semantic::model::{download, FastEmbedder, DEFAULT_MODEL};
+use noughtpad_core::semantic::Semantic;
+use noughtpad_core::userstate::UserState;
+use noughtpad_core::vault::{EditableMeta, NewNote};
+use noughtpad_core::Vault;
 
 const NOTEBOOK: &[(&str, &str)] = &[
     ("VC", "Read about VC power-law returns. A handful of outlier companies return the entire fund."),

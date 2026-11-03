@@ -1,13 +1,13 @@
 //! Ask a downloaded local model one grounded question (manual check).
 //!
-//! cargo run --release -p nought-llm --features local --example ask -- <models-dir> <model-id>
+//! cargo run --release -p noughtpad-llm --features local --example ask -- <models-dir> <model-id>
 
 use std::sync::atomic::AtomicBool;
 
-use nought_llm::catalog;
-use nought_llm::local::LocalRuntime;
-use nought_llm::prompt::{self, ContextNote};
-use nought_llm::ChatRequest;
+use noughtpad_llm::catalog;
+use noughtpad_llm::local::LocalRuntime;
+use noughtpad_llm::prompt::{self, ContextNote};
+use noughtpad_llm::ChatRequest;
 
 #[tokio::main]
 async fn main() {

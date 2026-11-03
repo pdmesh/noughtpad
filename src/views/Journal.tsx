@@ -14,7 +14,7 @@ interface Props {
 
 function readMode(): Mode {
   try {
-    const m = localStorage.getItem("nought.journalMode");
+    const m = localStorage.getItem("noughtpad.journalMode");
     if (m === "day" || m === "week" || m === "month") return m;
   } catch {
     /* storage unavailable */
@@ -32,7 +32,7 @@ export function Journal({ onOpen, onLabel }: Props) {
   const setMode = (m: Mode) => {
     setModeState(m);
     try {
-      localStorage.setItem("nought.journalMode", m);
+      localStorage.setItem("noughtpad.journalMode", m);
     } catch {
       /* storage unavailable */
     }

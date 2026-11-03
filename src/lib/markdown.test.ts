@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clipboardHtml, htmlToMarkdown, isUrl, markdownToHtml, NOUGHT_HTML_MARKER, shouldConvertHtml } from "./markdown";
+import { clipboardHtml, htmlToMarkdown, isUrl, markdownToHtml, NOUGHTPAD_HTML_MARKER, shouldConvertHtml } from "./markdown";
 
 describe("markdownToHtml", () => {
   it("renders GFM and math", () => {
@@ -9,8 +9,8 @@ describe("markdownToHtml", () => {
     expect(html).toContain("<table>");
     expect(html).toContain("katex");
   });
-  it("tags clipboard html so Nought can recognise its own copies", () => {
-    expect(clipboardHtml("**b**")).toContain(NOUGHT_HTML_MARKER);
+  it("tags clipboard html so Noughtpad can recognise its own copies", () => {
+    expect(clipboardHtml("**b**")).toContain(NOUGHTPAD_HTML_MARKER);
   });
 });
 
@@ -37,7 +37,7 @@ describe("htmlToMarkdown", () => {
 
 describe("paste heuristics", () => {
   it("keeps plain text for our own copies, code editors and explicit plain paste", () => {
-    expect(shouldConvertHtml(["text/html"], `<div ${NOUGHT_HTML_MARKER}="1"><p>x</p></div>`, false)).toBe(false);
+    expect(shouldConvertHtml(["text/html"], `<div ${NOUGHTPAD_HTML_MARKER}="1"><p>x</p></div>`, false)).toBe(false);
     expect(shouldConvertHtml(["text/html", "vscode-editor-data"], "<p>x</p>", false)).toBe(false);
     expect(shouldConvertHtml(["text/html"], "<p>x</p>", true)).toBe(false);
     expect(shouldConvertHtml(["text/html"], "<span>x</span>", false)).toBe(false);

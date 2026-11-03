@@ -1,4 +1,4 @@
-//! A vault is a folder of Markdown notes plus a hidden `.nought/` data folder.
+//! A vault is a folder of Markdown notes plus a hidden `.noughtpad/` data folder.
 //!
 //! The vault is the only component that writes note files. It writes them
 //! atomically and keeps the index in step. Edits made by other tools are
@@ -18,7 +18,7 @@ use crate::index::{DaySummary, Index, IndexedNote, LabelCount, ListQuery, MonthL
 use crate::note::{slugify, Note, NoteKind, NoteMeta, Source};
 use crate::{Error, Result};
 
-pub const DATA_DIR: &str = ".nought";
+pub const DATA_DIR: &str = ".noughtpad";
 const INDEX_FILE: &str = "index.sqlite";
 const TRASH_DIR: &str = "trash";
 /// Notes written per index transaction during a scan.
@@ -233,7 +233,7 @@ impl Vault {
         self.get(id)
     }
 
-    /// Move a note to `.nought/trash/` (recoverable), and drop it from the index.
+    /// Move a note to `.noughtpad/trash/` (recoverable), and drop it from the index.
     pub fn trash(&self, id: &str) -> Result<()> {
         let rel = self.ix().path_of(id)?.ok_or_else(|| Error::NotFound(id.to_string()))?;
         let from = self.abs(&rel)?;
@@ -426,7 +426,7 @@ impl Vault {
         let dir = abs.parent().expect("note path has a parent");
         fs::create_dir_all(dir).at(dir)?;
         let mut tmp = tempfile::Builder::new()
-            .prefix(".nought-tmp-")
+            .prefix(".noughtpad-tmp-")
             .tempfile_in(dir)
             .at(dir)?;
         std::io::Write::write_all(&mut tmp, text.as_bytes()).at(tmp.path())?;
@@ -653,7 +653,7 @@ mod tests {
         assert_eq!(n.title, "Plain file");
         assert_eq!(n.day, "2026-02-03");
         assert!(n.id.starts_with("p-"));
-        // Editing an external file through Nought keeps it frontmatter-free.
+        // Editing an external file through Noughtpad keeps it frontmatter-free.
         let doc = v
             .update(
                 &n.id,

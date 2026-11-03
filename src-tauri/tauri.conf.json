@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Nought",
-  "identifier": "app.nought.desktop",
+  "productName": "Noughtpad",
+  "identifier": "app.noughtpad.desktop",
   "build": {
     "beforeDevCommand": "pnpm install --prefer-offline && pnpm dev",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Nought",
+        "title": "Noughtpad",
         "width": 1100,
         "height": 800,
         "minWidth": 480,

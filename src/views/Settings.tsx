@@ -51,7 +51,7 @@ export function SettingsView({
 
       <section className="settings-section">
         <h3 className="ideas-section-title">Notes folder</h3>
-        <Row label={vault.path} hint="Plain Markdown files. Nought keeps its index in a .nought folder inside it.">
+        <Row label={vault.path} hint="Plain Markdown files. Noughtpad keeps its index in a .noughtpad folder inside it.">
           <button className="btn btn-small" onClick={onSwitchVault}>
             <FolderOpen size={13} aria-hidden /> Switch…
           </button>

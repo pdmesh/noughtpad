@@ -1,4 +1,4 @@
-# Nought — Design Proposal (v0.1, draft for discussion)
+# Noughtpad — Design Proposal (v0.1, draft for discussion)
 
 > A local-first notebook where you capture anything without friction, and which
 > gradually reveals the shape of your own ideas.
@@ -14,7 +14,7 @@ This document turns that thesis into a concrete architecture and build plan. Ite
 | Date | Decision |
 |---|---|
 | 2026-11-02 | Desktop only for v1. No mobile app. |
-| 2026-11-02 | No migration or import from other tools in v1. Nought starts its own vault. Files stay Obsidian-*readable*. |
+| 2026-11-02 | No migration or import from other tools in v1. Noughtpad starts its own vault. Files stay Obsidian-*readable*. |
 | 2026-11-02 | AI tiers: deterministic → local embeddings → small local **non-generative** models (e.g. Laya-class decision/classifier models) → **bring-your-own LLM** (key or endpoint), opt-in, only for advanced tasks. |
 | 2026-11-02 | Licence: **FSL-1.1-ALv2** (source-available). Any use except a competing commercial product; each release converts to Apache-2.0 after 2 years. Contributions require a licence grant to the owner (CONTRIBUTING.md) so commercial editions stay possible. ELv2 was rejected because it only restricts hosted services, not desktop resale. |
 | 2026-11-02 | English first; language-pluggable architecture (§11). |
@@ -32,9 +32,9 @@ This document turns that thesis into a concrete architecture and build plan. Ite
 | 2026-11-03 | Small judge models (reranker, NLI, Laya) evaluated against embeddings + rules, did not beat them, and were removed (details under M3.5). One default download (the embedding model). |
 | 2026-11-03 | M4 language models are **always explicit opt-in**, on a Models page: download a local model (several may be downloaded) or add your own provider and key, then press **Use**. Downloading or saving a provider does not switch anything on. |
 | 2026-11-03 | Built-in runtime: **mistral.rs** (Rust, MIT) running GGUF on CPU/Metal/CUDA. Default model **Qwen3-4B-Instruct-2507 Q4_K_M** (Apache-2.0, 2.5 GB). Bring-your-own via the **genai** crate (Anthropic, OpenAI, Gemini, Ollama, any OpenAI-compatible URL); keys live in the OS keychain. |
-| 2026-11-03 | Before notes go to a remote provider, Nought lists them and the destination and asks; the user can untick notes. It asks the first time and again whenever the destination changes. Local models never ask, because nothing leaves the machine. |
+| 2026-11-03 | Before notes go to a remote provider, Noughtpad lists them and the destination and asks; the user can untick notes. It asks the first time and again whenever the destination changes. Local models never ask, because nothing leaves the machine. |
 | 2026-11-03 | No embedded third-party agent harness (e.g. pi): our Rust layer already routes models and keeps keys in the keychain. Chat gets a small built-in tool loop instead. Workflow files and cost display are dropped for now. |
-| 2026-11-03 | Chat is a full page with the input docked at the bottom of the window; past chats are listed in a right-hand panel on the chat page (like Related; toggled from the top bar) and open as pages. Chats are saved to `.nought/chats/` (this replaces the Think page and "Kept"). Online models search and read notes through read-only tools bounded by the chat's scope; the user approves a chat's scope and destination once. Local models get the most relevant notes per question. Answers don't re-list sources, because the steps already show which notes were read. |
+| 2026-11-03 | Chat is a full page with the input docked at the bottom of the window; past chats are listed in a right-hand panel on the chat page (like Related; toggled from the top bar) and open as pages. Chats are saved to `.noughtpad/chats/` (this replaces the Think page and "Kept"). Online models search and read notes through read-only tools bounded by the chat's scope; the user approves a chat's scope and destination once. Local models get the most relevant notes per question. Answers don't re-list sources, because the steps already show which notes were read. |
 | 2026-11-03 | M5 "ship it to yourself": release workflow (macOS with Metal, Windows, Linux; signing optional), Settings page, capture-speed budget in CI. Kept answers and workflow files are dropped. Plan in `ROADMAP.md`. |
 | 2026-11-03 | Built-in two-way sync (Google Drive everywhere; iCloud on Apple devices only, as iCloud has no API elsewhere) and iOS/Android apps are planned as a paid, proprietary add-on. The core stays FSL, with an open `SyncBackend` interface. |
 | 2026-11-02 | Extensions reuse the CodeMirror 6 and unified (remark/rehype) ecosystems; no bespoke plugin ecosystem. |
@@ -68,11 +68,11 @@ dashboard, collaboration, custom sync server.
 │   time · Thinking workspace · Search palette                             │
 │                          │  Tauri commands / events                      │
 │  ────────────────────────┼───────────────────────────────────────────── │
-│  nought-core (Rust library, UI-agnostic)                                 │
+│  noughtpad-core (Rust library, UI-agnostic)                                 │
 │   vault ─ watcher ─ parser ─ indexer ─ search ─ intelligence ─ ai        │
 └───────────────┬──────────────────────────────────────┬───────────────────┘
                 │                                      │
-        Markdown vault (truth)                 .nought/ (app data)
+        Markdown vault (truth)                 .noughtpad/ (app data)
         ~/Notes/**/*.md                         index.sqlite   (disposable)
                                                 user-state.db  (NOT disposable:
                                                   dismissals, confirmations)
@@ -88,7 +88,7 @@ Key idea: **three kinds of data, three lifetimes.**
    kept syntheses. Not rebuildable, so it is stored separately from the disposable index and
    keyed by stable note IDs + content hashes, so it survives a reindex.
 
-`nought-core` is a plain Rust crate, so the same engine can later power a CLI, an MCP server
+`noughtpad-core` is a plain Rust crate, so the same engine can later power a CLI, an MCP server
 (agent access, as HomeKB/Hypha do), or a mobile build without the desktop UI.
 
 ---
@@ -133,7 +133,7 @@ dependencies; copyleft terms conflict with FSL's competing-use restriction. Mode
 ~/Notes/                         ← user-chosen folder (can be an Obsidian vault)
   2026/09/2026-09-12-2310-ownership-vc.md
   2026/09/2026-09-14-0912-the-mom-test.md
-  .nought/                       ← app data (hidden, git-ignorable)
+  .noughtpad/                       ← app data (hidden, git-ignorable)
 ```
 
 ```markdown
@@ -164,7 +164,7 @@ evidence links. A "Daily stream" is a **view** (thesis §6: journal is a view, n
 
 ---
 
-## 5. Derived index schema (`.nought/index.sqlite`, disposable)
+## 5. Derived index schema (`.noughtpad/index.sqlite`, disposable)
 
 ```sql
 notes(id TEXT PK, path, created, modified, type, source_title, source_url,
@@ -185,12 +185,12 @@ jobs(id PK, kind, payload, state, attempts, run_after)
 meta(key, value)                                  -- embedding model id, schema version
 ```
 
-`.nought/user-state.db` (persistent, small):
+`.noughtpad/user-state.db` (persistent, small):
 
 ```sql
 relation_feedback(src_note, dst_note, kind, verdict, at)   -- confirmed|dismissed
 theme_feedback(theme_key, verdict, renamed_to, at)
-kept_artifacts(id, path, kind, created, cites_json)        -- syntheses saved to .nought/artifacts
+kept_artifacts(id, path, kind, created, cites_json)        -- syntheses saved to .noughtpad/artifacts
 ```
 
 Swapping the embedding model means a column in `meta` changes and the vectors are rebuilt.
@@ -261,7 +261,7 @@ related notes, a theme, a month, open questions or a collection.
   Every search and read appears as a step that expands to the notes involved.
 - **Answers** respond to the question directly and cite `[n]` only where pointing at a note helps.
 - **Earlier turns:** the last 6 are sent as text.
-- **Storage:** chats are saved as JSON in `.nought/chats/` and listed in the history panel on the right of the chat page. Notes
+- **Storage:** chats are saved as JSON in `.noughtpad/chats/` and listed in the history panel on the right of the chat page. Notes
   are never written.
 - **Consent:** before an online provider sees anything, the user approves this chat's scope and
   destination once per chat.
@@ -283,8 +283,8 @@ related notes, a theme, a month, open questions or a collection.
 - **Fenced-block renderers:** ```` ```mermaid ````, `$$math$$` (KaTeX) and syntax-highlighted code
   are rendered as widgets when the cursor is outside them. This is the same idea as Obsidian's
   code-block processors.
-- **Plugins: piggyback on existing open ecosystems; no Nought-specific plugin ecosystem.**
-  Obsidian's plugins can't run because they depend on Obsidian's closed API. Instead, Nought
+- **Plugins: piggyback on existing open ecosystems; no Noughtpad-specific plugin ecosystem.**
+  Obsidian's plugins can't run because they depend on Obsidian's closed API. Instead, Noughtpad
   extensions are packages from two large, open, MIT-licensed ecosystems that the app already uses:
   1. **CodeMirror 6 extensions:** editing behaviour such as keymaps, autocomplete, vim mode, decorations and
      linting (e.g. `@replit/codemirror-vim`, `@codemirror/autocomplete`).
@@ -293,7 +293,7 @@ related notes, a theme, a month, open questions or a collection.
      `rehype-mermaid`). Hundreds of these exist, and they power MDX, Docusaurus, Astro and GitHub-style
      renderers.
 
-  The only Nought-specific piece is a thin registry of **block renderers**
+  The only Noughtpad-specific piece is a thin registry of **block renderers**
   (`{ languages, render(code, el) }`, see `src/editor/blocks.ts`) for fenced blocks shown in live
   preview, such as mermaid and math. A later step lets a block renderer delegate to a rehype plugin, so
   that preview, copy and export share one rendering path.
@@ -328,7 +328,7 @@ related notes, a theme, a month, open questions or a collection.
 
 | Milestone | Scope | Exit criterion |
 |---|---|---|
-| **M0 Skeleton** | Tauri + React scaffold, `nought-core` crate, CI (lint/test), vault picker | App opens a folder |
+| **M0 Skeleton** | Tauri + React scaffold, `noughtpad-core` crate, CI (lint/test), vault picker | App opens a folder |
 | **M1 Genuinely good notebook** | CM6 editor, autosave, frontmatter, stream view, labels, source field, FTS5 search, watcher, journal (daily/monthly, deterministic), collections, quick-capture hotkey | Dogfood daily; open→typing < 300 ms |
 | **M2 Quiet retrieval** | fastembed + sqlite-vec, job queue, hybrid search, Connections panel with reasons, user-state feedback | Rediscovers forgotten notes |
 | **M3 Temporal discovery** | Themes (HDBSCAN + c-TF-IDF), theme identity over time, Ideas-over-time view, dormant/recurring/influence signals | Shows something a plain notebook would not |
@@ -346,14 +346,14 @@ Each milestone ships something that is usable on its own. M1 needs no ML.
 | Full-text search | ~20 ms |
 | Create a note (write + index) | ~2 ms |
 
-Reproduce with `cargo run --release -p nought-core --example bench -- 10000`.
+Reproduce with `cargo run --release -p noughtpad-core --example bench -- 10000`.
 
 **M2 status (2026-11-02): complete, verified with the real model** in the desktop app on the sample notebook. 33 notes were connected about 3 s after launch. Indexing runs at about 37 notes/s using 2 CPU threads. Related-note lookup takes about 3 ms and hybrid search about 25 ms, including the query embedding. On a hand-written 13-note test set, all 20 related suggestions were on the same topic.
 - Background worker: notes are embedded only after 3 s without edits, newest first, in batches of 16, yielding between batches.
 - Vectors are cached by `(model, chunk-text hash)`, so index rebuilds, renames and unchanged saves never re-run the model.
 - Related notes score each note against all others with `0.5·mean-vector similarity + 0.5·best passage-pair similarity`. A note is kept only above the model's `min_related` and at least 1σ above that note's own similarity distribution, which filters "everything looks alike" notes. Small boosts apply for shared labels and the same source.
 - Each related note shows the matching passage, the passage it matched in your note, shared labels, same source and time apart. Wording is cautious: "These ideas appear connected" / "Possibly related".
-- Dismissals live in `.nought/user-state.sqlite`. They are not disposable and apply in both directions.
+- Dismissals live in `.noughtpad/user-state.sqlite`. They are not disposable and apply in both directions.
 - Hybrid search fuses FTS5 and vector ranks (reciprocal rank fusion, k = 60). Meaning-only hits are marked "similar meaning", and label/type filters apply to them too.
 - The CI `model` job downloads the real model and checks that the thresholds separate related from unrelated sentences. Measured: related pairs 0.66–0.88, unrelated pairs up to 0.57, so `min_related` is 0.60. This favours precision: two short sourdough notes with no shared vocabulary are missed rather than letting false links in. `examples/semantic.rs` reproduces the quality and speed check. The app logs `editor ready ms=…` on every launch.
 
@@ -379,7 +379,7 @@ Reproduce with `cargo run --release -p nought-core --example bench -- 10000`.
   - an *Ideas over time* page with 12-month bar charts (muted bars, current month in the accent, a tooltip per bar, an accessible summary);
   - a theme timeline with cues worded tentatively ("may build on", "returns to", "may rethink");
   - a "Part of a thread" link in the Related panel.
-- Reproduce with `cargo run --release -p nought-core --features embedding-static --example ideas -- <model-dir> samples/vault 2026-11-02`.
+- Reproduce with `cargo run --release -p noughtpad-core --features embedding-static --example ideas -- <model-dir> samples/vault 2026-11-02`.
 
 **M3.5 status (2026-11-03): small "judge" models evaluated and removed.** Three kinds of small non-generative model were measured on the sample notebook against the current approach (embeddings + rules). None beat it.
 - **Cross-encoder reranker** (`jina-reranker-v1-turbo-en`, int8, 38 MB):
@@ -396,7 +396,7 @@ Reproduce with `cargo run --release -p nought-core --example bench -- 10000`.
 
 **Feedback learning (2026-11-03): built.** Related notes learn what *this* user considers related, with no new model and no approval queue.
 - **Signals:** opening a suggestion from the Related panel counts as useful; "Not related" counts as not useful.
-- **Storage:** both are stored in `.nought/user-state.sqlite` with the pair's features at that moment.
+- **Storage:** both are stored in `.noughtpad/user-state.sqlite` with the pair's features at that moment.
 - **Features:** note similarity, best-passage similarity, shared labels, same source, time apart, both personal, and labels that don't overlap.
 - **Model:** a class-balanced logistic regression, regularised towards a prior that *is* today's hand-tuned rule.
   - It switches on only after 3 or more opens and 3 or more dismissals.

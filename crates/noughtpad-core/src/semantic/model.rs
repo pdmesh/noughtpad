@@ -232,7 +232,7 @@ mod fast {
 }
 
 /// End-to-end check against the real model (needs network for the first run).
-/// `cargo test -p nought-core --features embedding-static -- --ignored model_`
+/// `cargo test -p noughtpad-core --features embedding-static -- --ignored model_`
 #[cfg(all(test, feature = "embedding"))]
 mod model_tests {
     use super::super::embedder::{dot, Embedder, TextKind};
@@ -241,9 +241,9 @@ mod model_tests {
     #[test]
     #[ignore = "downloads the model (~65 MB)"]
     fn model_thresholds_separate_related_from_unrelated() {
-        let dir = std::env::var_os("NOUGHT_MODEL_DIR")
+        let dir = std::env::var_os("NOUGHTPAD_MODEL_DIR")
             .map(std::path::PathBuf::from)
-            .unwrap_or_else(|| std::env::temp_dir().join("nought-model-test"));
+            .unwrap_or_else(|| std::env::temp_dir().join("noughtpad-model-test"));
         download(&DEFAULT_MODEL, &dir, |_, _| {}).unwrap();
         let mut m = FastEmbedder::load(&DEFAULT_MODEL, &dir, 2).unwrap();
         let texts: Vec<String> = [

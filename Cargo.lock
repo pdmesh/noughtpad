@@ -4848,13 +4848,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "nought-app"
+name = "noughtpad-app"
 version = "0.1.0"
 dependencies = [
  "chrono",
  "dirs 6.0.0",
- "nought-core",
- "nought-llm",
+ "noughtpad-core",
+ "noughtpad-llm",
  "serde",
  "serde_json",
  "tauri",
@@ -4868,7 +4868,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "nought-core"
+name = "noughtpad-core"
 version = "0.1.0"
 dependencies = [
  "blake3",
@@ -4889,7 +4889,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "nought-llm"
+name = "noughtpad-llm"
 version = "0.1.0"
 dependencies = [
  "futures",

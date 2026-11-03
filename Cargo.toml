@@ -1,16 +1,16 @@
 [workspace]
 resolver = "2"
-members = ["crates/nought-core", "crates/nought-llm", "src-tauri"]
+members = ["crates/noughtpad-core", "crates/noughtpad-llm", "src-tauri"]
 
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
 license-file = "LICENSE.md"
-repository = "https://github.com/pdmesh/nought"
+repository = "https://github.com/pdmesh/noughtpad"
 
 [workspace.dependencies]
-nought-core = { path = "crates/nought-core" }
-nought-llm = { path = "crates/nought-llm" }
+noughtpad-core = { path = "crates/noughtpad-core" }
+noughtpad-llm = { path = "crates/noughtpad-llm" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"

@@ -179,7 +179,7 @@ export function NotePane({ noteId, vaultRoot, presetLabels, onCreated, onTrashed
   const trash = async () => {
     const cur = docRef.current;
     if (!cur) return;
-    if (!window.confirm("Move this note to the trash? It stays recoverable in .nought/trash.")) return;
+    if (!window.confirm("Move this note to the trash? It stays recoverable in .noughtpad/trash.")) return;
     if (timer.current) clearTimeout(timer.current);
     dirty.current = { content: false, meta: false };
     await api.trashNote(cur.id);

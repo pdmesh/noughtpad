@@ -1,11 +1,11 @@
 //! Rough performance check on a synthetic vault.
 //!
-//! cargo run --release -p nought-core --example bench -- 10000
+//! cargo run --release -p noughtpad-core --example bench -- 10000
 
 use std::time::Instant;
 
-use nought_core::index::ListQuery;
-use nought_core::Vault;
+use noughtpad_core::index::ListQuery;
+use noughtpad_core::Vault;
 
 const WORDS: &[&str] = &[
     "ownership",

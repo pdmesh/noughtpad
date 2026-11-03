@@ -5,7 +5,7 @@
 //!   notebook). Every search and read appears in the chat as a step.
 //! * Local models, and providers that reject tools, get the most relevant
 //!   notes for each turn chosen by the app instead.
-//! * Chats are saved as JSON in `.nought/chats/` (the chat history). Notes are
+//! * Chats are saved as JSON in `.noughtpad/chats/` (the chat history). Notes are
 //!   never written.
 //!
 //! Privacy, enforced here: nothing runs until a model is chosen, and a remote
@@ -17,14 +17,14 @@ use std::path::PathBuf;
 use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 
-use nought_core::index::NoteSummary;
-use nought_core::semantic::context::Scope;
-use nought_core::semantic::Semantic;
-use nought_core::Vault;
-use nought_llm::catalog;
-use nought_llm::prompt::{self, ContextNote};
-use nought_llm::settings::Active;
-use nought_llm::{ChatRequest, NoteTools, ToolSpec, Turn};
+use noughtpad_core::index::NoteSummary;
+use noughtpad_core::semantic::context::Scope;
+use noughtpad_core::semantic::Semantic;
+use noughtpad_core::Vault;
+use noughtpad_llm::catalog;
+use noughtpad_llm::prompt::{self, ContextNote};
+use noughtpad_llm::settings::Active;
+use noughtpad_llm::{ChatRequest, NoteTools, ToolSpec, Turn};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use tauri::{AppHandle, Emitter, Manager, State};
@@ -111,7 +111,7 @@ fn now() -> String {
 }
 
 fn chats_dir(vault: &Vault) -> PathBuf {
-    vault.root().join(nought_core::vault::DATA_DIR).join(CHATS)
+    vault.root().join(noughtpad_core::vault::DATA_DIR).join(CHATS)
 }
 
 fn valid_id(id: &str) -> bool {
@@ -613,7 +613,7 @@ pub fn chat_send(
                     let req = fallback(&notes);
                     local.chat(&dir, m, &req, &cancel, &mut on_text).await
                 }
-                None => Err(nought_llm::Error::Unavailable("unknown model".into())),
+                None => Err(noughtpad_llm::Error::Unavailable("unknown model".into())),
             },
             (Active::Remote { .. }, Some(r)) => {
                 let mut user = text.clone();
@@ -632,7 +632,7 @@ pub fn chat_send(
                     max_tokens: MAX_TOKENS,
                     temperature: 0.2,
                 };
-                match nought_llm::remote::chat_with_tools(
+                match noughtpad_llm::remote::chat_with_tools(
                     r,
                     key.clone(),
                     &req,
@@ -643,19 +643,19 @@ pub fn chat_send(
                 )
                 .await
                 {
-                    Err(nought_llm::Error::ToolsUnsupported(m)) => {
+                    Err(noughtpad_llm::Error::ToolsUnsupported(m)) => {
                         tracing::info!("{} can't use tools ({m}); choosing notes instead", r.model);
                         let req = fallback(&notes);
-                        nought_llm::remote::chat(r, key, &req, &cancel, &mut on_text).await
+                        noughtpad_llm::remote::chat(r, key, &req, &cancel, &mut on_text).await
                     }
                     other => other,
                 }
             }
-            (Active::Remote { .. }, None) => Err(nought_llm::Error::Unavailable("provider removed".into())),
+            (Active::Remote { .. }, None) => Err(noughtpad_llm::Error::Unavailable("provider removed".into())),
         };
 
         let error = match result {
-            Ok(_) | Err(nought_llm::Error::Cancelled) => None,
+            Ok(_) | Err(noughtpad_llm::Error::Cancelled) => None,
             Err(e) => {
                 tracing::warn!("chat failed: {e}");
                 Some(e.to_string())
@@ -715,7 +715,7 @@ mod tests {
             excerpt: String::new(),
             created: String::new(),
             day: "2026-01-01".into(),
-            kind: nought_core::NoteKind::Personal,
+            kind: noughtpad_core::NoteKind::Personal,
             labels: vec![],
             source: None,
         };

@@ -318,13 +318,13 @@ export async function mock(cmd: string, a: Record<string, any> = {}): Promise<un
   if (llm.handled) return llm.value;
   switch (cmd) {
     case "vault_info":
-      return { path: "/mock/Nought", noteCount: notes.length, defaultPath: "/mock/Nought" };
+      return { path: "/mock/Noughtpad", noteCount: notes.length, defaultPath: "/mock/Noughtpad" };
     case "mark_ready":
       return Math.round(performance.now());
     case "default_vault":
-      return "/mock/Nought";
+      return "/mock/Noughtpad";
     case "open_vault":
-      return { path: a.path, noteCount: notes.length, defaultPath: "/mock/Nought" };
+      return { path: a.path, noteCount: notes.length, defaultPath: "/mock/Noughtpad" };
     case "list_notes":
       return list(a.query);
     case "list_days":

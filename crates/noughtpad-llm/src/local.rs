@@ -71,7 +71,7 @@ impl LocalRuntime {
         _on_text: &mut (dyn FnMut(&str) + Send),
     ) -> Result<Usage> {
         Err(Error::Unavailable(
-            "this build of Nought has no local model runtime".into(),
+            "this build of Noughtpad has no local model runtime".into(),
         ))
     }
 

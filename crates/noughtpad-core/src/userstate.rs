@@ -1,6 +1,6 @@
 //! The user's judgements about derived data (e.g. "these notes are not
 //! related"). Unlike the index this is NOT disposable: it lives in its own
-//! file, `.nought/user-state.sqlite`, keyed by stable note ids, and survives
+//! file, `.noughtpad/user-state.sqlite`, keyed by stable note ids, and survives
 //! index rebuilds and model changes.
 
 use std::collections::HashSet;

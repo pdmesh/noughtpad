@@ -510,11 +510,11 @@ button {
 }
 
 /* ---------- editor (CodeMirror live preview) ---------------------------- */
-.nought-editor .cm-editor {
+.noughtpad-editor .cm-editor {
   font-size: 18px;
   line-height: 1.7;
 }
-.nought-editor .cm-scroller {
+.noughtpad-editor .cm-scroller {
   font-family: var(--font-text);
   overflow: visible;
 }

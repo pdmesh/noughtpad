@@ -1,6 +1,6 @@
 [package]
-name = "nought-core"
-description = "Vault, index and search engine for Nought"
+name = "noughtpad-core"
+description = "Vault, index and search engine for Noughtpad"
 version.workspace = true
 edition.workspace = true
 license-file.workspace = true

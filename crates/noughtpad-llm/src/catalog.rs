@@ -1,4 +1,4 @@
-//! Local models Nought offers to download. Each is pinned to a revision and
+//! Local models Noughtpad offers to download. Each is pinned to a revision and
 //! checked against its SHA-256 after download.
 //!
 //! Only models that passed the grounding evaluation on the sample notebook

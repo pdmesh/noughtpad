@@ -8,7 +8,7 @@ use std::sync::Mutex;
 use crate::Error;
 use crate::Result;
 
-const SERVICE: &str = "app.nought.llm";
+const SERVICE: &str = "app.noughtpad.llm";
 
 pub trait KeyStore: Send + Sync {
     fn set(&self, id: &str, key: &str) -> Result<()>;

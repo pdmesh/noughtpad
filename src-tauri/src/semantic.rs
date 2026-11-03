@@ -3,9 +3,9 @@
 
 use std::sync::Arc;
 
-use nought_core::semantic::ideas::{IdeasOverview, ThemeSummary, ThemeTimeline};
-use nought_core::semantic::model::DEFAULT_MODEL;
-use nought_core::semantic::{RelatedNotes, Semantic, Status};
+use noughtpad_core::semantic::ideas::{IdeasOverview, ThemeSummary, ThemeTimeline};
+use noughtpad_core::semantic::model::DEFAULT_MODEL;
+use noughtpad_core::semantic::{RelatedNotes, Semantic, Status};
 use tauri::{AppHandle, Emitter, Manager, State};
 
 use crate::{load_config, save_config, AppState, CmdError, CmdResult};
@@ -28,7 +28,7 @@ fn model_dir(app: &AppHandle) -> CmdResult<std::path::PathBuf> {
 pub fn start(app: &AppHandle, sem: Arc<Semantic>) {
     if !AVAILABLE {
         sem.set_status(Status::Error {
-            message: "This build of Nought has no local model runtime.".into(),
+            message: "This build of Noughtpad has no local model runtime.".into(),
         });
         return;
     }
@@ -48,8 +48,8 @@ pub fn start(app: &AppHandle, sem: Arc<Semantic>) {
 }
 
 #[cfg(any(feature = "embedding-static", feature = "embedding-dynamic"))]
-fn load(sem: &Semantic, models: &std::path::Path) -> nought_core::Result<()> {
-    use nought_core::semantic::model::{bundle_downloaded, download_bundle, model_dir, FastEmbedder};
+fn load(sem: &Semantic, models: &std::path::Path) -> noughtpad_core::Result<()> {
+    use noughtpad_core::semantic::model::{bundle_downloaded, download_bundle, model_dir, FastEmbedder};
     // Background work should never make the machine hot: use at most half the cores.
     let threads = std::thread::available_parallelism().map_or(2, |n| (n.get() / 2).clamp(1, 4));
     let edir = model_dir(models);
@@ -72,7 +72,7 @@ fn load(sem: &Semantic, models: &std::path::Path) -> nought_core::Result<()> {
 }
 
 #[cfg(not(any(feature = "embedding-static", feature = "embedding-dynamic")))]
-fn load(_sem: &Semantic, _dir: &std::path::Path) -> nought_core::Result<()> {
+fn load(_sem: &Semantic, _dir: &std::path::Path) -> noughtpad_core::Result<()> {
     Ok(())
 }
 

@@ -1,5 +1,5 @@
 // Fenced-block renderers: ```mermaid, ```math and $$…$$ blocks render as
-// widgets when the cursor is outside them. This is Nought's extension point
+// widgets when the cursor is outside them. This is Noughtpad's extension point
 // for "block plugins" — a renderer is just { languages, render(code, el) }.
 
 import { ensureSyntaxTree, syntaxTree } from "@codemirror/language";
@@ -27,7 +27,7 @@ registerBlockRenderer({
     const dark = window.matchMedia?.("(prefers-color-scheme: dark)").matches;
     mermaid.initialize({ startOnLoad: false, theme: dark ? "dark" : "neutral", securityLevel: "strict" });
     try {
-      const { svg } = await mermaid.render(`nought-mermaid-${++mermaidSeq}`, code);
+      const { svg } = await mermaid.render(`noughtpad-mermaid-${++mermaidSeq}`, code);
       el.innerHTML = svg;
     } catch (e) {
       el.classList.add("cm-block-error");

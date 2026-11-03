@@ -1,4 +1,4 @@
-//! The derived, disposable index (`.nought/index.sqlite`).
+//! The derived, disposable index (`.noughtpad/index.sqlite`).
 //!
 //! Everything in here can be rebuilt from the Markdown vault. User judgements
 //! about derived data (dismissed connections etc.) will live in a separate

@@ -5,7 +5,7 @@ name: Release
 # create a draft GitHub release.
 #
 # Signing is optional: without the secrets below, macOS builds are ad-hoc
-# signed (open with right-click → Open, or `xattr -cr Nought.app`) and
+# signed (open with right-click → Open, or `xattr -cr Noughtpad.app`) and
 # Windows builds are unsigned (SmartScreen warns).
 #   macOS:   APPLE_CERTIFICATE, APPLE_CERTIFICATE_PASSWORD, APPLE_SIGNING_IDENTITY,
 #            APPLE_ID, APPLE_PASSWORD, APPLE_TEAM_ID  (needs the $99/yr Apple Developer Program)
@@ -84,11 +84,11 @@ jobs:
           args: ${{ matrix.args }}
           # A tag push creates a draft release; a manual run only uploads artifacts.
           tagName: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || '' }}
-          releaseName: ${{ startsWith(github.ref, 'refs/tags/') && format('Nought {0}', github.ref_name) || '' }}
+          releaseName: ${{ startsWith(github.ref, 'refs/tags/') && format('Noughtpad {0}', github.ref_name) || '' }}
           releaseDraft: true
       - uses: actions/upload-artifact@v4
         with:
-          name: nought-${{ matrix.name }}
+          name: noughtpad-${{ matrix.name }}
           path: |
             target/*/release/bundle/dmg/*.dmg
             target/*/release/bundle/macos/*.app

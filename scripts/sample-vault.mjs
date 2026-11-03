@@ -2,7 +2,7 @@
 // Copy the sample notebook (samples/vault) to a scratch folder and, with
 // --run, start `tauri dev` on it. Your configured notes folder is untouched.
 //
-//   pnpm sample                      copy to ~/Nought Sample (keeps your edits)
+//   pnpm sample                      copy to ~/Noughtpad Sample (keeps your edits)
 //   pnpm sample --reset              start again from the pristine samples
 //   pnpm sample --to <folder>        copy somewhere else
 //   pnpm dev:sample                  copy, then run the app on that folder
@@ -16,8 +16,8 @@ const args = process.argv.slice(2);
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const src = join(repo, "samples", "vault");
 const toIdx = args.indexOf("--to");
-const dest = resolve(toIdx >= 0 ? args[toIdx + 1] : join(homedir(), "Nought Sample"));
-const MARKER = ".nought-sample";
+const dest = resolve(toIdx >= 0 ? args[toIdx + 1] : join(homedir(), "Noughtpad Sample"));
+const MARKER = ".noughtpad-sample";
 
 if (args.includes("--reset") && existsSync(dest)) {
   // Only ever delete a folder this script created.
@@ -39,7 +39,7 @@ if (args.includes("--run")) {
     cwd: repo,
     stdio: "inherit",
     shell: process.platform === "win32",
-    env: { ...process.env, NOUGHT_VAULT: dest },
+    env: { ...process.env, NOUGHTPAD_VAULT: dest },
   });
   child.on("exit", (code) => process.exit(code ?? 0));
 }

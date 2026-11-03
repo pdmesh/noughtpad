@@ -1,4 +1,4 @@
-//! Filesystem watcher: keeps the index in step with edits made outside Nought
+//! Filesystem watcher: keeps the index in step with edits made outside Noughtpad
 //! (another editor, git, a sync client).
 
 use std::sync::Arc;

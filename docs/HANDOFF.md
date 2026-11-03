@@ -22,9 +22,9 @@ Read this first next session, then `ROADMAP.md` (what's next) and
 
 | Path | What |
 |---|---|
-| `crates/nought-core` | Vault, SQLite index, FTS, embeddings, related notes, themes (`semantic/ideas.rs`), chat context scopes (`semantic/context.rs`) |
-| `crates/nought-llm` | Model catalogue, checked and resumable downloads, local runtime (mistral.rs), remote providers and the tool loop (genai), keychain, prompts |
-| `src-tauri/src` | `lib.rs` (vault commands), `semantic.rs`, `think.rs` (Models page commands), `chat.rs` (chat, tools, consent, `.nought/chats/`) |
+| `crates/noughtpad-core` | Vault, SQLite index, FTS, embeddings, related notes, themes (`semantic/ideas.rs`), chat context scopes (`semantic/context.rs`) |
+| `crates/noughtpad-llm` | Model catalogue, checked and resumable downloads, local runtime (mistral.rs), remote providers and the tool loop (genai), keychain, prompts |
+| `src-tauri/src` | `lib.rs` (vault commands), `semantic.rs`, `think.rs` (Models page commands), `chat.rs` (chat, tools, consent, `.noughtpad/chats/`) |
 | `src/` | React UI. Views: `Chat`, `Models`, `Settings`, `Ideas`, `Journal`. `lib/mockBackend.ts` and `lib/mockLlm.ts` let the UI run in a plain browser |
 | `tests/perf/capture.mjs` | Capture-speed budget |
 | `tools/eval/` | Model evaluations (embeddings, judges, SLMs) |
@@ -35,12 +35,12 @@ Read this first next session, then `ROADMAP.md` (what's next) and
 ```sh
 pnpm install
 pnpm tauri dev                     # the app on your real notes folder
-pnpm dev:sample                    # the app on a copy of the sample notebook (~/Nought Sample)
+pnpm dev:sample                    # the app on a copy of the sample notebook (~/Noughtpad Sample)
 pnpm dev                           # UI only, in a browser, with the mock backend (?llm=ready, ?mock=many)
 pnpm test && pnpm typecheck        # UI tests
 pnpm build && pnpm perf            # capture-speed budget
-cargo test --workspace --no-default-features --features nought-app/embedding-static   # fast Rust tests
-cargo clippy -p nought-llm --all-targets --features local,remote,keychain -- -D warnings # local runtime
+cargo test --workspace --no-default-features --features noughtpad-app/embedding-static   # fast Rust tests
+cargo clippy -p noughtpad-llm --all-targets --features local,remote,keychain -- -D warnings # local runtime
 ```
 
 ## Next session, step by step (on the Mac)
@@ -50,24 +50,25 @@ the screen.
 
 ### 1. Get a build
 Choose one:
-- **From CI:** GitHub → Actions → Release → latest run → artifact `nought-macos-arm64`. The
+- **From CI:** GitHub → Actions → Release → latest run → artifact `noughtpad-macos-arm64`. The
   first green run with all three platforms is
-  [run #2](https://github.com/pdmesh/nought/actions/runs/41607043430): macOS arm64 with Metal
-  115 MB, Windows 66 MB, Linux 167 MB. It's
-  ad-hoc signed and not notarised. Unzip it, then `xattr -cr Nought.app` (or right-click → Open
+  [run #2](https://github.com/pdmesh/noughtpad/actions/runs/41607043430): macOS arm64 with Metal
+  115 MB, Windows 66 MB, Linux 167 MB (built before the rename, so its artifact is still named
+  `nought-macos-arm64`). Builds are
+  ad-hoc signed and not notarised. Unzip it, then `xattr -cr Noughtpad.app` (or right-click → Open
   the first time).
 - **Local build**, which also gives Metal:
   `pnpm install && pnpm tauri build --features local-llm-metal`. The app lands in
   `target/release/bundle/macos/`.
 
 ### 2. Speed checks (record the numbers in DESIGN.md § M5)
-- **Startup to typing:** run `RUST_LOG=info /path/Nought.app/Contents/MacOS/nought-app` and read
+- **Startup to typing:** run `RUST_LOG=info /path/Noughtpad.app/Contents/MacOS/noughtpad-app` and read
   the `editor ready ms=…` log line. Target: under 300 ms on Apple Silicon (M1's design goal).
-- **Large vault:** `cargo run --release -p nought-core --example bench -- 10000`.
+- **Large vault:** `cargo run --release -p noughtpad-core --example bench -- 10000`.
 - **Local model with Metal:**
   ```sh
-  cargo run --release -p nought-llm --features local-metal --example ask -- \
-    ~/Library/Application\ Support/app.nought.desktop/models/llm qwen3-4b-instruct-2507-q4km
+  cargo run --release -p noughtpad-llm --features local-metal --example ask -- \
+    ~/Library/Application\ Support/app.noughtpad.desktop/models/llm qwen3-4b-instruct-2507-q4km
   ```
   First download the model in the app: Settings → Language models → Download. Compare with
   about 8 tok/s on a 4-core CPU.
@@ -98,14 +99,13 @@ Run the same question with each provider:
 - **Ollama** (`ollama serve`, then pull `qwen3:4b`) and **LM Studio**. Check whether tool calls
   work, and that the fallback (app-chosen notes) kicks in when they don't.
 
-Also check that the key ends up in Keychain Access (service `app.nought.llm`), not in
-`~/Library/Application Support/app.nought.desktop/config.json`.
+Also check that the key ends up in Keychain Access (service `app.noughtpad.llm`), not in
+`~/Library/Application Support/app.noughtpad.desktop/config.json`.
 
-### 5. Name
-`Nought.app` is taken. Candidates: Mull, Quire, Strata. Check the App Store, domains and
-trademarks (class 9), then rename everywhere **before** daily use. The name is in the bundle ID
-`app.nought.desktop`, the keychain service `app.nought.llm`, the `.nought` data folder, crate and
-package names, and the docs. Changing it later means migrating data.
+### 5. Name (done 2026-11-03)
+Renamed from Nought (taken) to **Noughtpad** before any real install: bundle ID
+`app.noughtpad.desktop`, keychain service `app.noughtpad.llm`, the `.noughtpad` data folder, crates
+`noughtpad-core` / `noughtpad-llm`, packages and docs. No data migration was needed.
 
 ### 6. Then
 - **Auto-update:** run `pnpm tauri signer generate`, add the public key and updater endpoint, and
@@ -126,5 +126,5 @@ package names, and the docs. Changing it later means migrating data.
 - **⌘L** opens chat; the editor's select-line binding is overridden.
 - **Release CI time:** the release build compiles mistral.rs, which takes 20–40 minutes per
   platform on GitHub runners.
-- **Old answers:** answers saved with "Keep" before M4.5 remain in `.nought/artifacts/` and
+- **Old answers:** answers saved with "Keep" before M4.5 remain in `.noughtpad/artifacts/` and
   aren't shown. That's intentional (dropped).

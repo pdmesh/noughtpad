@@ -75,7 +75,7 @@ fn blank(s: &Option<String>) -> bool {
 /// User-authored, stable metadata. Everything here is optional.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct NoteMeta {
-    /// Stable identity (ULID). `None` for files created outside Nought.
+    /// Stable identity (ULID). `None` for files created outside Noughtpad.
     pub id: Option<String>,
     /// Optional explicit title. Most notes have none; the first line stands in.
     pub title: Option<String>,
@@ -141,7 +141,7 @@ pub struct Note {
     /// Original frontmatter block (including both fences) and the meta it
     /// parsed to; used to write it back untouched when meta is unchanged.
     original: Option<(String, NoteMeta)>,
-    /// Frontmatter keys Nought does not manage, preserved on rewrite.
+    /// Frontmatter keys Noughtpad does not manage, preserved on rewrite.
     extra: Mapping,
 }
 

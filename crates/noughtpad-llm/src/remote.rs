@@ -18,7 +18,7 @@ pub async fn chat(
     _on_text: &mut (dyn FnMut(&str) + Send),
 ) -> Result<Usage> {
     Err(Error::Unavailable(
-        "this build of Nought can't use online providers".into(),
+        "this build of Noughtpad can't use online providers".into(),
     ))
 }
 
@@ -33,14 +33,14 @@ pub async fn chat_with_tools(
     _on_text: &mut (dyn FnMut(&str) + Send),
 ) -> Result<Usage> {
     Err(Error::Unavailable(
-        "this build of Nought can't use online providers".into(),
+        "this build of Noughtpad can't use online providers".into(),
     ))
 }
 
 #[cfg(not(feature = "remote"))]
 pub async fn list_models(_kind: RemoteKind, _base_url: Option<String>, _key: Option<String>) -> Result<Vec<String>> {
     Err(Error::Unavailable(
-        "this build of Nought can't use online providers".into(),
+        "this build of Noughtpad can't use online providers".into(),
     ))
 }
 

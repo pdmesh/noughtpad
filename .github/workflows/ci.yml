@@ -27,8 +27,8 @@ jobs:
       - run: mkdir -p dist && echo '<!doctype html>' > dist/index.html
       - run: cargo fmt --all --check
       # The built-in LLM runtime (mistral.rs) is checked in its own job below.
-      - run: cargo clippy --workspace --all-targets --no-default-features --features nought-app/embedding-static -- -D warnings
-      - run: cargo test --workspace --no-default-features --features nought-app/embedding-static
+      - run: cargo clippy --workspace --all-targets --no-default-features --features noughtpad-app/embedding-static -- -D warnings
+      - run: cargo test --workspace --no-default-features --features noughtpad-app/embedding-static
 
   # The local language-model runtime: a large dependency, so it gets its own cached job.
   llm:
@@ -41,8 +41,8 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           key: llm
-      - run: cargo clippy -p nought-llm --all-targets --features local,remote,keychain -- -D warnings
-      - run: cargo test -p nought-llm --features remote,keychain
+      - run: cargo clippy -p noughtpad-llm --all-targets --features local,remote,keychain -- -D warnings
+      - run: cargo test -p noughtpad-llm --features remote,keychain
 
   # Downloads the real embedding model and checks that the similarity
   # thresholds separate related from unrelated notes.
@@ -54,11 +54,11 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - uses: actions/cache@v4
         with:
-          path: ~/.cache/nought-model
+          path: ~/.cache/noughtpad-model
           key: model-bge-small-en-v1.5-q
-      - run: cargo test -p nought-core --features embedding-static -- --ignored --nocapture model_
+      - run: cargo test -p noughtpad-core --features embedding-static -- --ignored --nocapture model_
         env:
-          NOUGHT_MODEL_DIR: /home/runner/.cache/nought-model
+          NOUGHTPAD_MODEL_DIR: /home/runner/.cache/noughtpad-model
 
   web:
     runs-on: ubuntu-24.04

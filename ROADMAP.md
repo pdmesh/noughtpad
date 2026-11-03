@@ -1,4 +1,4 @@
-# Nought roadmap
+# Noughtpad roadmap
 
 The working plan. Design detail and the reasons behind decisions are in
 [`docs/DESIGN.md`](docs/DESIGN.md). Each item has a one-line exit criterion.
@@ -21,7 +21,7 @@ The goal is a build on your own Mac, used daily for two weeks.
 - [x] Release workflow builds installers on demand (Actions → Release) and on `v*` tags. All three platforms are green
 - [x] Settings page (folder, connections, models, layout, shortcuts)
 - [x] Capture-speed budget in CI (open → typing; ~0.4 s, budget 1.5 s)
-- [ ] Pick a new name (Nought.app is taken) and rename before daily use
+- [x] Renamed from Nought (taken) to Noughtpad before daily use: bundle ID, keychain service, `.noughtpad` data folder, crates, packages, docs
 - [ ] Run the Mac build: check speed (startup, local model with Metal), keychain and quick capture. See `docs/HANDOFF.md`
 - [ ] UX pass on macOS using computer use: writing, related notes, ideas, chat, models
 - [ ] Real providers: an Anthropic or OpenAI key, Ollama and LM Studio, including tool use
@@ -30,19 +30,19 @@ The goal is a build on your own Mac, used daily for two weeks.
 - [ ] Signing: Apple Developer Program ($99/yr) for notarisation; Windows via Azure Artifact Signing (~$10/mo) when Windows matters
 - [ ] Dogfood for two weeks; track the dismiss rate of related notes and anything that slows capture
 
-Exit: Nought replaces your current notes app for two weeks without workarounds.
+Exit: Noughtpad replaces your current notes app for two weeks without workarounds.
 
-## Next: M6, Nought Sync (paid, proprietary)
+## Next: M6, Noughtpad Sync (paid, proprietary)
 
 Built-in, two-way sync across devices. It isn't open source, so it can be charged for. The core
 stays FSL; sync lives in a separate private crate that plugs into an open `SyncBackend` interface
-in `nought-core`.
+in `noughtpad-core`.
 
-- [ ] Sync engine: per-file change journal, three-way merge for Markdown (base hash kept in `.nought/`), conflict copies only when a merge fails, tombstones for deletions
+- [ ] Sync engine: per-file change journal, three-way merge for Markdown (base hash kept in `.noughtpad/`), conflict copies only when a merge fails, tombstones for deletions
 - [ ] Google Drive backend: OAuth (PKCE, desktop loopback), Drive API changes feed, works on every platform
-- [ ] iCloud backend: the app's iCloud container, using CloudKit or `NSFileCoordinator`. **Only works on Apple devices**, because iCloud has no official API for Windows, Linux or Android. Non-Apple devices use Google Drive (or a future Nought server)
+- [ ] iCloud backend: the app's iCloud container, using CloudKit or `NSFileCoordinator`. **Only works on Apple devices**, because iCloud has no official API for Windows, Linux or Android. Non-Apple devices use Google Drive (or a future Noughtpad server)
 - [ ] Licensing and billing: account, licence key check, subscription (e.g. Paddle or Lemon Squeezy, which handle VAT)
-- [ ] The index stays local and disposable on every device; only notes and `.nought/user-state` sync
+- [ ] The index stays local and disposable on every device; only notes and `.noughtpad/user-state` sync
 
 Exit: edit the same notebook on two Macs and one non-Apple device for a week with no lost edits.
 
@@ -63,7 +63,7 @@ Exit: edit the same notebook on two Macs and one non-Apple device for a week wit
 
 ## Dropped
 
-- Showing old "Kept" answers (`.nought/artifacts/`), replaced by chat history
+- Showing old "Kept" answers (`.noughtpad/artifacts/`), replaced by chat history
 - Workflow files (prebuilt and custom)
 - Token and cost display
 - Small judge models (reranker, NLI, Laya) and GLiNER concept extraction: evaluated, didn't beat embeddings plus rules

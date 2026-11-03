@@ -2,7 +2,7 @@
 // until a keystroke lands in the editor. Runs the production bundle in a
 // headless browser with the in-memory backend, so it measures the frontend
 // (bundle size, startup work, editor mount) — the Rust side is measured by
-// `cargo run --release -p nought-core --example bench`.
+// `cargo run --release -p noughtpad-core --example bench`.
 //
 //   pnpm build && pnpm perf            (BUDGET_MS overrides the budget)
 

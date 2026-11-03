@@ -54,11 +54,11 @@ function Welcome({ onOpened, error, setError }: { onOpened: (v: VaultInfo) => vo
   };
   return (
     <main className="welcome">
-      <h1>Nought</h1>
+      <h1>Noughtpad</h1>
       <p className="welcome-lede">A blank page that quietly remembers. Your notes are plain Markdown files in a folder you choose.</p>
       <div className="welcome-actions">
         <button className="btn btn-primary" onClick={() => open(defaultPath ?? null)}>
-          Start in {defaultPath ?? "~/Documents/Nought"}
+          Start in {defaultPath ?? "~/Documents/Noughtpad"}
         </button>
         <button className="btn" onClick={async () => open(await pickFolder())}>
           <FolderOpen size={16} aria-hidden /> Choose another folder…
@@ -75,7 +75,7 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
   // `paneKey` remounts the editor; `currentId` tracks which note it shows.
   const [paneKey, setPaneKey] = useState("new-0");
   const [currentId, setCurrentId] = useState<string | null>(null);
-  const [chromePinned, setChromePinned] = useState(() => readPref("nought.chrome") === "pinned");
+  const [chromePinned, setChromePinned] = useState(() => readPref("noughtpad.chrome") === "pinned");
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [toast, setToast] = useState<{ text: string; undo?: () => void } | null>(null);
   const setNotice = useCallback((text: string | null, undo?: () => void) => setToast(text ? { text, undo } : null), []);
@@ -96,10 +96,10 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
   }, []);
   const showChat = useCallback((id: string) => setView({ kind: "chat", id, key: id }), []);
   // Chat history: a right-hand panel on the chat page, open unless the user hid it.
-  const [historyOpen, setHistoryOpen] = useState(() => readPref("nought.chatHistory") !== "off");
+  const [historyOpen, setHistoryOpen] = useState(() => readPref("noughtpad.chatHistory") !== "off");
   const toggleHistory = useCallback(() => {
     setHistoryOpen((o) => {
-      writePref("nought.chatHistory", o ? "off" : "on");
+      writePref("noughtpad.chatHistory", o ? "off" : "on");
       return !o;
     });
   }, []);
@@ -119,7 +119,7 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
   }, [view]);
 
   // Optional: show the note list under the editor (off by default: the page stays blank).
-  const [listUnderEditor, setListUnderEditor] = useState(() => readPref("nought.listUnderEditor") === "on");
+  const [listUnderEditor, setListUnderEditor] = useState(() => readPref("noughtpad.listUnderEditor") === "on");
   // A new note started from a collection gets that collection's label.
   const [presetLabel, setPresetLabel] = useState<string | undefined>(undefined);
 
@@ -142,14 +142,14 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
 
   const toggleListUnderEditor = useCallback(() => {
     setListUnderEditor((on) => {
-      writePref("nought.listUnderEditor", on ? "off" : "on");
+      writePref("noughtpad.listUnderEditor", on ? "off" : "on");
       return !on;
     });
   }, []);
 
   const toggleChrome = useCallback(() => {
     setChromePinned((p) => {
-      writePref("nought.chrome", p ? "auto" : "pinned");
+      writePref("noughtpad.chrome", p ? "auto" : "pinned");
       return !p;
     });
   }, []);
@@ -184,7 +184,7 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
   useEffect(() => {
     requestAnimationFrame(() =>
       requestAnimationFrame(() => {
-        void api.markReady().then((ms) => console.info(`[nought] editor ready ${ms} ms after start`));
+        void api.markReady().then((ms) => console.info(`[noughtpad] editor ready ${ms} ms after start`));
       }),
     );
   }, []);

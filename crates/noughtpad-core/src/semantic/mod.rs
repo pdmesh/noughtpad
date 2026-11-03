@@ -225,7 +225,7 @@ impl Semantic {
     pub fn spawn_worker(self: &Arc<Self>) -> std::thread::JoinHandle<()> {
         let me = self.clone();
         std::thread::Builder::new()
-            .name("nought-semantic".into())
+            .name("noughtpad-semantic".into())
             .spawn(move || me.run())
             .expect("spawn semantic worker")
     }
