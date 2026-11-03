@@ -427,6 +427,22 @@ The updater key's public half is in `src-tauri/tauri.conf.json` (`plugins.update
 private half and its password exist only with the user and in the GitHub secrets. Losing either
 means existing installs can't take updates any more and need one manual reinstall with a new key.
 
+What was seen with release v0.1.1 (2026-11-03, published):
+- The Release run took 25 min on macOS, 31 min on Linux and 53 min on Windows. The macOS log says
+  `using TAURI_SIGNING_PRIVATE_KEY` and `…_PASSWORD`, so the secrets work.
+- The Mac update bundle is named `Noughtpad_aarch64.app.tar.gz` (58 MB, with a `.sig`), not
+  `Noughtpad.app.tar.gz`; the `.dmg` is `Noughtpad_0.1.1_aarch64.dmg` (57 MB). `latest.json` has
+  `darwin-aarch64` (and `-app`), Linux AppImage/deb/rpm and Windows NSIS/MSI entries, each with a
+  signature, and their URLs point at the attached files.
+- **Blocker: the repo is private.** GitHub only serves release files of a private repo to signed-in
+  users with access, and the updater asks anonymously, so
+  `releases/latest/download/latest.json` answers 404 and no install can see an update. The endpoint
+  is built into each release, so changing where releases live means a new build. Options: make the
+  repo public, publish releases from a separate public repo (e.g. `pdmesh/noughtpad-releases`, with
+  a token secret that can write to it), or host the files elsewhere (R2/S3). The user decides after
+  a few days of using 0.1.1 on their machines. Until then nothing about Gatekeeper on install or
+  update has been seen: the expectations in HANDOFF ("Auto-update: parked on where releases live") are unverified.
+
 : complete, verified with the real model** in the desktop app on the sample notebook. 33 notes were connected about 3 s after launch. Indexing runs at about 37 notes/s using 2 CPU threads. Related-note lookup takes about 3 ms and hybrid search about 25 ms, including the query embedding. On a hand-written 13-note test set, all 20 related suggestions were on the same topic (still 20 of 20 at `min_related` 0.63 in M5).
 - Background worker: notes are embedded only after 3 s without edits, newest first, in batches of 16, yielding between batches.
 - Vectors are cached by `(model, chunk-text hash)`, so index rebuilds, renames and unchanged saves never re-run the model.

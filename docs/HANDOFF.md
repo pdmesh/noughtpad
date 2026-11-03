@@ -3,7 +3,7 @@
 Read this first next session, then `ROADMAP.md` (what's next) and
 `docs/DESIGN.md` (why things are the way they are).
 
-## Where things stand (2026-11-03, late)
+## Where things stand (2026-11-03, night)
 
 - **M1–M4.5 are done**, and CI is green.
 - **Verified on this Mac (Apple M4, 16 GB):** a `--features local-llm-metal` build; startup and the
@@ -18,7 +18,11 @@ Read this first next session, then `ROADMAP.md` (what's next) and
   reading a saved key back after a rebuild.
 - **M5 so far:** everything above, plus a macOS menu bar, the first-visit blank-page fix, the
   related-notes threshold at 0.63, a plain out-of-memory message for the local model, and
-  **auto-update** (code, key and workflow done; the two-release check on the Mac is step 1 below).
+  **auto-update** (code, key and workflow done; **v0.1.1 is published** with signed update files,
+  but updates can't reach anyone while the repo is private: see "Auto-update: parked on where
+  releases live" below).
+- **The user is using 0.1.1 on their own machines for a few days** (installed by hand from the
+  release), then decides the release path.
 - **Apple signing is deferred:** no Developer Program for now. The user runs unsigned builds on
   their own Macs with right-click → Open for a few weeks, then decides.
 
@@ -42,6 +46,7 @@ pnpm tauri dev                     # the app on your real notes folder
 pnpm dev:sample                    # the app on a copy of the sample notebook (~/Noughtpad Sample)
 pnpm dev                           # UI only, in a browser, with the mock backend (?llm=ready, ?mock=many)
 pnpm test && pnpm typecheck        # UI tests
+cargo fmt --all --check            # CI fails on formatting
 pnpm build && pnpm perf            # capture-speed budget
 cargo test --workspace --no-default-features --features noughtpad-app/embedding-static   # fast Rust tests
 cargo clippy -p noughtpad-llm --all-targets --features local,remote,keychain -- -D warnings # local runtime
@@ -62,56 +67,66 @@ State on this Mac: `~/Noughtpad Sample` has 2 test notes and 2 chats from the UX
 (`node scripts/sample-vault.mjs` recreates it). The app config has the local Qwen3 4B active and an
 Ollama provider (`qwen3.5:4b`) saved. "Open at login" is off.
 
-### 1. Finish auto-update: the two-release check (next)
+### 1. Pick the next piece of work (the user chooses)
 
-Done already: `tauri-plugin-updater` (`src-tauri/src/updater.rs`), the public key and the endpoint
-in `src-tauri/tauri.conf.json`, Settings → Updates (`src/lib/updates.ts`), Noughtpad → Check for
-Updates… in the menu, and `release.yml` making signed update bundles and `latest.json` when the
-updater secret exists. How it works: `docs/DESIGN.md` § Auto-update.
+The user is living with 0.1.1 on several machines for a few days. Good next pieces, none blocked:
+- **M6 sync design** (ROADMAP "Next: M6"): write the design first in `docs/DESIGN.md` (change
+  journal, three-way merge with base hashes in `.noughtpad/`, tombstones, the open `SyncBackend`
+  interface in `noughtpad-core`, Google Drive vs iCloud), before any code.
+- **Minor items** from "Parked" below (UX leftovers such as dark mode and the minimum window size,
+  chat history delete, related-notes dismiss/undo), or anything the user hit while dogfooding.
 
-Before the check, the user must have stored the two GitHub secrets
-(`TAURI_SIGNING_PRIVATE_KEY`, `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`). The private key was generated
-on 2026-11-03 and handed to the user; it is not in the repo (`*.key` is git-ignored). Check with
-`gh secret list --repo pdmesh/noughtpad`.
+Ship fixes as tagged releases (bump `version` in the root `Cargo.toml` and `package.json`, tag
+`v0.1.x`, push, wait, check the draft, ask before publishing). Until updates work, the user
+installs each one by hand: `gh release download v0.1.x --repo pdmesh/noughtpad -p '*.dmg'`, or the
+release page while signed in to GitHub.
 
-1. **Release A (0.1.1):** set `version = "0.1.1"` in the root `Cargo.toml` (`[workspace.package]`)
-   and `package.json`, commit, `git tag v0.1.1 && git push origin main v0.1.1`. Wait for Actions →
-   Release (20–40 min). On the draft release check that `latest.json`,
-   `Noughtpad.app.tar.gz` and `Noughtpad.app.tar.gz.sig` are attached, then press **Publish**.
-2. **Install A like a user:** download the `.dmg` from the release in Safari, drag Noughtpad to
-   /Applications, right-click → Open (note exactly what Gatekeeper shows). Settings → Updates should
-   say 0.1.1 and "You have the newest version."
-3. **Release B (0.1.2):** bump to 0.1.2 the same way, tag `v0.1.2`, wait, publish.
-4. **Update:** in the running 0.1.1, Noughtpad → Check for Updates… → Settings shows "Version
-   0.1.2 is available" → **Install and restart**. Expect: download progress, the app restarts as
-   0.1.2.
-5. **Write down** in DESIGN.md § Auto-update what Gatekeeper did at step 2 and after step 4, how long
-   the download took, and whether macOS asked for the keychain (only if a provider key is saved).
-   Then drop "Left: …" from the ROADMAP item.
+### Auto-update: parked on where releases live
 
-What Gatekeeper should do (expected, not yet seen on a Mac): the first install is quarantined
-because Safari downloaded it, so it needs right-click → Open once (or
-`xattr -cr /Applications/Noughtpad.app`). Updates are downloaded by the app itself, which doesn't
-mark files as quarantined, so the updated app should open with no prompt. Each build has a new
-ad-hoc signature, so macOS may treat it as a different app for anything tied to the signature:
-the keychain may ask "Noughtpad wants to use … app.noughtpad.llm" (choose Always Allow), and
-privacy permissions, if any are ever granted, may be asked again. If an update ever does trigger
-"Noughtpad is damaged / can't be opened", `xattr -cr /Applications/Noughtpad.app` fixes it, and
-that is worth recording.
+Done: `tauri-plugin-updater` (`src-tauri/src/updater.rs`), the public key and endpoint in
+`src-tauri/tauri.conf.json`, Settings → Updates, Noughtpad → Check for Updates…, and `release.yml`
+signing update bundles and writing `latest.json`. Both updater secrets are stored on
+pdmesh/noughtpad. **v0.1.1 is published** and its `latest.json` is correct (`docs/DESIGN.md`
+§ Auto-update has what was seen). The Mac bundle is `Noughtpad_aarch64.app.tar.gz` (+ `.sig`).
+
+The blocker: pdmesh/noughtpad is **private**, so
+`https://github.com/pdmesh/noughtpad/releases/latest/download/latest.json` answers 404 to the app
+(which asks without signing in). Every build has that address built in. Options, the user's call:
+1. Make the repo public: nothing changes, 0.1.1 can update as is.
+2. A separate public repo just for releases (e.g. `pdmesh/noughtpad-releases`): point
+   `plugins.updater.endpoints` there, have `tauri-action` upload to it (`owner`/`repo` inputs plus
+   a token secret with Contents write on that repo only). Installs from 0.1.1 can't follow; start
+   the check from the first build with the new address.
+3. Host on R2/S3: more setup, no gain yet.
+
+Once decided, the two-release check (release A, install like a user, release B, Check for
+Updates… → Install and restart) is the rest of this item. Record in DESIGN.md § Auto-update what
+Gatekeeper does on install, after the update restart and on a later reopen, how long the download
+took, and any keychain prompt; then drop "Left: …" from the ROADMAP item and tick it.
+
+Checks for that run: download the `.dmg` in Safari (the user clicks; the built-in browser may not
+set quarantine), confirm `xattr -p com.apple.quarantine` on it, copy with a Finder drag, and while
+0.1.1 runs check `ps -o comm= -p $(pgrep noughtpad-app)` is under /Applications, not
+`AppTranslocation` (a translocated app can't replace itself). Wait for all three Release jobs
+before publishing: each edits `latest.json` on the draft.
+
+What Gatekeeper should do (expected, not yet seen): on macOS 15 and later, right-click → Open may
+no longer offer "Open" for an unsigned app; instead it's System Settings → Privacy & Security →
+**Open Anyway** plus a password (the user presses it, it's a security setting), or
+`xattr -cr /Applications/Noughtpad.app` if the user agrees. Updates are downloaded by the app,
+which doesn't mark them quarantined, so the updated app should open with no prompt. Each build has
+a new ad-hoc signature, so the keychain may ask "Noughtpad wants to use … app.noughtpad.llm"
+(Always Allow). If an update gives "Noughtpad is damaged", `xattr -cr` fixes it; record it.
 
 If something fails: run `/Applications/Noughtpad.app/Contents/MacOS/noughtpad-app` from Terminal
-to see the log (`update check`, `update: …` warnings). The updater refuses anything whose
-signature doesn't match the public key, so a wrong secret shows as "The download didn't match
+for the log (`update check`, `update: …`). A wrong key shows as "The download didn't match
 Noughtpad's signature".
 
 ### 2. Then
-- **Start dogfooding** (ROADMAP M5 exit): install in /Applications from a release (not a local
-  build, so updates work), turn "Open at login" on there. Ship fixes as tagged releases and update
-  through the app.
-- **Signing**, deferred: the user runs unsigned builds with right-click → Open for a few weeks.
-  If they decide to pay: Apple Developer Program, then the secrets listed at the top of
-  `release.yml`. Updates keep working either way; the updater key is separate from Apple's.
-- M6 sync design.
+- **Dogfood** (ROADMAP M5 exit) from an installed release with "Open at login" on.
+- **Signing**, deferred: unsigned builds for a few weeks, then decide. If the user pays: Apple
+  Developer Program, then the secrets listed at the top of `release.yml`. The updater key is
+  separate from Apple's.
 
 ### Parked (do when convenient, not blocking)
 - UX pass leftovers: dark mode, minimum window size, keyboard-only use, related-notes dismiss/undo,
@@ -130,7 +145,9 @@ Noughtpad's signature".
   unrelated short notes showed up as related; a plain message when the local model doesn't fit in
   free memory.
 - Late: auto-update (`tauri-plugin-updater`, GitHub Releases, signed bundles, Settings → Updates,
-  Noughtpad → Check for Updates…). Updater key generated; the user stores it as GitHub secrets.
+  Noughtpad → Check for Updates…). Updater key generated; the user stored it as GitHub secrets.
+- Night: released and published v0.1.1 (signed update files on all three platforms). Found the
+  private repo blocks the updater (404). Fixed CI formatting (`cargo fmt`).
 
 ## Known limits and gotchas
 
@@ -144,6 +161,8 @@ Noughtpad's signature".
 - **`examples/ask`** answers without `[n]` citations, unlike the app; don't use it to check citing.
 - **Unsigned builds:** macOS Gatekeeper blocks them until `xattr -cr` or right-click → Open, and
   Windows SmartScreen warns.
+- **Private repo:** release files aren't downloadable without signing in to GitHub, so the app
+  can't update (see "Auto-update: parked") and installs need `gh release download`.
 - **Updates only reach published releases:** tag pushes make drafts; nothing updates until you
   press Publish. A release built without the updater secret has no `latest.json`, and publishing
   it makes "Check for updates" fail until a release with one is published.
