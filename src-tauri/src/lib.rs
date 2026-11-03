@@ -376,7 +376,7 @@ pub fn run() {
             .on_window_event(lifecycle::on_window_event);
         #[cfg(target_os = "macos")]
         {
-            builder = builder.menu(|app| menu::build(app)).on_menu_event(menu::on_menu_event);
+            builder = builder.menu(menu::build).on_menu_event(menu::on_menu_event);
         }
         builder = builder.setup(move |app| {
             tracing::info!(ms = since_start(), "setup");
