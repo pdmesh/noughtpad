@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarDays, Cpu, FilePlus2, FolderOpen, MessageSquareText, Notebook, PanelLeft, PenLine, Search, Sprout, Waypoints, X } from "lucide-react";
+import { CalendarDays, Cpu, History, FilePlus2, FolderOpen, MessageSquareText, Notebook, PanelLeft, PenLine, Search, Sprout, Waypoints, X } from "lucide-react";
 import { api, isApiError, pickFolder, type VaultInfo } from "./lib/api";
 import { useEvent } from "./lib/useEvent";
 import { NotePane } from "./components/NotePane";
@@ -93,6 +93,15 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
     setView({ kind: "chat", id: null, start, key: `new-${Date.now()}` });
   }, []);
   const showChat = useCallback((id: string) => setView({ kind: "chat", id, key: id }), []);
+  // Chat history: a right-hand panel on the chat page, open unless the user hid it.
+  const [historyOpen, setHistoryOpen] = useState(() => readPref("nought.chatHistory") !== "off");
+  const toggleHistory = useCallback(() => {
+    setHistoryOpen((o) => {
+      writePref("nought.chatHistory", o ? "off" : "on");
+      return !o;
+    });
+  }, []);
+  const showHistory = view.kind === "chat" && historyOpen;
   const { data: currentNoteChoice = null } = useQuery({
     queryKey: ["notes", "chat-label", currentId],
     enabled: !!currentId,
@@ -237,7 +246,7 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
 
   return (
     <div
-      className={`app ${chromePinned ? "chrome-pinned" : "chrome-auto"} ${typing ? "is-typing" : ""} ${relatedOpen && view.kind === "write" ? "related-open" : ""}`}
+      className={`app ${chromePinned ? "chrome-pinned" : "chrome-auto"} ${typing ? "is-typing" : ""} ${(relatedOpen && view.kind === "write") || showHistory ? "related-open" : ""}`}
     >
       <div className="sidebar-hotzone" aria-hidden />
       <aside className="sidebar chrome" aria-label="Navigation">
@@ -253,15 +262,6 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
           />
           <SideItem icon={<MessageSquareText size={15} />} label="Chat" active={view.kind === "chat" && view.id === null} onClick={() => openChat()} />
         </nav>
-        <ChatHistory
-          currentId={view.kind === "chat" ? view.id : null}
-          running={new Set(Object.keys(chatLive.live))}
-          onOpen={showChat}
-          onNew={() => openChat()}
-          onDeleted={(id) => {
-            if (view.kind === "chat" && view.id === id) openChat();
-          }}
-        />
         {labels.length > 0 && (
           <nav className="sidebar-section" aria-label="Collections">
             <h4 className="sidebar-heading">Collections</h4>
@@ -301,6 +301,17 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
         >
           <Waypoints size={16} />
         </button>
+        {view.kind === "chat" && (
+          <button
+            className={`icon-btn ${historyOpen ? "is-on" : ""}`}
+            onClick={toggleHistory}
+            title="Chat history"
+            aria-label="Chat history"
+            aria-pressed={historyOpen}
+          >
+            <History size={16} />
+          </button>
+        )}
         <button
           className={`icon-btn ${view.kind === "chat" ? "is-on" : ""}`}
           onClick={() => openChat()}
@@ -411,6 +422,18 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
           )
         }
       />
+      {showHistory && (
+        <ChatHistory
+          currentId={view.kind === "chat" ? view.id : null}
+          running={new Set(Object.keys(chatLive.live))}
+          onOpen={showChat}
+          onNew={() => openChat()}
+          onDeleted={(id) => {
+            if (view.kind === "chat" && view.id === id) openChat();
+          }}
+          onClose={toggleHistory}
+        />
+      )}
       {relatedOpen && view.kind === "write" && (
         <RelatedPanel
           noteId={currentId}

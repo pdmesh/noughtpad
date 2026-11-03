@@ -34,7 +34,7 @@ This document turns that thesis into a concrete architecture and build plan. Ite
 | 2026-11-03 | Built-in runtime: **mistral.rs** (Rust, MIT) running GGUF on CPU/Metal/CUDA. Default model **Qwen3-4B-Instruct-2507 Q4_K_M** (Apache-2.0, 2.5 GB). Bring-your-own via the **genai** crate (Anthropic, OpenAI, Gemini, Ollama, any OpenAI-compatible URL); keys live in the OS keychain. |
 | 2026-11-03 | Before notes go to a remote provider, Nought lists them and the destination and asks; the user can untick notes. It asks the first time and again whenever the destination changes. Local models never ask, because nothing leaves the machine. |
 | 2026-11-03 | No embedded third-party agent harness (e.g. pi): our Rust layer already routes models and keeps keys in the keychain. Chat gets a small built-in tool loop instead. Workflow files and cost display are dropped for now. |
-| 2026-11-03 | Chat is a full page with the input docked at the bottom of the window; past chats are listed in the left sidebar and open as pages. Chats are saved to `.nought/chats/` (this replaces the Think page and "Kept"). Online models search and read notes through read-only tools bounded by the chat's scope; the user approves a chat's scope and destination once. Local models get the most relevant notes per question. Answers don't re-list sources, because the steps already show which notes were read. |
+| 2026-11-03 | Chat is a full page with the input docked at the bottom of the window; past chats are listed in a right-hand panel on the chat page (like Related; toggled from the top bar) and open as pages. Chats are saved to `.nought/chats/` (this replaces the Think page and "Kept"). Online models search and read notes through read-only tools bounded by the chat's scope; the user approves a chat's scope and destination once. Local models get the most relevant notes per question. Answers don't re-list sources, because the steps already show which notes were read. |
 | 2026-11-02 | Extensions reuse the CodeMirror 6 and unified (remark/rehype) ecosystems; no bespoke plugin ecosystem. |
 
 ---
@@ -259,7 +259,7 @@ related notes, a theme, a month, open questions or a collection.
   Every search and read appears as a step that expands to the notes involved.
 - **Answers** respond to the question directly and cite `[n]` only where pointing at a note helps.
 - **Earlier turns:** the last 6 are sent as text.
-- **Storage:** chats are saved as JSON in `.nought/chats/` and listed in the left sidebar. Notes
+- **Storage:** chats are saved as JSON in `.nought/chats/` and listed in the history panel on the right of the chat page. Notes
   are never written.
 - **Consent:** before an online provider sees anything, the user approves this chat's scope and
   destination once per chat.

@@ -1,63 +1,69 @@
-import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { SquarePen, Trash2 } from "lucide-react";
+import { SquarePen, Trash2, X } from "lucide-react";
 import { api } from "../lib/api";
+import { formatDay } from "../lib/format";
 
-const SHOWN = 8;
-
-/** Past chats in the left sidebar; clicking one opens it as a page. */
+/** Past chats, in the right-hand panel on the chat page (like Related). */
 export function ChatHistory({
   currentId,
   running,
   onOpen,
   onNew,
   onDeleted,
+  onClose,
 }: {
   currentId: string | null;
   running: Set<string>;
   onOpen: (id: string) => void;
   onNew: () => void;
   onDeleted: (id: string) => void;
+  onClose: () => void;
 }) {
   const qc = useQueryClient();
-  const { data: chats = [] } = useQuery({ queryKey: ["chats"], queryFn: api.chatList });
-  const [all, setAll] = useState(false);
-  const shown = all ? chats : chats.slice(0, SHOWN);
+  const { data: chats = [], isLoading } = useQuery({ queryKey: ["chats"], queryFn: api.chatList });
   return (
-    <nav className="sidebar-section" aria-label="Chats">
-      <h4 className="sidebar-heading sidebar-heading-row">
-        Chats
-        <button className="icon-btn icon-btn-small" onClick={onNew} title="New chat (⌘L)" aria-label="New chat">
-          <SquarePen size={13} />
-        </button>
-      </h4>
-      {shown.map((c) => (
-        <div key={c.id} className={`side-item side-chat ${c.id === currentId ? "is-active" : ""}`}>
-          <button className="side-chat-open" onClick={() => onOpen(c.id)} title={`${c.title}\n${c.scopeLabel}`}>
-            <span className="side-label">{c.title}</span>
-            {running.has(c.id) && <span className="dot-pulse" aria-label="answering" />}
+    <aside className="related chat-history" aria-label="Chat history">
+      <header className="related-head">
+        <h2>Chats</h2>
+        <div className="chat-history-actions">
+          <button className="icon-btn" onClick={onNew} title="New chat (⌘L)" aria-label="New chat">
+            <SquarePen size={15} />
           </button>
-          <button
-            className="side-chat-delete"
-            aria-label={`Delete “${c.title}”`}
-            title="Delete chat"
-            disabled={running.has(c.id)}
-            onClick={() =>
-              void api.chatDelete(c.id).then(() => {
-                void qc.invalidateQueries({ queryKey: ["chats"] });
-                onDeleted(c.id);
-              })
-            }
-          >
-            <Trash2 size={12} />
+          <button className="icon-btn" onClick={onClose} title="Hide history" aria-label="Hide chat history">
+            <X size={15} />
           </button>
         </div>
-      ))}
-      {chats.length > SHOWN && (
-        <button className="side-more" onClick={() => setAll((a) => !a)}>
-          {all ? "Show fewer" : `Show all ${chats.length}`}
-        </button>
-      )}
-    </nav>
+      </header>
+      {!isLoading && chats.length === 0 && <p className="faint chat-history-empty">Your chats will be listed here.</p>}
+      <ul className="chat-history-list">
+        {chats.map((c) => (
+          <li key={c.id} className={c.id === currentId ? "is-current" : ""}>
+            <button className="chat-history-item" onClick={() => onOpen(c.id)} aria-current={c.id === currentId ? "page" : undefined}>
+              <span className="chat-history-title">
+                {c.title}
+                {running.has(c.id) && <span className="dot-pulse" aria-label="answering" />}
+              </span>
+              <span className="faint chat-history-meta">
+                {formatDay(c.updated.slice(0, 10))} · {c.scopeLabel} · {c.questions} {c.questions === 1 ? "question" : "questions"}
+              </span>
+            </button>
+            <button
+              className="chat-history-delete"
+              aria-label={`Delete “${c.title}”`}
+              title="Delete chat"
+              disabled={running.has(c.id)}
+              onClick={() =>
+                void api.chatDelete(c.id).then(() => {
+                  void qc.invalidateQueries({ queryKey: ["chats"] });
+                  onDeleted(c.id);
+                })
+              }
+            >
+              <Trash2 size={13} />
+            </button>
+          </li>
+        ))}
+      </ul>
+    </aside>
   );
 }
