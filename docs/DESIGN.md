@@ -352,11 +352,22 @@ Reproduce with `cargo run --release -p noughtpad-core --example bench -- 10000`.
 
 | Measure | Result |
 |---|---|
-| Process start to focused editor (`editor ready ms=`), sample notebook | 874 ms cold, 362–394 ms warm. Over the 300 ms goal (G1). The vault scan takes 0 ms and the ready log follows it by ~25 ms, so the time goes to webview start-up and loading the 1.6 MB main JS bundle |
+| Process start to focused editor (`editor ready ms=`), sample notebook | 874 ms cold, 362–394 ms warm before the bundle split; 345–366 ms warm after it. Over the 300 ms goal (G1), see below |
 | First full index, 10,000 notes | ~2.9 s |
 | Startup rescan of an unchanged vault | ~25 ms |
 | Full-text search | ~7 ms |
 | Create a note (write + index) | ~5 ms |
+
+Where the warm launch goes (the `setup` and `page load` log lines): ~175 ms until Tauri's setup,
+which already includes creating the window and the WKWebView; ~75 ms until the page starts loading;
+~110 ms of JavaScript until the editor is focused. A `sample` profile puts most of the first part in
+`-[WKWebView initWithFrame:]` (WebKit's GPU process, OpenGL renderer queries, loading system
+libraries), which the app can't speed up.
+
+The startup bundle was split anyway: the Markdown↔HTML pipeline, KaTeX and every page but writing
+now load after the editor is ready (main chunk 1.6 MB → 0.6 MB). `pnpm perf` dropped from 109 ms to
+81 ms; the real app gained ~20 ms. So 300 ms from a cold process isn't reachable on WKWebView. The
+budget that matters is quick capture into an app that's already running.
 
 **M2 status (2026-11-02): complete, verified with the real model** in the desktop app on the sample notebook. 33 notes were connected about 3 s after launch. Indexing runs at about 37 notes/s using 2 CPU threads. Related-note lookup takes about 3 ms and hybrid search about 25 ms, including the query embedding. On a hand-written 13-note test set, all 20 related suggestions were on the same topic.
 - Background worker: notes are embedded only after 3 s without edits, newest first, in batches of 16, yielding between batches.

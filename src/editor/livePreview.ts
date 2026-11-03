@@ -17,7 +17,15 @@ import {
   WidgetType,
 } from "@codemirror/view";
 import type { SyntaxNodeRef } from "@lezer/common";
-import katex from "katex";
+
+// KaTeX is large and most notes have no maths, so it loads on first use.
+type Katex = typeof import("katex").default;
+let katex: Katex | undefined;
+let katexLoading: Promise<Katex> | undefined;
+
+function loadKatex(): Promise<Katex> {
+  return (katexLoading ??= import("katex").then((m) => (katex = m.default)));
+}
 
 /** Resolves a Markdown image/link target to a loadable URL. */
 export const assetResolver = Facet.define<(src: string) => string, (src: string) => string>({
@@ -77,7 +85,13 @@ class InlineMathWidget extends WidgetType {
   toDOM() {
     const span = document.createElement("span");
     span.className = "cm-md-math";
-    katex.render(this.tex, span, { throwOnError: false, displayMode: false });
+    const render = (k: Katex) => k.render(this.tex, span, { throwOnError: false, displayMode: false });
+    if (katex) {
+      render(katex);
+    } else {
+      span.textContent = this.tex;
+      void loadKatex().then(render);
+    }
     return span;
   }
 }

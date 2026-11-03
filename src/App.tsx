@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarDays, History, Settings as SettingsIcon, FilePlus2, FolderOpen, MessageSquareText, Notebook, PanelLeft, PenLine, Search, Sprout, Waypoints, X } from "lucide-react";
 import { api, isApiError, pickFolder, type VaultInfo } from "./lib/api";
@@ -8,14 +8,29 @@ import { Stream } from "./components/Stream";
 import { SearchPalette } from "./components/SearchPalette";
 import { RelatedPanel } from "./components/RelatedPanel";
 import { describeStatus, useSemanticStatus } from "./lib/useSemantic";
-import { Journal } from "./views/Journal";
-import { IdeasView, ThemeView } from "./views/Ideas";
-import { ChatView } from "./views/Chat";
 import { ChatHistory } from "./components/ChatHistory";
 import { useChatLive, type ScopeChoice } from "./lib/chat";
-import { ModelsView } from "./views/Models";
-import { SettingsView } from "./views/Settings";
 import type { EditorHandle } from "./editor/Editor";
+import { loadMarkdownPipeline } from "./editor/clipboard";
+
+// Pages other than writing load after the editor is ready, keeping them out of
+// the startup bundle (G1: capture in < 300 ms).
+const loadJournal = () => import("./views/Journal");
+const loadIdeas = () => import("./views/Ideas");
+const loadChat = () => import("./views/Chat");
+const loadModels = () => import("./views/Models");
+const loadSettings = () => import("./views/Settings");
+const Journal = lazy(() => loadJournal().then((m) => ({ default: m.Journal })));
+const IdeasView = lazy(() => loadIdeas().then((m) => ({ default: m.IdeasView })));
+const ThemeView = lazy(() => loadIdeas().then((m) => ({ default: m.ThemeView })));
+const ChatView = lazy(() => loadChat().then((m) => ({ default: m.ChatView })));
+const ModelsView = lazy(() => loadModels().then((m) => ({ default: m.ModelsView })));
+const SettingsView = lazy(() => loadSettings().then((m) => ({ default: m.SettingsView })));
+
+/** Warm everything that was left out of the startup bundle, so first use is instant. */
+function preloadDeferred() {
+  for (const load of [loadMarkdownPipeline, loadChat, loadJournal, loadIdeas, loadSettings, loadModels]) void load();
+}
 
 /** "write" is the blank page; "notes" lists all notes (optionally one collection). */
 type View =
@@ -185,6 +200,7 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
     requestAnimationFrame(() =>
       requestAnimationFrame(() => {
         void api.markReady().then((ms) => console.info(`[noughtpad] editor ready ${ms} ms after start`));
+        setTimeout(preloadDeferred, 200);
       }),
     );
   }, []);
@@ -377,43 +393,45 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
             <Stream query={{ label }} currentId={currentId} onOpen={openNote} onLabel={showLabel} />
           </>
         )}
-        {view.kind === "journal" && <Journal onOpen={openNote} onLabel={showLabel} />}
-        {view.kind === "ideas" && <IdeasView onOpenNote={openNote} onOpenTheme={(id) => setView({ kind: "theme", id })} />}
-        {view.kind === "theme" && (
-          <ThemeView
-            id={view.id}
-            onBack={() => setView({ kind: "ideas" })}
-            onOpenNote={openNote}
-            onAsk={(name) => openChat({ scope: { kind: "theme", id: view.id }, label: name })}
-          />
-        )}
-        {view.kind === "models" && <ModelsView focus={view.focus} />}
-        {view.kind === "settings" && (
-          <SettingsView
-            vault={vault}
-            onSwitchVault={onSwitchVault}
-            chromePinned={chromePinned}
-            toggleChrome={toggleChrome}
-            listUnderEditor={listUnderEditor}
-            toggleListUnderEditor={toggleListUnderEditor}
-            onModels={() => setView({ kind: "models" })}
-            onRebuildIndex={() => void rebuildIndex()}
-            onResetRelated={resetRelated}
-          />
-        )}
-        {view.kind === "chat" && (
-          <ChatView
-            key={view.key}
-            chatId={view.id}
-            start={view.start}
-            currentNote={currentNoteChoice}
-            live={view.id ? chatLive.live[view.id] : undefined}
-            onBegin={chatLive.begin}
-            onCreated={(id) => setView((v) => (v.kind === "chat" && v.id === null ? { ...v, id } : v))}
-            onOpenNote={openNote}
-            onModels={(focus) => setView({ kind: "models", focus })}
-          />
-        )}
+        <Suspense fallback={null}>
+          {view.kind === "journal" && <Journal onOpen={openNote} onLabel={showLabel} />}
+          {view.kind === "ideas" && <IdeasView onOpenNote={openNote} onOpenTheme={(id) => setView({ kind: "theme", id })} />}
+          {view.kind === "theme" && (
+            <ThemeView
+              id={view.id}
+              onBack={() => setView({ kind: "ideas" })}
+              onOpenNote={openNote}
+              onAsk={(name) => openChat({ scope: { kind: "theme", id: view.id }, label: name })}
+            />
+          )}
+          {view.kind === "models" && <ModelsView focus={view.focus} />}
+          {view.kind === "settings" && (
+            <SettingsView
+              vault={vault}
+              onSwitchVault={onSwitchVault}
+              chromePinned={chromePinned}
+              toggleChrome={toggleChrome}
+              listUnderEditor={listUnderEditor}
+              toggleListUnderEditor={toggleListUnderEditor}
+              onModels={() => setView({ kind: "models" })}
+              onRebuildIndex={() => void rebuildIndex()}
+              onResetRelated={resetRelated}
+            />
+          )}
+          {view.kind === "chat" && (
+            <ChatView
+              key={view.key}
+              chatId={view.id}
+              start={view.start}
+              currentNote={currentNoteChoice}
+              live={view.id ? chatLive.live[view.id] : undefined}
+              onBegin={chatLive.begin}
+              onCreated={(id) => setView((v) => (v.kind === "chat" && v.id === null ? { ...v, id } : v))}
+              onOpenNote={openNote}
+              onModels={(focus) => setView({ kind: "models", focus })}
+            />
+          )}
+        </Suspense>
       </main>
 
       <SearchPalette

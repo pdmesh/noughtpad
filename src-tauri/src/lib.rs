@@ -213,9 +213,13 @@ static STARTED: std::sync::OnceLock<std::time::Instant> = std::sync::OnceLock::n
 /// Called by the UI once the editor is focused; logs the time-to-capture budget.
 #[tauri::command]
 fn mark_ready() -> u64 {
-    let ms = STARTED.get().map_or(0, |t| t.elapsed().as_millis() as u64);
+    let ms = since_start();
     tracing::info!(ms, "editor ready");
     ms
+}
+
+fn since_start() -> u64 {
+    STARTED.get().map_or(0, |t| t.elapsed().as_millis() as u64)
 }
 
 #[tauri::command]
@@ -368,6 +372,7 @@ pub fn run() {
                 .build(),
         );
         builder = builder.setup(move |app| {
+            tracing::info!(ms = since_start(), "setup");
             let shortcut = if cfg!(target_os = "macos") {
                 capture
             } else {
@@ -381,6 +386,8 @@ pub fn run() {
     }
 
     builder
+        // Startup timeline next to `editor ready`: page load start/finish show the webview's share.
+        .on_page_load(|_, payload| tracing::info!(ms = since_start(), event = ?payload.event(), "page load"))
         .invoke_handler(tauri::generate_handler![
             vault_info,
             mark_ready,

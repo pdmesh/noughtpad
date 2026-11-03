@@ -7,7 +7,17 @@
 
 import { EditorSelection, type Extension } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
-import { clipboardHtml, htmlToMarkdown, isUrl, shouldConvertHtml } from "../lib/markdown";
+import { isUrl, shouldConvertHtml } from "../lib/pasteRules";
+
+// The Markdown <-> HTML pipeline is the heaviest part of the editor, so it
+// stays out of the startup bundle and loads once the editor is idle.
+type Pipeline = typeof import("../lib/markdown");
+let pipeline: Pipeline | undefined;
+let loading: Promise<Pipeline> | undefined;
+
+export function loadMarkdownPipeline(): Promise<Pipeline> {
+  return (loading ??= import("../lib/markdown").then((m) => (pipeline = m)));
+}
 
 export interface ClipboardOptions {
   /** Persist binary data, returning a vault-relative path. */
@@ -25,7 +35,8 @@ function writeClipboard(e: ClipboardEvent, md: string) {
   if (!e.clipboardData) return false;
   e.clipboardData.setData("text/plain", md);
   try {
-    e.clipboardData.setData("text/html", clipboardHtml(md));
+    // In the first moments after launch the pipeline may still be loading: copy plain text only.
+    if (pipeline) e.clipboardData.setData("text/html", pipeline.clipboardHtml(md));
   } catch {
     // Conversion failure must never break copying the Markdown itself.
   }
@@ -94,8 +105,17 @@ export function markdownClipboard(opts: ClipboardOptions = {}): Extension {
 
       const html = data.getData("text/html");
       if (shouldConvertHtml(Array.from(data.types), html, plainOnly)) {
+        if (!pipeline) {
+          // Not loaded yet: take over the paste, convert once it arrives, and fall back to plain text.
+          e.preventDefault();
+          void loadMarkdownPipeline()
+            .then((p) => p.htmlToMarkdown(html))
+            .catch(() => "")
+            .then((md) => insert(view, md.trim() ? md : text));
+          return true;
+        }
         try {
-          const md = htmlToMarkdown(html);
+          const md = pipeline.htmlToMarkdown(html);
           if (md.trim()) {
             e.preventDefault();
             insert(view, md);
