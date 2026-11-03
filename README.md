@@ -6,7 +6,7 @@ Notes are plain Markdown files you own. AI stays out of the way during capture a
 
 - Design: [docs/DESIGN.md](docs/DESIGN.md)
 - Roadmap: [ROADMAP.md](ROADMAP.md) · Next session: [docs/HANDOFF.md](docs/HANDOFF.md)
-- Status: **M1–M3 complete** (notebook, quiet retrieval, temporal discovery). Next: M4, an on-demand thinking workspace with your own LLM
+- Status: **M1–M4.5 complete** (notebook, quiet retrieval, ideas over time, opt-in models, chat with your notes). Now: M5, release builds and dogfooding on a real Mac
 
 ## What works today
 
