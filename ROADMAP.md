@@ -37,14 +37,17 @@ Exit: Noughtpad replaces your current notes app for two weeks without workaround
 ## Next: M6, Noughtpad Sync (paid, proprietary)
 
 Built-in, two-way sync across devices. It isn't open source, so it can be charged for. The core
-stays FSL; sync lives in a separate private crate that plugs into an open `SyncBackend` interface
-in `noughtpad-core`.
+stays FSL; sync lives in a private repo (`pdmesh/noughtpad-sync`) that plugs into an open
+`SyncBackend` interface in `noughtpad-core`. Design: `docs/DESIGN.md` §12 (written 2026-11-03).
 
-- [ ] Sync engine: per-file change journal, three-way merge for Markdown (base hash kept in `.noughtpad/`), conflict copies only when a merge fails, tombstones for deletions
-- [ ] Google Drive backend: OAuth (PKCE, desktop loopback), Drive API changes feed, works on every platform
-- [ ] iCloud backend: the app's iCloud container, using CloudKit or `NSFileCoordinator`. **Only works on Apple devices**, because iCloud has no official API for Windows, Linux or Android. Non-Apple devices use Google Drive (or a future Noughtpad server)
+- [x] Design (§12): what syncs, merge rules, tombstones, the interface, Drive vs iCloud
+- [ ] Slice 1, open core: device id, user-state as per-device logs, `SyncBackend` and a folder backend for tests, `Vault::apply_synced` and the change journal
+
+- [ ] Slice 2, sync engine (private repo): per-file change journal, three-way merge for Markdown against a base copy in `.noughtpad/sync/`, conflict copies only when a merge fails, tombstones, edit beats delete; tested against the folder backend
+- [ ] Slice 3, Google Drive backend: `drive.file` access, OAuth (PKCE, desktop loopback), Drive changes feed, works on every platform. Testing mode while dogfooding (sign in again every 7 days); production needs Google's basic project checks
+- [ ] iCloud backend: the app's iCloud container, using CloudKit or `NSFileCoordinator`. Needs the Apple Developer Program (signed app). **Only works on Apple devices**, because iCloud has no official API for Windows, Linux or Android. Non-Apple devices use Google Drive (or a future Noughtpad server)
 - [ ] Licensing and billing: account, licence key check, subscription (e.g. Paddle or Lemon Squeezy, which handle VAT)
-- [ ] The index stays local and disposable on every device; only notes and `.noughtpad/user-state` sync
+- [ ] The index stays local and disposable on every device; notes, other files, user-state, chats and trash sync
 
 Exit: edit the same notebook on two Macs and one non-Apple device for a week with no lost edits.
 

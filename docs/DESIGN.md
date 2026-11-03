@@ -39,6 +39,7 @@ This document turns that thesis into a concrete architecture and build plan. Ite
 | 2026-11-03 | Auto-update through `tauri-plugin-updater` from GitHub Releases. It only checks when asked (Settings → Updates, or Noughtpad → Check for Updates… on macOS) and installs only when the user presses **Install and restart**; there is no background check and no pop-up. Every update bundle is signed with Noughtpad's updater key and checked against the public key built into the app. Updates go out when a draft release is **published**. |
 | 2026-11-03 | Built-in two-way sync (Google Drive everywhere; iCloud on Apple devices only, as iCloud has no API elsewhere) and iOS/Android apps are planned as a paid, proprietary add-on. The core stays FSL, with an open `SyncBackend` interface. |
 | 2026-11-03 | Window lifecycle follows each platform. On macOS, closing the window hides it and the app keeps running (Dock icon reopens, ⌘Q quits), so ⌘⇧Space capture is instant instead of waiting ~350 ms for WKWebView. On Windows and Linux, closing quits. "Open at login" (off by default) starts hidden on macOS and minimised elsewhere. |
+| 2026-11-03 | Sync design (§12): three-way merge per file against a stored base copy, eager rules (two additions at the same spot are both kept; for title/source the newer edit wins), a conflict copy only when both devices changed the same lines. Edit beats delete. Notes, images and other files, user-state, chats and trash sync; the index, sync state and app settings never do. User-state moves to per-device logs. Google Drive first (`drive.file`, Testing mode while dogfooding); iCloud after the signing decision. Engine and backends live in a private repo (`pdmesh/noughtpad-sync`); the open core has the `SyncBackend` interface. |
 | 2026-11-02 | Extensions reuse the CodeMirror 6 and unified (remark/rehype) ecosystems; no bespoke plugin ecosystem. |
 
 ---
@@ -76,8 +77,9 @@ dashboard, collaboration, custom sync server.
                 │                                      │
         Markdown vault (truth)                 .noughtpad/ (app data)
         ~/Notes/**/*.md                         index.sqlite   (disposable)
-                                                user-state.db  (NOT disposable:
-                                                  dismissals, confirmations)
+                                                user-state     (NOT disposable:
+                                                  dismissals, confirmations;
+                                                  per-device logs from M6, §12.6)
                                                 artifacts/*.md (AI syntheses the
                                                   user chose to keep)
 ```
@@ -187,7 +189,8 @@ jobs(id PK, kind, payload, state, attempts, run_after)
 meta(key, value)                                  -- embedding model id, schema version
 ```
 
-`.noughtpad/user-state.db` (persistent, small):
+`.noughtpad/user-state.db` (persistent, small; as built it is `user-state.sqlite`, and for M6 sync
+the truth moves to per-device logs with the SQLite file as a cache, §12.6):
 
 ```sql
 relation_feedback(src_note, dst_note, kind, verdict, at)   -- confirmed|dismissed
@@ -540,12 +543,13 @@ What was seen with release v0.1.1 (2026-11-03, published):
   matching (§6.2) is a core algorithm, not polish. Prototype it early on real notes.
 - **Sync:** v1 relies on the user's folder sync (iCloud/Dropbox/Syncthing/git). Because the index is
   local and disposable, every device just reindexes. Conflicts are handled at the file level only.
+  Built-in sync (M6) merges edits instead; design in §12.
 
 ---
 
 ## 10. Open questions
 
-None blocking M1.
+None blocking M1. Sync's open points are in §12.12.
 
 ---
 
@@ -560,3 +564,284 @@ None blocking M1.
   `multilingual-e5-small` and running a reindex, with no schema change.
 - Stopwords and keyword extraction sit behind a `LanguagePack` trait. English ships first.
 - UI strings go through i18n keys from day one (`i18next`), even though only English ships.
+
+---
+
+## 12. Sync (M6, design, 2026-11-03)
+
+Built-in two-way sync between your devices. Design only; no code yet. Decisions taken with the
+product owner are in the decisions log (§0); what is still open is at the end of this section.
+
+### 12.1 The idea in one paragraph
+
+Each device keeps, for every synced file, a copy of **the version both sides last agreed on** (the
+*base*). When it syncs, it compares three versions of each file: the base, the one on this device
+and the one in the cloud. If only one side changed, that side wins. If both changed, the two edits
+are merged line by line against the base (a *three-way merge*, the same idea git uses). Only when
+both devices changed the very same lines is a **conflict copy** written next to the note. Deleted
+files leave a small **tombstone** record, so a device that was offline for weeks learns about the
+delete instead of uploading the file again. The search index is never synced; every device
+rebuilds its own from the notes it has.
+
+### 12.2 What syncs and what doesn't
+
+| Data | Syncs? | How |
+|---|---|---|
+| Notes (`**/*.md`) | Yes | Three-way merge (§12.5) |
+| Images, PDFs and any other file in the notebook | Yes | Whole file. If both devices changed it, a conflict copy |
+| Your judgements (dismissed related notes, feedback) | Yes | Per-device logs that never conflict (§12.6) |
+| Chat history (`.noughtpad/chats/`) | Yes | One file per chat; merged by message (§12.6) |
+| Trash (`.noughtpad/trash/`) | Yes | Files are written once with unique names, so they never conflict |
+| Tombstones (`.noughtpad/tombstones/`) | Yes | Per-device logs of deletes (§12.7) |
+| Index (`.noughtpad/index.sqlite*`) | **Never** | Derived. Each device builds its own |
+| Sync state (`.noughtpad/sync/`) | **Never** | It describes this device's view |
+| App settings, provider keys, downloaded models | **Never** | They live outside the notebook folder (app config dir, OS keychain) and are per device |
+| Temporary files (`.noughtpad-tmp-*`, `*.tmp`), `.DS_Store`, old `artifacts/` | Never | |
+
+Chat consent travels with the chat, but it names a provider that is set up per device; on a
+device where that provider isn't set up, the chat asks again before notes go anywhere.
+
+### 12.3 Pieces, and where the code lives
+
+```
+noughtpad-core (open, FSL)                 noughtpad-sync (private repo pdmesh/noughtpad-sync)
+  device id                                   engine: plan → merge → apply → upload → commit
+  per-device user-state logs                  three-way merge for Markdown, chats, user-state
+  Vault::apply_synced(...) (safe writes)      Google Drive backend (first)
+  trait SyncBackend + its types               iCloud backend (later)
+  a folder backend used by tests              licence check (later)
+```
+
+- The app builds the private crate only with a `sync` cargo feature. The open build, CI and
+  every command in HANDOFF work without it. Release builds need a read-only token for that repo.
+- The open core gets what any sync, including someone else's, needs: stable device ids,
+  conflict-free user-state, a safe "write this file from sync" call, and the interface.
+
+### 12.4 Local sync state (per device, never synced)
+
+`.noughtpad/sync/` (added to `.noughtpad/.gitignore`):
+
+```
+sync/
+  state.sqlite     -- one row per synced path:
+                   --   path, note_id, base_hash, remote_rev, remote_hash, synced_at
+                   -- plus: device_id, backend, remote notebook id, the backend's change cursor
+  base/<blake3>    -- the base text of each file, stored by its hash (needed to merge;
+                   -- a hash alone can't be merged against). Images keep no base copy: their
+                   -- base is the hash only, since they are never merged.
+  journal          -- table in state.sqlite: paths this device changed since the last sync
+```
+
+- **Change journal.** Every write through the vault and every watcher event adds the path to the
+  journal, so a sync only looks at what changed. The journal is a shortcut, not the truth: on
+  start, and every so often, a full comparison of each file's hash with its base catches anything
+  the journal missed (the app was closed while another editor or git touched files). Losing the
+  journal costs time, never data.
+- **Device id.** A ULID kept in the app's data dir (not the notebook), plus a name the user sees
+  ("MacBook Air"). `state.sqlite` records the device id it belongs to; if they don't match (the
+  folder was copied to another machine), the sync state is thrown away and the device joins
+  afresh (§12.8).
+- On the remote side, the backend's own change feed plays the journal's role (Drive's
+  `changes.list` page token).
+
+### 12.5 Merging notes
+
+A note is frontmatter plus body; they are merged separately.
+
+**Body: line-by-line three-way merge.** Written in our crate on top of `similar`'s line diff
+(Apache-2.0) rather than a ready-made diff3, so we own the rules:
+1. Lines changed on one side only: take that side.
+2. The same change on both sides: take it once.
+3. **Both sides only added text at the same spot** (the common case: two devices each appended a
+   paragraph): keep both, this device's first, with a blank line between so the paragraphs don't
+   run together.
+4. Both sides changed the same lines differently: **the merge fails** (§12.5.1).
+
+Line endings and a missing final newline are kept as they are; a file is never reformatted.
+
+**Frontmatter: field by field.** Parsed with the existing note parser into an ordered map:
+- `labels`: merged as sets. A label added on either side is kept, one removed on either side is
+  removed.
+- Any other field (`title`, `source`, `type`, hand-written keys): if one side changed it, that
+  side wins; if both changed it differently, **the newer edit wins** (by file modification time,
+  device id breaks ties). It is noted in the sync log, not turned into a conflict copy.
+- `id` never merges. Different ids at the same path means two different notes landed on the same
+  path (rare: same minute, same slug); the incoming one is saved under `…-2.md`. The same id at
+  two paths means one device moved the file; the move is followed.
+
+#### 12.5.1 When a merge fails: conflict copies
+
+- The note keeps **this device's** version, untouched.
+- The other device's whole version is saved next to it as
+  `2026-09-12-2310-ownership-vc (conflict, MacBook Air, 3 Nov).md`, with a **new id** (two files
+  must never share one) and `conflict_of: <original id>` in its frontmatter. It is an ordinary
+  note: search finds it, and you delete it once you've copied over what you need.
+- The app shows a quiet notice ("1 note had edits on two devices") linking to both.
+- The copy syncs like any other note, so every device sees the same pair.
+
+Why not a CRDT (Automerge, Yjs)? The Markdown files are the truth and other tools edit them
+(Obsidian, git, a text editor), so the merge has to work on plain text after the fact. A CRDT
+would need its own history next to every file and still fall back to text merging for outside
+edits.
+
+### 12.6 Data that must never conflict
+
+- **User-state becomes per-device logs.** `.noughtpad/user-state.sqlite` is one file that every
+  device writes, and a SQLite file can't be merged (and copying one mid-write can corrupt it). So
+  the truth moves to append-only logs, one per device:
+  `.noughtpad/user-state/<device-id>.jsonl`, each line an event
+  (`{"at":…, "op":"dismiss", "a":…, "b":…}`, `undismiss`, `feedback`, …). A device only ever
+  writes its own log, so sync never sees two writers. `user-state.sqlite` stays as a local cache,
+  rebuilt from all the logs (newest event per key wins). This works with no sync too, and with
+  folder sync tools such as Dropbox.
+- **Chats** are one JSON file each. If both devices changed one chat and one message list is a
+  prefix of the other, the longer wins. Otherwise (both continued the same chat offline) the
+  other device's copy is saved as a separate chat, "(from MacBook Air)".
+- **Trash** files are named by time and path when written, so two devices never write the same
+  trash file.
+
+### 12.7 Deletes and tombstones
+
+- Deleting a note on this device moves it to `.noughtpad/trash/` as today, and records a
+  tombstone in this device's log `.noughtpad/tombstones/<device-id>.jsonl` (synced; one writer per
+  log, like user-state): `{path, id, base_hash, at}`.
+- Another device that still has the file at that base hash moves it to **its** trash. A sync
+  never deletes anything outright; everything stays recoverable in the trash.
+- **Edit beats delete.** If the other device edited the note since the base, the note is kept
+  with the edit, uploaded again, and the user gets a notice ("A note you deleted on MacBook Air
+  was edited on Windows PC, so it's back").
+- Tombstones are small, so they are kept for good. That way even a device that hasn't synced for
+  a year, or one that lost its sync state, can tell "deleted elsewhere" from "never uploaded".
+
+### 12.8 One sync, step by step
+
+1. **Pull:** ask the backend for remote changes since the saved cursor.
+2. **Plan:** for each path changed here (journal) or there (feed), compare local hash, base hash
+   and remote hash: upload, download, merge, delete-here, delete-there, or nothing.
+3. **Merge and write locally** through `Vault::apply_synced(path, bytes, expected_hash)`, which
+   writes atomically and refuses if the file changed since the plan (the user was typing); that
+   path is retried next round.
+4. **Upload** each changed file with `put(path, bytes, expected_rev)`. If the remote moved on in
+   the meantime, the backend says so and the path goes back to step 2.
+5. **Commit:** only after the upload is confirmed, store the new base and revision.
+
+A crash at any step is safe: the base isn't updated until step 5, so the next run sees the same
+three versions and does the same merge again. Merging a file with an identical result is a no-op
+(rule 2), so repeating a step never duplicates text.
+
+**Joining** (first sync on a device, or after its state was reset): there is no base, so every
+file is compared directly. Same hash on both sides: becomes the base. Only on one side: copied
+over, unless a tombstone says it was deleted. Different on both: merged against an empty base,
+which keeps both versions' unique lines, or gives a conflict copy.
+
+**When it runs:** on start, about 5 s after you stop typing, when the window comes to the front,
+and every minute while the app is open (Drive can't push changes to a desktop app). Never during
+capture: sync runs in the background and writes to an open note only when the editor has nothing
+unsaved, and the editor then reloads the note keeping the cursor.
+
+**The editor:** a merged write to the open note arrives like any outside edit today (the watcher
+plus the editor's `base_hash` check), so no keystroke is lost.
+
+### 12.9 The `SyncBackend` interface (open, in `noughtpad-core`)
+
+Blocking calls, like the rest of the core; the engine runs them on a background thread.
+
+```rust
+/// Where a notebook's files live remotely. A backend stores files by notebook-relative
+/// path and reports changes; it knows nothing about Markdown or merging.
+pub trait SyncBackend: Send + Sync {
+    /// "gdrive", "icloud", "folder".
+    fn kind(&self) -> &'static str;
+    /// Find or create the remote notebook (`notebook.json` holds its id and format version).
+    fn open_notebook(&self, name: &str) -> Result<RemoteNotebook>;
+    /// Every file, for joining and periodic checks.
+    fn list(&self, nb: &RemoteNotebook) -> Result<Vec<RemoteEntry>>;
+    /// Changes since `cursor` (None = from now). Pages until `more` is false.
+    fn changes(&self, nb: &RemoteNotebook, cursor: Option<&Cursor>) -> Result<ChangePage>;
+    fn get(&self, nb: &RemoteNotebook, path: &str) -> Result<(Vec<u8>, Rev)>;
+    /// Write only if the remote is still at `expected` (None = must not exist yet).
+    fn put(&self, nb: &RemoteNotebook, path: &str, bytes: &[u8], expected: Option<&Rev>) -> Result<Put>;
+    /// Remove (to the backend's own trash where it has one), same rule as `put`.
+    fn remove(&self, nb: &RemoteNotebook, path: &str, expected: &Rev) -> Result<Put>;
+}
+
+pub struct RemoteEntry { pub path: String, pub rev: Rev, pub hash: Option<String>,
+                         pub size: u64, pub modified: i64, pub removed: bool }
+pub struct ChangePage  { pub entries: Vec<RemoteEntry>, pub cursor: Cursor, pub more: bool }
+pub enum   Put         { Written(Rev), Moved(Rev) /* someone else wrote first */ }
+pub struct Rev(pub String);      // opaque to the engine
+pub struct Cursor(pub String);   // opaque to the engine
+```
+
+The interface is deliberately file-shaped, so a backend is small: the "only if still at
+`expected`" rule is the one hard part, and each backend meets it in its own way.
+
+### 12.10 Backends
+
+**Google Drive (first).** Works on every platform.
+- **Access:** only files Noughtpad created (`drive.file`). Google rates that scope low-risk: it
+  needs basic checks of the Google Cloud project (app name, logo, privacy policy and home page
+  links, a verified domain), not the paid security audit that full Drive access needs. Google
+  reviews the project's details, not our code. **Starts in Testing mode** for dogfooding: only
+  listed test accounts can sign in, and sign-ins expire every 7 days. Before anyone else uses it,
+  fill in those details and switch the project to "In production".
+- **Sign-in:** OAuth with PKCE through the system browser and a loopback address
+  (`http://127.0.0.1:<port>`), the standard desktop flow. The refresh token goes in the OS
+  keychain like provider keys. The client id ships in the app (desktop client ids are not
+  secret).
+- **Layout:** a visible folder, `My Drive/Noughtpad/<notebook>/`, mirroring the notebook's paths,
+  so your notes are readable in Drive itself. Each file carries the notebook-relative path and
+  note id in `appProperties`.
+- **Changes:** `changes.list` with a saved page token; `md5Checksum` and `headRevisionId` per
+  file.
+- **"Only if still at `expected`":** Drive has no conditional write, so `put` uploads a new
+  revision and then reads the file's revision list. If the revision before ours isn't `expected`,
+  another device slipped in between. Drive kept both revisions, so the engine fetches theirs,
+  merges and uploads again. Nothing is lost, it just takes one more round.
+- **Warning:** if the notebook folder is already inside Google Drive for desktop, Dropbox or
+  iCloud Drive (`~/Library/CloudStorage/…`, `~/Library/Mobile Documents/…`), the app says so
+  before turning sync on, since two syncs on one folder fight each other.
+
+**iCloud (later, Apple devices only).** Waits for the Apple Developer Program decision: the
+iCloud permission only works in a signed app with a provisioning profile. Two ways, chosen when
+we get there: the app's iCloud Drive container with `NSFileCoordinator` (iCloud moves the files;
+the backend reads its conflict versions), or CloudKit records (we control every write, closer to
+the Drive design). A notebook uses one backend; to share a notebook with a non-Apple device it
+has to be on Google Drive.
+
+**Folder (tests only, for now).** A backend over a plain directory, used by the engine's tests
+and for trying sync between two notebooks on one machine. Could become a product feature (sync
+over a USB drive or a NAS) later.
+
+### 12.11 Testing
+
+- Merge rules as unit tests, plus property tests: random edit sequences on two simulated devices
+  must never lose a line that either device wrote, and repeating a sync must change nothing.
+- The engine against the folder backend with two or three simulated devices: offline edits,
+  delete vs edit, crash between steps (kill after each step, then rerun), a copied folder.
+- Drive against a real test account, by hand, before dogfooding.
+- Exit (ROADMAP M6): two Macs and one non-Apple device on one notebook for a week, no lost edits.
+
+### 12.12 Still open
+
+- **Notebook name on Drive** when two different notebooks share a name (likely: ask once and add
+  a suffix).
+- **Big files:** a size limit for images and PDFs (e.g. warn above 50 MB).
+- **Sync status in the UI:** a quiet dot in the top bar and a Settings → Sync section is the
+  default; a sync log viewer only if it's needed.
+- **Licensing and billing** (ROADMAP M6) come after the engine works.
+
+### 12.13 First slice (proposed)
+
+All in the open core, in this repo, testable without Google:
+1. **Device id** in the app data dir, with a name the user can change.
+2. **User-state as per-device logs** (`.noughtpad/user-state/<device-id>.jsonl`), with
+   `user-state.sqlite` rebuilt from them. On first start the existing rows are copied into this
+   device's log once. Useful already for anyone syncing the folder with Dropbox or Syncthing.
+3. **`SyncBackend` trait and types** in `noughtpad-core::sync`, plus the **folder backend** and
+   its tests (including the "only if still at `expected`" rule).
+4. **`Vault::apply_synced`** (atomic, refuses if the file changed) and the **change journal**
+   hooks, with tests; `sync/` added to `.noughtpad/.gitignore`.
+
+Then, in the private repo: slice 2 is the engine and the merge rules against the folder backend;
+slice 3 is Google Drive in Testing mode, dogfooded on your machines.

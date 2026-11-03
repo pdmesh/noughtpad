@@ -3,7 +3,12 @@
 Read this first next session, then `ROADMAP.md` (what's next) and
 `docs/DESIGN.md` (why things are the way they are).
 
-## Where things stand (2026-11-03, night)
+## Where things stand (2026-11-03, late night)
+
+- **M6 sync is designed** (`docs/DESIGN.md` §12), no code yet. Settled with the user: eager merge
+  rules, edit beats delete, notes + images/other files + user-state + chats + trash sync, Google
+  Drive first in Testing mode (it's only the user dogfooding), iCloud after the signing decision,
+  sync code in a separate private repo `pdmesh/noughtpad-sync` (not created yet).
 
 - **M1–M4.5 are done**, and CI is green.
 - **Verified on this Mac (Apple M4, 16 GB):** a `--features local-llm-metal` build; startup and the
@@ -70,9 +75,14 @@ Ollama provider (`qwen3.5:4b`) saved. "Open at login" is off.
 ### 1. Pick the next piece of work (the user chooses)
 
 The user is living with 0.1.1 on several machines for a few days. Good next pieces, none blocked:
-- **M6 sync design** (ROADMAP "Next: M6"): write the design first in `docs/DESIGN.md` (change
-  journal, three-way merge with base hashes in `.noughtpad/`, tombstones, the open `SyncBackend`
-  interface in `noughtpad-core`, Google Drive vs iCloud), before any code.
+- **M6 slice 1** (open core, this repo, no Google needed; DESIGN.md §12.13): device id;
+  user-state as per-device logs `.noughtpad/user-state/<device-id>.jsonl` with
+  `user-state.sqlite` rebuilt from them (copy existing rows once); `SyncBackend` trait and types
+  in `noughtpad-core::sync` plus a folder backend for tests; `Vault::apply_synced` and the change
+  journal; `sync/` in `.noughtpad/.gitignore`. Works in a cloud session too.
+  Before slice 2: the user creates the private repo `pdmesh/noughtpad-sync`. Before slice 3: a
+  Google Cloud project with the Drive API, OAuth consent screen in Testing with the user's
+  accounts as test users, and a desktop OAuth client id. Still open: §12.12.
 - **Minor items** from "Parked" below (UX leftovers such as dark mode and the minimum window size,
   chat history delete, related-notes dismiss/undo), or anything the user hit while dogfooding.
 
@@ -137,6 +147,8 @@ Noughtpad's signature".
   2026-11-03 (vs ~350 ms earlier) needs no chase.
 
 ### Done on 2026-11-03
+- Late night (cloud session): M6 sync design written in `docs/DESIGN.md` §12 after the user's
+  answers (decisions log entry 2026-11-03); ROADMAP M6 split into slices.
 - Morning: renamed Nought → Noughtpad; Mac build with Metal and speed numbers; startup bundle split
   (1.6 MB → 0.6 MB); window lifecycle per platform and the "Open at login" switch.
 - Evening: Mac checks and a UX pass on the sample notebook. Added a macOS menu bar
