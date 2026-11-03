@@ -83,8 +83,6 @@ pub fn build(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
     let window = SubmenuBuilder::new(app, "Window")
         .minimize()
         .maximize()
-        .separator()
-        .close_window()
         .build()?;
 
     MenuBuilder::new(app)

@@ -3,24 +3,21 @@
 Read this first next session, then `ROADMAP.md` (what's next) and
 `docs/DESIGN.md` (why things are the way they are).
 
-## Where things stand (2026-11-03)
+## Where things stand (2026-11-03, evening)
 
 - **M1–M4.5 are done**, and CI is green.
-- **Everything has been verified only on Linux:** in a cloud container, with the real Tauri app
-  under a virtual display, the real BGE embedding model, the real Qwen3-4B (CPU, about 45–60 s per
-  answer) and a fake OpenAI-compatible provider.
-- **Verified on a Mac (2026-11-03):** a local `--features local-llm-metal` build, startup time
-  (345–366 ms warm, mostly WKWebView creation), the 10k-note benchmark, and the window lifecycle:
-  closing hides the window, ⌘⇧Space and the Dock icon bring it back, ⌘Q quits, and `--hidden`
-  starts with no window.
-- **Never verified:**
-  - On macOS: the Keychain, Metal model speed, and the "Open at login" switch actually adding the
-    login item (`~/Library/LaunchAgents`).
-  - A real Anthropic, OpenAI or Ollama provider.
-  - A full 2.5 GB model download through the app.
-- **M5 so far:** the release workflow, the Settings page, the capture-speed check in CI
-  (`pnpm perf`), the rename, the Mac build and speed numbers, the startup bundle split, and the
-  platform window lifecycle with "Open at login".
+- **Verified on this Mac (Apple M4, 16 GB):** a `--features local-llm-metal` build; startup and the
+  10k-note benchmark; the window lifecycle (close hides, ⌘⇧Space and the Dock bring it back, ⌘Q
+  quits); quick capture with no lost keystrokes; "Open at login" adding and removing
+  `~/Library/LaunchAgents/Noughtpad.plist`; the 2.5 GB Qwen3 4B download with quit-and-resume;
+  Metal speed (first in-app answer 23 s, follow-up 6 s); Ollama with tool use; the provider key in
+  Keychain (`app.noughtpad.llm`) and not in `config.json`; paste/copy/undo right after launch.
+  Numbers are in DESIGN.md § M5 measurements.
+- **Never verified:** a real Anthropic, OpenAI or LM Studio provider (the user chose Ollama only for
+  now), the fallback when a model can't use tools, logging out and in with "Open at login" on, and
+  reading a saved key back after a rebuild.
+- **M5 so far:** everything above, plus a macOS menu bar, the first-visit blank-page fix, the
+  related-notes threshold at 0.63 and a plain out-of-memory message for the local model.
 
 ## Repo map
 
@@ -28,7 +25,7 @@ Read this first next session, then `ROADMAP.md` (what's next) and
 |---|---|
 | `crates/noughtpad-core` | Vault, SQLite index, FTS, embeddings, related notes, themes (`semantic/ideas.rs`), chat context scopes (`semantic/context.rs`) |
 | `crates/noughtpad-llm` | Model catalogue, checked and resumable downloads, local runtime (mistral.rs), remote providers and the tool loop (genai), keychain, prompts |
-| `src-tauri/src` | `lib.rs` (vault commands), `lifecycle.rs` (window hide/reopen, open at login), `semantic.rs`, `think.rs` (Models page commands), `chat.rs` (chat, tools, consent, `.noughtpad/chats/`) |
+| `src-tauri/src` | `lib.rs` (vault commands), `lifecycle.rs` (window hide/reopen, open at login), `menu.rs` (macOS menu bar), `semantic.rs`, `think.rs` (Models page commands), `chat.rs` (chat, tools, consent, `.noughtpad/chats/`) |
 | `src/` | React UI. Views: `Chat`, `Models`, `Settings`, `Ideas`, `Journal`. `lib/mockBackend.ts` and `lib/mockLlm.ts` let the UI run in a plain browser |
 | `tests/perf/capture.mjs` | Capture-speed budget |
 | `tools/eval/` | Model evaluations (embeddings, judges, SLMs) |
@@ -49,67 +46,63 @@ cargo clippy -p noughtpad-llm --all-targets --features local,remote,keychain -- 
 
 ## Next session, step by step (on the Mac)
 
-Run on this Mac with computer use (background `app_*` tools work for the app window; global
-shortcuts need full-screen control). The local build is the quickest:
-`pnpm install && pnpm tauri build --features local-llm-metal --bundles app`, which lands in
-`target/release/bundle/macos/Noughtpad.app` (about 7 minutes from clean, about 1 minute after).
+The local build is the quickest: `pnpm tauri build --features local-llm-metal --bundles app`
+(about 1–2 minutes after the first build) lands in `target/release/bundle/macos/Noughtpad.app`.
 Launch it on the sample notebook with
-`open --env NOUGHTPAD_VAULT="$HOME/Noughtpad Sample" target/release/bundle/macos/Noughtpad.app`
-(`node scripts/sample-vault.mjs` creates the folder). Rust must be 1.94 or newer for mistral.rs.
+`open --env NOUGHTPAD_VAULT="$HOME/Noughtpad Sample" target/release/bundle/macos/Noughtpad.app`, or
+run `Contents/MacOS/noughtpad-app` directly with that variable to get the log (`setup`,
+`editor ready`, model load times). Every app command is in the menu bar now, so background
+computer use can drive it with `app_menu` (Go → Language Models, View → Chat…); paste, global
+shortcuts and resizing need full-screen control.
 
-### 1. Open Mac checks
-- **Open at login:** the user turns it on in Settings → Start-up (the agent's auto mode blocks
-  adding login items). Expect a plist in `~/Library/LaunchAgents`; log out and in, and the app
-  should be running with no window. Turning it off removes the plist.
-- **Local model with Metal:** download in Settings → Language models (2.5 GB; also covers the
-  ROADMAP item "full download, resume after quitting midway"), then
-  ```sh
-  cargo run --release -p noughtpad-llm --features local-metal --example ask -- \
-    ~/Library/Application\ Support/app.noughtpad.desktop/models/llm qwen3-4b-instruct-2507-q4km
-  ```
-  Compare with about 8 tok/s on a 4-core CPU. In the app, time the first chat answer after launch
-  and a follow-up. Record the numbers in DESIGN.md § M5 measurements.
+State on this Mac: `~/Noughtpad Sample` has 2 test notes and 2 chats from the UX pass
+(`node scripts/sample-vault.mjs` recreates it). The app config has the local Qwen3 4B active and an
+Ollama provider (`qwen3.5:4b`) saved. "Open at login" is off.
 
-### 2. UX pass with computer use
-On the sample notebook and then on real notes:
-- **Capture:** ⌘⇧Space from another app, type at once, then check that labels, source and title
-  appear on hover. Check that the sidebar and toolbar stay hidden while typing.
-- **Editor:** paste Markdown and rich text, copy out, Mermaid, maths, tasks, images (drag and
-  paste). Paste/copy and inline maths now load lazily after startup; check them right after launch.
-- **Related notes:** ⌘J, open, dismiss and undo. Check that the reasons make sense.
-- **Ideas over time** and theme pages: check that themes and influences match the notebook.
-- **Chat:** each scope, follow-ups, history panel (open, delete, hide), navigate away while an
-  answer streams, citations.
-- **Models:** download (pause and resume), Use, Turn off, add a provider, the consent card.
-- **Settings:** every switch and button. Check that preferences survive a restart.
-- Dark mode, small windows (minimum 480×360) and keyboard-only use.
+### 1. Finish the UX pass
+- Dark mode, the minimum window size (480×360), keyboard-only use.
+- Related notes: dismiss and undo; check the reasons. Chat: history delete and hide, leaving a chat
+  while it streams. Editor: images (drag and paste) and Mermaid.
+- Then the user's real notes (`~/Documents/Noughtpad`): does 0.63 still keep related notes on topic?
+- Recheck startup after a reboot: warm launches measured ~550 ms to `editor ready` late on
+  2026-11-03, against ~350 ms earlier that day, and none of the day's changes explain it (see
+  DESIGN.md).
 
-### 3. Real providers (needs the user's keys)
-Run the same question with each provider:
-- An **Anthropic** key, and an **OpenAI** key. Expect search/read steps to appear, and the answer
-  not to list sources.
-- **Ollama** (`ollama serve`, then pull `qwen3:4b`) and **LM Studio**. Check whether tool calls
-  work, and that the fallback (app-chosen notes) kicks in when they don't.
+### 2. Providers
+- When the user has keys: Anthropic and OpenAI. The user pastes the key into Models → Add a
+  provider (the computer-use tool can't type into password fields anyway). Expect search/read steps
+  and an answer that doesn't list sources.
+- LM Studio, if installed, and the tool fallback (a model that rejects tools should get app-chosen
+  notes).
+- Read a key back after a rebuild: the build is ad-hoc signed, so macOS may ask for Keychain access.
 
-Also check that the key ends up in Keychain Access (service `app.noughtpad.llm`), not in
-`~/Library/Application Support/app.noughtpad.desktop/config.json`.
-
-### 4. Then
+### 3. Then
 - **Auto-update:** run `pnpm tauri signer generate`, add the public key and updater endpoint, and
   store the private key as `TAURI_SIGNING_PRIVATE_KEY`.
 - **Signing**, once the user decides to pay: Apple Developer Program, then the secrets listed at
   the top of `release.yml`.
-- **Start dogfooding** (ROADMAP M5 exit), then M6 sync design.
+- **Start dogfooding** (ROADMAP M5 exit): install the app in /Applications, turn "Open at login" on
+  there, then M6 sync design.
 
 ### Done on 2026-11-03
-- Renamed Nought → Noughtpad everywhere (no data migration needed).
-- Mac build with Metal; speed numbers in DESIGN.md § M5 measurements. Startup is ~350 ms warm,
-  mostly WKWebView creation, so the 300 ms goal is met by keeping the app running instead.
-- Startup bundle split (1.6 MB → 0.6 MB main chunk).
-- Window lifecycle per platform (`src-tauri/src/lifecycle.rs`) and the "Open at login" switch.
+- Morning: renamed Nought → Noughtpad; Mac build with Metal and speed numbers; startup bundle split
+  (1.6 MB → 0.6 MB); window lifecycle per platform and the "Open at login" switch.
+- Evening: Mac checks and a UX pass on the sample notebook. Added a macOS menu bar
+  (`src-tauri/src/menu.rs`) with Settings ⌘, and the app's commands; fixed a blank page on the
+  first visit to each page (`page()` in `src/App.tsx`); raised `min_related` 0.60 → 0.63 after
+  unrelated short notes showed up as related; a plain message when the local model doesn't fit in
+  free memory.
 
 ## Known limits and gotchas
 
+- **GPU memory is shared with Ollama/LM Studio:** with Ollama holding a model (7.5 GB for
+  `qwen3.5:4b`, since Ollama gives it a 131k context), the local 4B model can't load on a 16 GB Mac.
+  The app says so plainly. Sending a smaller `num_ctx` to Ollama would help (Backlog candidate).
+- **Editor lists:** Enter after a task adds `- [ ] ` automatically, so typing `- [x] ` by hand gives
+  `- [ ] - [x] …`; Enter on an empty item clears it without a blank line, so the next paragraph
+  joins the list in Markdown.
+- **Deleting a provider** (trash icon) removes it and its key at once, with no confirm or undo.
+- **`examples/ask`** answers without `[n]` citations, unlike the app; don't use it to check citing.
 - **Unsigned builds:** macOS Gatekeeper blocks them until `xattr -cr` or right-click → Open, and
   Windows SmartScreen warns.
 - **First model load:** the first load of the 2.5 GB local model reads it from disk, which took

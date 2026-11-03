@@ -24,10 +24,10 @@ The goal is a build on your own Mac, used daily for two weeks.
 - [x] Renamed from Nought (taken) to Noughtpad before daily use: bundle ID, keychain service, `.noughtpad` data folder, crates, packages, docs
 - [x] Mac build with Metal; startup and 10k-note speed measured (`docs/DESIGN.md` § M5 measurements); startup bundle split
 - [x] Platform window lifecycle: on macOS closing hides and ⌘⇧Space/Dock bring it back; "Open at login" setting
-- [ ] Mac checks still open: local model speed with Metal, keychain, "Open at login" switch
-- [ ] UX pass on macOS using computer use: writing, related notes, ideas, chat, models
-- [ ] Real providers: an Anthropic or OpenAI key, Ollama and LM Studio, including tool use
-- [ ] Full 2.5 GB model download through the app (resume after quitting midway)
+- [x] Mac checks: local model speed with Metal (`docs/DESIGN.md` § M5 measurements), keychain (key stored under `app.noughtpad.llm`, not in `config.json`; deleted with the provider), "Open at login" (adds and removes `~/Library/LaunchAgents/Noughtpad.plist`). Left: log out and in to see the hidden launch; read a key back after a rebuild
+- [ ] UX pass on macOS using computer use. Done on the sample notebook: capture and ⌘⇧Space, paste/copy/undo right after launch, maths and tasks, related notes, ideas and theme pages, journal, chat (local and Ollama, follow-ups, citations, consent), models, preferences surviving a restart. Fixed: a macOS menu bar (Settings ⌘, and the app's commands were missing), a blank page on the first visit to each page, unrelated related-notes (threshold 0.60 → 0.63), a raw out-of-memory error. Left: dark mode, the minimum window size, keyboard-only use, dismiss/undo of related notes, chat history delete/hide, leaving a chat while it streams, images and Mermaid, your real notes
+- [ ] Real providers: Ollama works, including tool use. Left: an Anthropic or OpenAI key, LM Studio, and the fallback when a model can't use tools
+- [x] Full 2.5 GB model download through the app: ~5 min, quit at 0.8 GB and it resumed from there
 - [ ] Auto-update: generate the updater key, add the `tauri-plugin-updater` endpoint, publish `latest.json` with releases
 - [ ] Signing: Apple Developer Program ($99/yr) for notarisation; Windows via Azure Artifact Signing (~$10/mo) when Windows matters
 - [ ] Dogfood for two weeks; track the dismiss rate of related notes and anything that slows capture

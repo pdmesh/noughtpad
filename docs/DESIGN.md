@@ -370,14 +370,54 @@ now load after the editor is ready (main chunk 1.6 MB → 0.6 MB). `pnpm perf` d
 81 ms; the real app gained ~20 ms. So 300 ms from a cold process isn't reachable on WKWebView. The
 budget that matters is quick capture into an app that's already running.
 
-**M2 status (2026-11-02): complete, verified with the real model** in the desktop app on the sample notebook. 33 notes were connected about 3 s after launch. Indexing runs at about 37 notes/s using 2 CPU threads. Related-note lookup takes about 3 ms and hybrid search about 25 ms, including the query embedding. On a hand-written 13-note test set, all 20 related suggestions were on the same topic.
+Later the same day (after the window-lifecycle change, the menu bar and the lazy-page fix) warm
+launches measured `setup` ~350–370 ms and `editor ready` ~545–600 ms. The extra ~180 ms is all
+before Tauri's setup, i.e. window and WKWebView creation. It's the same with the menu bar removed
+and with the window created visible, and `pnpm perf` is unchanged (81 ms), so it isn't from those
+changes; the cause is unknown. Recheck after a reboot. Quick capture into the running app (⌘⇧Space,
+then typing at once) lost no keystrokes.
+
+**Local model on Metal (2026-11-03, Apple M4, 16 GB, Qwen3 4B Instruct Q4_K_M):**
+
+| Measure | Result |
+|---|---|
+| Download through the app, 2.5 GB, quit at 0.8 GB and resumed | ~5 min in all; resumed from 0.8 GB |
+| Model load (`examples/ask`) | 19 s from disk, ~5 s when the file is cached |
+| Model load in the app (warm-up when Chat opens) | 17 s |
+| `examples/ask`: 315-token prompt, 64-token answer | 3.4 s, ~19 tok/s overall including prefill (CPU: ~8 tok/s decode on 4 cores). A longer run is needed for a pure decode rate |
+| In the app, first answer after launch (whole notebook, 6 notes) | 23 s from sending, ~11 s of it waiting for the load |
+| In the app, follow-up | 6 s |
+
+In the app both answers cited their notes; the `ask` example's answers had no `[n]` markers
+(`cited: []`, two runs), so its prompt or settings differ and it's not a citation check.
+
+The model doesn't fit when another app holds GPU memory: with Ollama keeping `qwen3.5:4b` loaded
+(7.5 GB, because Ollama gave it a 131k context), mistral.rs saw 1.2 GB free and refused to load.
+The app now says so in plain words (`local::load_error`).
+
+**Ollama (`qwen3.5:4b`, same Mac):** the tool loop works: search, then three note reads, then an
+answer with citations. First answer 1 min 43 s over five requests, including ~30 s to load the model;
+decode 18–22 tok/s, prefill ~208 tok/s. Most of the time is the model's own thinking.
+
+**Keychain:** a provider key is stored under service `app.noughtpad.llm`, account = the provider's
+id, and `config.json` holds none. Deleting the provider deletes the item. Reading it back after a
+rebuild (ad-hoc signed, so macOS may ask) is untested.
+
+**macOS menu bar:** the app replaces Tauri's default menu (`src-tauri/src/menu.rs`): Settings… ⌘,,
+File → New Note ⌘N, View → Show or Hide Sidebar `⌘\`, Search Notes ⌘K, Related Notes ⌘J, Chat ⌘L,
+and a Go menu for each page. Each item emits a `menu` event; the UI runs the same command as the
+shortcut and ignores the second one when the page and the menu both see a key (checked: `⌘\` and ⌘K
+fire once). Edit → Undo/Cut/Copy/Paste are the standard items: paste of Markdown right after launch
+renders, and copy puts Markdown text and HTML on the clipboard.
+
+**M2 status (2026-11-02): complete, verified with the real model** in the desktop app on the sample notebook. 33 notes were connected about 3 s after launch. Indexing runs at about 37 notes/s using 2 CPU threads. Related-note lookup takes about 3 ms and hybrid search about 25 ms, including the query embedding. On a hand-written 13-note test set, all 20 related suggestions were on the same topic (still 20 of 20 at `min_related` 0.63 in M5).
 - Background worker: notes are embedded only after 3 s without edits, newest first, in batches of 16, yielding between batches.
 - Vectors are cached by `(model, chunk-text hash)`, so index rebuilds, renames and unchanged saves never re-run the model.
 - Related notes score each note against all others with `0.5·mean-vector similarity + 0.5·best passage-pair similarity`. A note is kept only above the model's `min_related` and at least 1σ above that note's own similarity distribution, which filters "everything looks alike" notes. Small boosts apply for shared labels and the same source.
 - Each related note shows the matching passage, the passage it matched in your note, shared labels, same source and time apart. Wording is cautious: "These ideas appear connected" / "Possibly related".
 - Dismissals live in `.noughtpad/user-state.sqlite`. They are not disposable and apply in both directions.
 - Hybrid search fuses FTS5 and vector ranks (reciprocal rank fusion, k = 60). Meaning-only hits are marked "similar meaning", and label/type filters apply to them too.
-- The CI `model` job downloads the real model and checks that the thresholds separate related from unrelated sentences. Measured: related pairs 0.66–0.88, unrelated pairs up to 0.57, so `min_related` was 0.60; raised to 0.63 in M5 after the Mac UX pass, where short notes on different topics (a run log next to a bread note) scored 0.60–0.63 on the sample notebook and no same-topic suggestion fell below 0.63. This favours precision: two short sourdough notes with no shared vocabulary are missed rather than letting false links in. `examples/semantic.rs` reproduces the quality and speed check. The app logs `editor ready ms=…` on every launch.
+- The CI `model` job downloads the real model and checks that the thresholds separate related from unrelated sentences. Measured: related pairs 0.66–0.88, unrelated pairs up to 0.57, so `min_related` was 0.60; raised to 0.63 in M5 after the Mac UX pass, where short notes on different topics (a run log next to a bread note) scored 0.60–0.63 on the sample notebook and no same-topic suggestion fell below 0.63 (tuned on those same 37 notes, so check it on real notes). This favours precision: two short sourdough notes with no shared vocabulary are missed rather than letting false links in. `examples/semantic.rs` reproduces the quality and speed check. The app logs `editor ready ms=…` on every launch.
 
 ---
 
