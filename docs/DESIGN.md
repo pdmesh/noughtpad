@@ -406,6 +406,17 @@ Reproduce with `cargo run --release -p nought-core --example bench -- 10000`.
 - **Visibility and control:** the panel says "Tuned to what you open and dismiss here". `⌘K → Reset what related notes learned` clears it; dismissals stay hidden.
 - **Tests:** unit tests cover the prior and the learning. An integration test checks that feedback on other notes stops cross-topic look-alikes from appearing for a new note while same-topic suggestions remain.
 
+**Concept extraction (2026-11-03): evaluated, not shipped.** Scripts are in `tools/eval/`.
+- **GLiNER** (`gliner_small-v2.1`, int8, 183 MB, Apache-2.0, about 20 ms per note):
+  - It is excellent at *names*: places (Tokyo, Asakusa, Fushimi Inari), authors and book titles.
+  - It is poor at *concepts*. At 0.5 it misses "power law", "fund outcome", "sourdough" and "half marathon", labels "Ownership" an organisation and "Zettelkasten" a book, and counts "someone"/"Nobody"/"I" as people.
+  - At thresholds low enough to catch "Portfolio construction" it adds junk ("compare", "quote", "Idea").
+  - Separately, `gline-rs` is built on ort rc.9 and cannot share a process with fastembed's rc.15. Shipping it would mean porting its pre- and post-processing.
+- **Embedding key phrases** (KeyBERT-style with the existing BGE model, no download): about half the phrases are clean ("sourdough starter", "half marathon", "portfolio construction", "concentration beats diversification") and the rest are fragments ("law the job", "gion visit fushimi").
+  - Too noisy to show per note.
+  - Possibly useful later in aggregate (phrases that recur across notes) for a concept index or theme names.
+- **Decision:** neither ships. Revisit concept timelines after M4, ideally with recurrence-based aggregation.
+
 ## 9. Risks I would watch from day one
 
 - **Capture friction creep:** add a performance budget test (time-to-type) to CI.
