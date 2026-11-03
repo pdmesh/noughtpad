@@ -328,6 +328,26 @@ export async function mock(cmd: string, a: Record<string, any> = {}): Promise<un
       return autostart;
     case "set_autostart":
       return (autostart = Boolean(a.on));
+    // ?update=available pretends a newer release exists; ?update=offline that GitHub can't be reached.
+    case "app_version":
+      return "0.1.0";
+    case "update_check": {
+      await new Promise((r) => setTimeout(r, 400));
+      const mode = new URLSearchParams(globalThis.location?.search ?? "").get("update");
+      if (mode === "offline") throw { kind: "update", message: "Couldn't reach GitHub. Check your connection and try again." };
+      return {
+        current: "0.1.0",
+        available: mode === "available" ? { version: "0.1.1", notes: "Checks for updates.", date: "2026-11-03" } : null,
+      };
+    }
+    case "update_install": {
+      const total = 12_000_000;
+      for (let d = 0; d <= total; d += 3_000_000) {
+        emit("update-progress", { downloaded: d, total });
+        await new Promise((r) => setTimeout(r, 150));
+      }
+      throw { kind: "update", message: "This is the browser preview, so there's nothing to restart." };
+    }
     case "open_vault":
       return { path: a.path, noteCount: notes.length, defaultPath: "/mock/Noughtpad" };
     case "list_notes":

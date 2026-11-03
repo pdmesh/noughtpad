@@ -4,3 +4,6 @@ dist/
 .DS_Store
 *.log
 src-tauri/gen/
+
+# Updater signing key (`pnpm tauri signer generate`): never commit the private key
+*.key

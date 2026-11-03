@@ -2129,6 +2129,10 @@ button.cue:hover {
   font-size: 0.8rem;
   line-height: 1.45;
 }
+.settings-notes {
+  margin: 0.25rem 0 0;
+  white-space: pre-wrap;
+}
 .switch {
   flex-shrink: 0;
   width: 36px;

@@ -1,5 +1,5 @@
 //! The macOS menu bar. Besides the standard App/Edit/Window menus it lists the
-//! app's own commands (Settings ⌘,, New Note, Show Sidebar, Chat…), so they
+//! app's own commands (Check for Updates…, Settings ⌘,, New Note, Show Sidebar, Chat…), so they
 //! are discoverable and reachable without the hover-only sidebar.
 //!
 //! Each custom item emits a `menu` event carrying its id; the UI runs the same
@@ -9,7 +9,10 @@ use tauri::menu::{AboutMetadata, Menu, MenuBuilder, MenuEvent, MenuItemBuilder, 
 use tauri::{AppHandle, Emitter};
 
 /// Custom items: (id, title, accelerator).
-const APP_ITEMS: &[(&str, &str, &str)] = &[("settings", "Settings…", "CmdOrCtrl+,")];
+const APP_ITEMS: &[(&str, &str, &str)] = &[
+    ("check-updates", "Check for Updates…", ""),
+    ("settings", "Settings…", "CmdOrCtrl+,"),
+];
 const FILE_ITEMS: &[(&str, &str, &str)] = &[("new-note", "New Note", "CmdOrCtrl+N")];
 const VIEW_ITEMS: &[(&str, &str, &str)] = &[
     ("toggle-sidebar", "Show or Hide Sidebar", "CmdOrCtrl+\\"),

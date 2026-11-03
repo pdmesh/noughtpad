@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronRight, FolderOpen } from "lucide-react";
 import { api, type VaultInfo } from "../lib/api";
 import { describeStatus, useSemanticStatus } from "../lib/useSemantic";
+import { checkForUpdates, describeUpdate, installUpdate, useUpdateState } from "../lib/updates";
 import { useLlm } from "./Models";
 
 const isMac = typeof navigator !== "undefined" && /Mac/i.test(navigator.platform);
@@ -124,6 +125,8 @@ export function SettingsView({
         </Row>
       </section>
 
+      <Updates />
+
       <section className="settings-section">
         <h3 className="ideas-section-title">Keyboard</h3>
         <dl className="shortcuts">
@@ -138,6 +141,34 @@ export function SettingsView({
         </dl>
       </section>
     </div>
+  );
+}
+
+function Updates() {
+  const update = useUpdateState();
+  const { data: version } = useQuery({ queryKey: ["app-version"], queryFn: api.appVersion, staleTime: Infinity });
+  const busy = update.kind === "checking" || update.kind === "installing";
+  const canInstall = update.kind === "available" || (update.kind === "error" && update.version);
+  const status = describeUpdate(update);
+  return (
+    <section className="settings-section">
+      <h3 className="ideas-section-title">Updates</h3>
+      <Row
+        label={version ? `Noughtpad ${version}` : "Noughtpad"}
+        hint={status ?? "Noughtpad only looks for updates when you ask. Updates come from GitHub and are checked against Noughtpad's signature before they install."}
+      >
+        {canInstall ? (
+          <button className="btn btn-small" onClick={() => void installUpdate()}>
+            {update.kind === "error" ? "Try again" : "Install and restart"}
+          </button>
+        ) : (
+          <button className="btn btn-small" disabled={busy} onClick={() => void checkForUpdates()}>
+            Check for updates
+          </button>
+        )}
+      </Row>
+      {update.kind === "available" && update.notes && <p className="settings-hint faint settings-notes">{update.notes}</p>}
+    </section>
   );
 }
 

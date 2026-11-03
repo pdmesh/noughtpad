@@ -44,5 +44,13 @@
       "minimumSystemVersion": "11.0",
       "signingIdentity": "-"
     }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDE1Rjg2OTY1NDMyMzA3NzgKUldSNEJ5TkRaV240RlptYTl1Ry84MXZMV3RXaXI1TTg2UWpLWlFncVpXNjNWOUlCSWRkUDVBT2MK",
+      "endpoints": [
+        "https://github.com/pdmesh/noughtpad/releases/latest/download/latest.json"
+      ]
+    }
   }
 }

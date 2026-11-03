@@ -324,6 +324,11 @@ export interface ChatDoneEvent {
   chatId: string;
 }
 
+export interface UpdateCheck {
+  current: string;
+  available: { version: string; notes: string | null; date: string | null } | null;
+}
+
 export interface ApiError {
   kind: "conflict" | "notFound" | "noVault" | "io" | "internal" | "invalid" | "provider" | "consent" | "noModel" | "cancelled";
   message: string;
@@ -364,6 +369,10 @@ export const api = {
   rebuildIndex: () => call<{ indexed: number; unchanged: number; removed: number }>("rebuild_index"),
   autostartEnabled: () => call<boolean>("autostart_enabled"),
   setAutostart: (on: boolean) => call<boolean>("set_autostart", { on }),
+  appVersion: () => call<string>("app_version"),
+  updateCheck: () => call<UpdateCheck>("update_check"),
+  /** Restarts the app on success. */
+  updateInstall: () => call<void>("update_install"),
   semanticStatus: () => call<SemanticStatus>("semantic_status"),
   enableSemantic: () => call<SemanticStatus>("enable_semantic"),
   disableSemantic: () => call<SemanticStatus>("disable_semantic"),

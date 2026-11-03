@@ -36,6 +36,7 @@ This document turns that thesis into a concrete architecture and build plan. Ite
 | 2026-11-03 | No embedded third-party agent harness (e.g. pi): our Rust layer already routes models and keeps keys in the keychain. Chat gets a small built-in tool loop instead. Workflow files and cost display are dropped for now. |
 | 2026-11-03 | Chat is a full page with the input docked at the bottom of the window; past chats are listed in a right-hand panel on the chat page (like Related; toggled from the top bar) and open as pages. Chats are saved to `.noughtpad/chats/` (this replaces the Think page and "Kept"). Online models search and read notes through read-only tools bounded by the chat's scope; the user approves a chat's scope and destination once. Local models get the most relevant notes per question. Answers don't re-list sources, because the steps already show which notes were read. |
 | 2026-11-03 | M5 "ship it to yourself": release workflow (macOS with Metal, Windows, Linux; signing optional), Settings page, capture-speed budget in CI. Kept answers and workflow files are dropped. Plan in `ROADMAP.md`. |
+| 2026-11-03 | Auto-update through `tauri-plugin-updater` from GitHub Releases. It only checks when asked (Settings → Updates, or Noughtpad → Check for Updates… on macOS) and installs only when the user presses **Install and restart**; there is no background check and no pop-up. Every update bundle is signed with Noughtpad's updater key and checked against the public key built into the app. Updates go out when a draft release is **published**. |
 | 2026-11-03 | Built-in two-way sync (Google Drive everywhere; iCloud on Apple devices only, as iCloud has no API elsewhere) and iOS/Android apps are planned as a paid, proprietary add-on. The core stays FSL, with an open `SyncBackend` interface. |
 | 2026-11-03 | Window lifecycle follows each platform. On macOS, closing the window hides it and the app keeps running (Dock icon reopens, ⌘Q quits), so ⌘⇧Space capture is instant instead of waiting ~350 ms for WKWebView. On Windows and Linux, closing quits. "Open at login" (off by default) starts hidden on macOS and minimised elsewhere. |
 | 2026-11-02 | Extensions reuse the CodeMirror 6 and unified (remark/rehype) ecosystems; no bespoke plugin ecosystem. |
@@ -410,7 +411,23 @@ shortcut and ignores the second one when the page and the menu both see a key (c
 fire once). Edit → Undo/Cut/Copy/Paste are the standard items: paste of Markdown right after launch
 renders, and copy puts Markdown text and HTML on the clipboard.
 
-**M2 status (2026-11-02): complete, verified with the real model** in the desktop app on the sample notebook. 33 notes were connected about 3 s after launch. Indexing runs at about 37 notes/s using 2 CPU threads. Related-note lookup takes about 3 ms and hybrid search about 25 ms, including the query embedding. On a hand-written 13-note test set, all 20 related suggestions were on the same topic (still 20 of 20 at `min_related` 0.63 in M5).
+**Auto-update:** the app asks
+`https://github.com/pdmesh/noughtpad/releases/latest/download/latest.json`, which GitHub serves
+from the newest published (not draft, not pre-release) release. `latest.json` lists, per platform,
+the version, the bundle's URL and its signature. The Release workflow makes these only when the
+`TAURI_SIGNING_PRIVATE_KEY` secret is set (it passes `--config src-tauri/tauri.updater.conf.json`,
+which turns on `createUpdaterArtifacts`), so local builds and forks without the key still build.
+Bundles: macOS `Noughtpad.app.tar.gz` (Apple Silicon only, as that's the only Mac build), Windows
+the NSIS `.exe` (per user, no admin prompt), Linux the `.AppImage`; each with a `.sig`. The updater
+compares versions, so each release needs a higher `version` in the root `Cargo.toml` (the app takes
+its version from there). On macOS the install replaces the `.app` in place and restarts it, so the
+app must sit somewhere writable (/Applications is, a mounted DMG isn't).
+
+The updater key's public half is in `src-tauri/tauri.conf.json` (`plugins.updater.pubkey`); the
+private half and its password exist only with the user and in the GitHub secrets. Losing either
+means existing installs can't take updates any more and need one manual reinstall with a new key.
+
+: complete, verified with the real model** in the desktop app on the sample notebook. 33 notes were connected about 3 s after launch. Indexing runs at about 37 notes/s using 2 CPU threads. Related-note lookup takes about 3 ms and hybrid search about 25 ms, including the query embedding. On a hand-written 13-note test set, all 20 related suggestions were on the same topic (still 20 of 20 at `min_related` 0.63 in M5).
 - Background worker: notes are embedded only after 3 s without edits, newest first, in batches of 16, yielding between batches.
 - Vectors are cached by `(model, chunk-text hash)`, so index rebuilds, renames and unchanged saves never re-run the model.
 - Related notes score each note against all others with `0.5·mean-vector similarity + 0.5·best passage-pair similarity`. A note is kept only above the model's `min_related` and at least 1σ above that note's own similarity distribution, which filters "everything looks alike" notes. Small boosts apply for shared labels and the same source.

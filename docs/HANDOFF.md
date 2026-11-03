@@ -3,7 +3,7 @@
 Read this first next session, then `ROADMAP.md` (what's next) and
 `docs/DESIGN.md` (why things are the way they are).
 
-## Where things stand (2026-11-03, evening)
+## Where things stand (2026-11-03, late)
 
 - **M1–M4.5 are done**, and CI is green.
 - **Verified on this Mac (Apple M4, 16 GB):** a `--features local-llm-metal` build; startup and the
@@ -17,7 +17,10 @@ Read this first next session, then `ROADMAP.md` (what's next) and
   now), the fallback when a model can't use tools, logging out and in with "Open at login" on, and
   reading a saved key back after a rebuild.
 - **M5 so far:** everything above, plus a macOS menu bar, the first-visit blank-page fix, the
-  related-notes threshold at 0.63 and a plain out-of-memory message for the local model.
+  related-notes threshold at 0.63, a plain out-of-memory message for the local model, and
+  **auto-update** (code, key and workflow done; the two-release check on the Mac is step 1 below).
+- **Apple signing is deferred:** no Developer Program for now. The user runs unsigned builds on
+  their own Macs with right-click → Open for a few weeks, then decides.
 
 ## Repo map
 
@@ -25,7 +28,7 @@ Read this first next session, then `ROADMAP.md` (what's next) and
 |---|---|
 | `crates/noughtpad-core` | Vault, SQLite index, FTS, embeddings, related notes, themes (`semantic/ideas.rs`), chat context scopes (`semantic/context.rs`) |
 | `crates/noughtpad-llm` | Model catalogue, checked and resumable downloads, local runtime (mistral.rs), remote providers and the tool loop (genai), keychain, prompts |
-| `src-tauri/src` | `lib.rs` (vault commands), `lifecycle.rs` (window hide/reopen, open at login), `menu.rs` (macOS menu bar), `semantic.rs`, `think.rs` (Models page commands), `chat.rs` (chat, tools, consent, `.noughtpad/chats/`) |
+| `src-tauri/src` | `lib.rs` (vault commands), `lifecycle.rs` (window hide/reopen, open at login), `menu.rs` (macOS menu bar), `updater.rs` (check, install, restart), `semantic.rs`, `think.rs` (Models page commands), `chat.rs` (chat, tools, consent, `.noughtpad/chats/`) |
 | `src/` | React UI. Views: `Chat`, `Models`, `Settings`, `Ideas`, `Journal`. `lib/mockBackend.ts` and `lib/mockLlm.ts` let the UI run in a plain browser |
 | `tests/perf/capture.mjs` | Capture-speed budget |
 | `tools/eval/` | Model evaluations (embeddings, judges, SLMs) |
@@ -59,20 +62,55 @@ State on this Mac: `~/Noughtpad Sample` has 2 test notes and 2 chats from the UX
 (`node scripts/sample-vault.mjs` recreates it). The app config has the local Qwen3 4B active and an
 Ollama provider (`qwen3.5:4b`) saved. "Open at login" is off.
 
-### 1. Auto-update (next)
-- `pnpm tauri signer generate` for the updater key pair. The public key goes in `tauri.conf.json`;
-  the user stores the private key (and its password) as GitHub secrets `TAURI_SIGNING_PRIVATE_KEY`
-  and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`. Never commit it.
-- Add `tauri-plugin-updater` with an endpoint on GitHub Releases, have `release.yml` publish
-  `latest.json` and the signed update bundles, and add a quiet "Check for updates" in Settings
-  (and the app menu).
-- Check the flow end to end on this Mac with two tagged releases. Builds are unsigned for Apple
-  until the user pays for the Developer Program; note what Gatekeeper does on an update.
+### 1. Finish auto-update: the two-release check (next)
+
+Done already: `tauri-plugin-updater` (`src-tauri/src/updater.rs`), the public key and the endpoint
+in `src-tauri/tauri.conf.json`, Settings → Updates (`src/lib/updates.ts`), Noughtpad → Check for
+Updates… in the menu, and `release.yml` making signed update bundles and `latest.json` when the
+updater secret exists. How it works: `docs/DESIGN.md` § Auto-update.
+
+Before the check, the user must have stored the two GitHub secrets
+(`TAURI_SIGNING_PRIVATE_KEY`, `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`). The private key was generated
+on 2026-11-03 and handed to the user; it is not in the repo (`*.key` is git-ignored). Check with
+`gh secret list --repo pdmesh/noughtpad`.
+
+1. **Release A (0.1.1):** set `version = "0.1.1"` in the root `Cargo.toml` (`[workspace.package]`)
+   and `package.json`, commit, `git tag v0.1.1 && git push origin main v0.1.1`. Wait for Actions →
+   Release (20–40 min). On the draft release check that `latest.json`,
+   `Noughtpad.app.tar.gz` and `Noughtpad.app.tar.gz.sig` are attached, then press **Publish**.
+2. **Install A like a user:** download the `.dmg` from the release in Safari, drag Noughtpad to
+   /Applications, right-click → Open (note exactly what Gatekeeper shows). Settings → Updates should
+   say 0.1.1 and "You have the newest version."
+3. **Release B (0.1.2):** bump to 0.1.2 the same way, tag `v0.1.2`, wait, publish.
+4. **Update:** in the running 0.1.1, Noughtpad → Check for Updates… → Settings shows "Version
+   0.1.2 is available" → **Install and restart**. Expect: download progress, the app restarts as
+   0.1.2.
+5. **Write down** in DESIGN.md § Auto-update what Gatekeeper did at step 2 and after step 4, how long
+   the download took, and whether macOS asked for the keychain (only if a provider key is saved).
+   Then drop "Left: …" from the ROADMAP item.
+
+What Gatekeeper should do (expected, not yet seen on a Mac): the first install is quarantined
+because Safari downloaded it, so it needs right-click → Open once (or
+`xattr -cr /Applications/Noughtpad.app`). Updates are downloaded by the app itself, which doesn't
+mark files as quarantined, so the updated app should open with no prompt. Each build has a new
+ad-hoc signature, so macOS may treat it as a different app for anything tied to the signature:
+the keychain may ask "Noughtpad wants to use … app.noughtpad.llm" (choose Always Allow), and
+privacy permissions, if any are ever granted, may be asked again. If an update ever does trigger
+"Noughtpad is damaged / can't be opened", `xattr -cr /Applications/Noughtpad.app` fixes it, and
+that is worth recording.
+
+If something fails: run `/Applications/Noughtpad.app/Contents/MacOS/noughtpad-app` from Terminal
+to see the log (`update check`, `update: …` warnings). The updater refuses anything whose
+signature doesn't match the public key, so a wrong secret shows as "The download didn't match
+Noughtpad's signature".
 
 ### 2. Then
-- **Signing**, once the user decides to pay: Apple Developer Program, then the secrets listed at
-  the top of `release.yml`.
-- **Start dogfooding** (ROADMAP M5 exit): install in /Applications, turn "Open at login" on there.
+- **Start dogfooding** (ROADMAP M5 exit): install in /Applications from a release (not a local
+  build, so updates work), turn "Open at login" on there. Ship fixes as tagged releases and update
+  through the app.
+- **Signing**, deferred: the user runs unsigned builds with right-click → Open for a few weeks.
+  If they decide to pay: Apple Developer Program, then the secrets listed at the top of
+  `release.yml`. Updates keep working either way; the updater key is separate from Apple's.
 - M6 sync design.
 
 ### Parked (do when convenient, not blocking)
@@ -91,6 +129,8 @@ Ollama provider (`qwen3.5:4b`) saved. "Open at login" is off.
   first visit to each page (`page()` in `src/App.tsx`); raised `min_related` 0.60 → 0.63 after
   unrelated short notes showed up as related; a plain message when the local model doesn't fit in
   free memory.
+- Late: auto-update (`tauri-plugin-updater`, GitHub Releases, signed bundles, Settings → Updates,
+  Noughtpad → Check for Updates…). Updater key generated; the user stores it as GitHub secrets.
 
 ## Known limits and gotchas
 
@@ -104,6 +144,12 @@ Ollama provider (`qwen3.5:4b`) saved. "Open at login" is off.
 - **`examples/ask`** answers without `[n]` citations, unlike the app; don't use it to check citing.
 - **Unsigned builds:** macOS Gatekeeper blocks them until `xattr -cr` or right-click → Open, and
   Windows SmartScreen warns.
+- **Updates only reach published releases:** tag pushes make drafts; nothing updates until you
+  press Publish. A release built without the updater secret has no `latest.json`, and publishing
+  it makes "Check for updates" fail until a release with one is published.
+- **Updater key:** lose the private key or its password and installed copies can't update any more;
+  they need one manual reinstall of a build with a new public key.
+- **Intel Macs** get no update (the release builds Apple Silicon only).
 - **First model load:** the first load of the 2.5 GB local model reads it from disk, which took
   3.5 minutes on the cloud container's slow disk and seconds when cached. A warm-up starts when
   you open Chat.

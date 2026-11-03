@@ -6,6 +6,8 @@ mod chat;
 mod lifecycle;
 #[cfg(target_os = "macos")]
 mod menu;
+#[cfg(desktop)]
+mod updater;
 mod semantic;
 mod think;
 
@@ -373,6 +375,8 @@ pub fn run() {
         );
         builder = builder
             .plugin(lifecycle::autostart_plugin())
+            .plugin(tauri_plugin_updater::Builder::new().build())
+            .manage(updater::PendingUpdate::default())
             .on_window_event(lifecycle::on_window_event);
         #[cfg(target_os = "macos")]
         {
@@ -444,6 +448,12 @@ pub fn run() {
             lifecycle::autostart_enabled,
             #[cfg(desktop)]
             lifecycle::set_autostart,
+            #[cfg(desktop)]
+            updater::app_version,
+            #[cfg(desktop)]
+            updater::update_check,
+            #[cfg(desktop)]
+            updater::update_install,
         ])
         .build(tauri::generate_context!())
         .expect("error while running Noughtpad")

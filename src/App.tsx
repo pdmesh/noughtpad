@@ -12,6 +12,7 @@ import { ChatHistory } from "./components/ChatHistory";
 import { useChatLive, type ScopeChoice } from "./lib/chat";
 import type { EditorHandle } from "./editor/Editor";
 import { loadMarkdownPipeline } from "./editor/clipboard";
+import { checkForUpdates } from "./lib/updates";
 
 // Pages other than writing load after the editor is ready, keeping them out of
 // the startup bundle (G1: capture in < 300 ms).
@@ -252,6 +253,10 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
           break;
         case "settings":
           setView({ kind: "settings" });
+          break;
+        case "check-updates":
+          setView({ kind: "settings" });
+          void checkForUpdates();
           break;
         case "go-write":
           setView({ kind: "write" });
