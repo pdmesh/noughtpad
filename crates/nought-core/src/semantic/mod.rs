@@ -7,6 +7,7 @@
 //! * Nothing here writes to note files.
 
 pub mod chunk;
+pub mod context;
 pub mod embedder;
 pub mod feedback;
 pub mod ideas;
@@ -975,6 +976,40 @@ mod tests {
             ),
             add(v, "Presentation software should let slides flow like documents.", &[]),
         ]
+    }
+
+    #[test]
+    fn context_for_questions_by_scope() {
+        use context::Scope;
+        let (_d, v, sem) = setup();
+        let ids = corpus(&v);
+        sem.set_embedder(Box::new(HashEmbedder::default())).unwrap();
+        index_all(&sem);
+
+        let c = sem.context(&Scope::Notebook, "power law fund returns", 3).unwrap();
+        let got: Vec<&str> = c.iter().map(|n| n.note.id.as_str()).collect();
+        assert!(
+            got.contains(&ids[0].as_str()) && got.contains(&ids[1].as_str()),
+            "{got:?}"
+        );
+        assert!(c.iter().all(|n| !n.body.is_empty()));
+        assert!(
+            c.windows(2).all(|w| w[0].note.created <= w[1].note.created),
+            "oldest first"
+        );
+
+        let c = sem.context(&Scope::Note { id: ids[0].clone() }, "", 4).unwrap();
+        assert!(c.iter().any(|n| n.note.id == ids[0]), "includes the note itself");
+        assert!(c.iter().any(|n| n.note.id == ids[1]), "and what relates to it");
+
+        let c = sem.context(&Scope::Label { label: "vc".into() }, "", 10).unwrap();
+        assert_eq!(c.len(), 2);
+        let month = &c[0].note.day[..7];
+        let c = sem.context(&Scope::Month { month: month.into() }, "", 2).unwrap();
+        assert_eq!(c.len(), 2, "spread down to the limit");
+
+        let c = sem.context(&Scope::Note { id: "missing".into() }, "", 4).unwrap();
+        assert!(c.is_empty());
     }
 
     #[test]

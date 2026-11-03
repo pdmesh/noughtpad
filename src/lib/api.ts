@@ -178,8 +178,131 @@ export type Change =
   | { type: "upserted"; id: string; path: string }
   | { type: "removed"; path: string };
 
+// ---- M4: models and thinking ----------------------------------------------
+
+export type ThinkScope =
+  | { kind: "notebook" }
+  | { kind: "note"; id: string }
+  | { kind: "theme"; id: string }
+  | { kind: "month"; month: string }
+  | { kind: "label"; label: string }
+  | { kind: "openQuestions" };
+
+export interface LocalModelInfo {
+  id: string;
+  name: string;
+  maker: string;
+  licence: string;
+  repo: string;
+  revision: string;
+  file: string;
+  sha256: string;
+  bytes: number;
+  ramGb: number;
+  blurb: string;
+  recommended: boolean;
+}
+
+export interface LocalEntry {
+  model: LocalModelInfo;
+  downloaded: boolean;
+  /** Bytes of an unfinished (resumable) or running download. */
+  received: number;
+  downloading: boolean;
+}
+
+export type RemoteKind = "anthropic" | "openAi" | "gemini" | "ollama" | "openAiCompatible";
+
+export interface Remote {
+  id: string;
+  kind: RemoteKind;
+  label: string;
+  baseUrl?: string | null;
+  model: string;
+}
+
+export interface ProviderInfo {
+  kind: RemoteKind;
+  label: string;
+  needsKey: boolean;
+  needsUrl: boolean;
+  defaultUrl: string | null;
+}
+
+export type ActiveModel = { kind: "local"; model: string } | { kind: "remote"; id: string };
+
+export interface LlmOverview {
+  active: ActiveModel | null;
+  activeLabel: string | null;
+  local: LocalEntry[];
+  remotes: Array<{ remote: Remote; hasKey: boolean }>;
+  providers: ProviderInfo[];
+  localAvailable: boolean;
+  remoteAvailable: boolean;
+  /** Keys are kept in the OS keychain (false: only until Nought quits). */
+  keychain: boolean;
+}
+
+export interface DownloadEvent {
+  id: string;
+  state: "downloading" | "done" | "cancelled" | "error";
+  received: number;
+  total: number;
+  message: string | null;
+}
+
+export interface RemoteInput {
+  id?: string;
+  kind: RemoteKind;
+  label?: string;
+  baseUrl?: string;
+  model: string;
+  apiKey?: string;
+}
+
+export interface ProviderView {
+  label: string;
+  model: string;
+  onDevice: boolean;
+  destination: string;
+}
+
+export interface Prepared {
+  notes: NoteSummary[];
+  provider: ProviderView | null;
+  needsConsent: boolean;
+}
+
+export interface ThinkUsage {
+  promptTokens: number | null;
+  completionTokens: number | null;
+  secs: number;
+}
+
+export interface ThinkDelta {
+  requestId: string;
+  text: string;
+}
+
+export interface ThinkDone {
+  requestId: string;
+  cited: string[];
+  usage: ThinkUsage;
+  error: string | null;
+  cancelled: boolean;
+}
+
+export interface Kept {
+  file: string;
+  question: string;
+  created: string;
+  model: string;
+  noteIds: string[];
+  answer: string;
+}
+
 export interface ApiError {
-  kind: "conflict" | "notFound" | "noVault" | "io" | "internal";
+  kind: "conflict" | "notFound" | "noVault" | "io" | "internal" | "invalid" | "provider" | "consent" | "noModel" | "cancelled";
   message: string;
 }
 
@@ -227,6 +350,23 @@ export const api = {
   ideasOverview: () => call<IdeasOverview>("ideas_overview"),
   themeTimeline: (id: string) => call<ThemeTimeline | null>("theme_timeline", { id }),
   noteTheme: (id: string) => call<ThemeSummary | null>("note_theme", { id }),
+  llmOverview: () => call<LlmOverview>("llm_overview"),
+  llmDownload: (id: string) => call<void>("llm_download", { id }),
+  llmCancelDownload: (id: string) => call<void>("llm_cancel_download", { id }),
+  llmDeleteModel: (id: string) => call<void>("llm_delete_model", { id }),
+  llmListRemoteModels: (kind: RemoteKind, baseUrl?: string, apiKey?: string, remoteId?: string) =>
+    call<string[]>("llm_list_remote_models", { kind, baseUrl: baseUrl || null, apiKey: apiKey || null, remoteId: remoteId ?? null }),
+  llmSaveRemote: (input: RemoteInput) => call<Remote>("llm_save_remote", { input }),
+  llmRemoveRemote: (id: string) => call<void>("llm_remove_remote", { id }),
+  llmUse: (active: ActiveModel) => call<void>("llm_use", { active }),
+  llmTurnOff: () => call<void>("llm_turn_off"),
+  thinkPrepare: (question: string, scope: ThinkScope) => call<Prepared>("think_prepare", { question, scope }),
+  thinkAsk: (requestId: string, question: string, noteIds: string[], consent: boolean) =>
+    call<void>("think_ask", { requestId, question, noteIds, consent }),
+  thinkCancel: (requestId: string) => call<void>("think_cancel", { requestId }),
+  keepAnswer: (input: { question: string; answer: string; noteIds: string[]; model: string }) => call<Kept>("keep_answer", { input }),
+  keptAnswers: () => call<Kept[]>("kept_answers"),
+  forgetKept: (file: string) => call<void>("forget_kept", { file }),
   saveAttachment: (bytes: Uint8Array, extension: string) =>
     call<string>("save_attachment", { bytes: Array.from(bytes), extension }),
 };

@@ -1,6 +1,7 @@
 // In-memory stand-in for the Rust backend, used only when the UI runs in a
 // plain browser (no Tauri). It mimics command shapes, not search quality.
 
+import { mockLlm } from "./mockLlm";
 import type { DaySummary, EditableMeta, LabelCount, ListQuery, NoteDoc, NoteSummary, Related, RelatedNotes, SemanticStatus } from "./api";
 
 interface MockNote {
@@ -313,6 +314,8 @@ function themeTimeline(id: string) {
 
 export async function mock(cmd: string, a: Record<string, any> = {}): Promise<unknown> {
   await new Promise((r) => setTimeout(r, 5));
+  const llm = await mockLlm(cmd, a, { emit, summaries: () => list({ limit: 10_000 }), body: (id) => get(id).content });
+  if (llm.handled) return llm.value;
   switch (cmd) {
     case "vault_info":
       return { path: "/mock/Nought", noteCount: notes.length, defaultPath: "/mock/Nought" };

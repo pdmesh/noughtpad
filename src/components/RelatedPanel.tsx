@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { BookOpen, Sprout, Tag, X } from "lucide-react";
+import { BookOpen, MessageSquareText, Sprout, Tag, X } from "lucide-react";
 import { api, type Related } from "../lib/api";
 import { describeStatus, useSemanticStatus } from "../lib/useSemantic";
 import { formatDay, plainExcerpt } from "../lib/format";
@@ -8,6 +8,8 @@ interface Props {
   noteId: string | null;
   onOpen: (id: string) => void;
   onOpenTheme: (id: string) => void;
+  /** Think about this note and what relates to it (needs a model; the Think page explains). */
+  onAsk?: () => void;
   onClose: () => void;
   onNotice: (msg: string, undo?: () => void) => void;
 }
@@ -16,7 +18,7 @@ interface Props {
  * "Explore this note": notes that appear connected, each with the passage that
  * matched and why. Opened on demand only, never while writing.
  */
-export function RelatedPanel({ noteId, onOpen, onOpenTheme, onClose, onNotice }: Props) {
+export function RelatedPanel({ noteId, onOpen, onOpenTheme, onAsk, onClose, onNotice }: Props) {
   const status = useSemanticStatus();
   const qc = useQueryClient();
   const active = status.state === "ready" || status.state === "indexing";
@@ -129,6 +131,11 @@ export function RelatedPanel({ noteId, onOpen, onOpenTheme, onClose, onNotice }:
             </li>
           ))}
         </ul>
+      )}
+      {onAsk && noteId && (
+        <button className="related-ask" onClick={onAsk}>
+          <MessageSquareText size={13} aria-hidden /> Ask about this note…
+        </button>
       )}
     </aside>
   );

@@ -1,7 +1,7 @@
-import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, BookOpen, CornerDownRight, HelpCircle, RefreshCcw } from "lucide-react";
-import { api, onEvent, type NoteSummary, type ThemeSummary } from "../lib/api";
+import { ArrowLeft, BookOpen, CornerDownRight, HelpCircle, MessageSquareText, RefreshCcw } from "lucide-react";
+import { useEvent } from "../lib/useEvent";
+import { api, type NoteSummary, type ThemeSummary } from "../lib/api";
 import { formatDay, formatMonth, plainExcerpt } from "../lib/format";
 import { useSemanticStatus, describeStatus } from "../lib/useSemantic";
 import { Sparkline } from "../components/Sparkline";
@@ -15,11 +15,7 @@ interface Nav {
 /** Refetch ideas whenever the background worker recomputes them. */
 function useIdeasEvents() {
   const qc = useQueryClient();
-  useEffect(() => {
-    let off = () => {};
-    void onEvent("ideas-updated", () => qc.invalidateQueries({ queryKey: ["ideas"] })).then((u) => (off = u));
-    return () => off();
-  }, [qc]);
+  useEvent("ideas-updated", () => void qc.invalidateQueries({ queryKey: ["ideas"] }));
 }
 
 const monthOf = (day: string) => formatMonth(day.slice(0, 7));
@@ -176,7 +172,17 @@ function short(n: NoteSummary, max = 90) {
 }
 
 /** One thread, month by month: how the idea accumulated and moved. */
-export function ThemeView({ id, onBack, onOpenNote }: { id: string; onBack: () => void; onOpenNote: (id: string) => void }) {
+export function ThemeView({
+  id,
+  onBack,
+  onOpenNote,
+  onAsk,
+}: {
+  id: string;
+  onBack: () => void;
+  onOpenNote: (id: string) => void;
+  onAsk?: (name: string) => void;
+}) {
   useIdeasEvents();
   const { data, isLoading } = useQuery({ queryKey: ["ideas", "theme", id], queryFn: () => api.themeTimeline(id) });
   if (isLoading) return null;
@@ -216,6 +222,11 @@ export function ThemeView({ id, onBack, onOpenNote }: { id: string; onBack: () =
         ))}
         <Sparkline months={t.months} width={240} height={36} />
       </div>
+      {onAsk && (
+        <button className="link-btn theme-ask" onClick={() => onAsk(t.name)}>
+          <MessageSquareText size={13} aria-hidden /> Ask how your thinking on this changed…
+        </button>
+      )}
 
       <ol className="timeline">
         {byMonth.map(([month, entries]) => (

@@ -2,6 +2,7 @@
 //! filesystem changes as events.
 
 mod semantic;
+mod think;
 
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, RwLock};
@@ -23,7 +24,7 @@ pub(crate) struct AppState {
 }
 
 impl AppState {
-    fn vault(&self) -> Result<Arc<Vault>, CmdError> {
+    pub(crate) fn vault(&self) -> Result<Arc<Vault>, CmdError> {
         self.vault
             .read()
             .unwrap_or_else(|e| e.into_inner())
@@ -77,6 +78,9 @@ struct Config {
     vault_path: Option<PathBuf>,
     /// Local semantic search: `None` = never asked, so it stays off.
     semantic: Option<bool>,
+    /// Language models the user opted into (M4). Keys live in the keychain.
+    #[serde(default)]
+    llm: nought_llm::settings::LlmSettings,
 }
 
 fn config_path(app: &AppHandle) -> Option<PathBuf> {
@@ -339,7 +343,8 @@ pub fn run() {
     let mut builder = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
-        .manage(AppState::default());
+        .manage(AppState::default())
+        .manage(think::LlmState::default());
 
     #[cfg(desktop)]
     {
@@ -404,6 +409,21 @@ pub fn run() {
             semantic::ideas_overview,
             semantic::theme_timeline,
             semantic::note_theme,
+            think::llm_overview,
+            think::llm_download,
+            think::llm_cancel_download,
+            think::llm_delete_model,
+            think::llm_list_remote_models,
+            think::llm_save_remote,
+            think::llm_remove_remote,
+            think::llm_use,
+            think::llm_turn_off,
+            think::think_prepare,
+            think::think_ask,
+            think::think_cancel,
+            think::keep_answer,
+            think::kept_answers,
+            think::forget_kept,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Nought");

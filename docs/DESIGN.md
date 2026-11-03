@@ -30,6 +30,9 @@ This document turns that thesis into a concrete architecture and build plan. Ite
 | 2026-11-02 | M3 is deterministic over local embeddings; AI-written monthly or topic syntheses move to M4 (bring-your-own LLM). |
 | 2026-11-02 | Journal shows a GitHub-style activity map with streaks. It is informational only (no goals, reminders or badges), so it never turns capture into a chore. Its levels adapt to the writer's own quartiles. The colour ramp is one hue (the amber accent), validated as an ordinal ramp against both surfaces (light end 2.12:1 on the light surface, 2.56:1 on dark). |
 | 2026-11-03 | Small judge models (reranker, NLI, Laya) evaluated against embeddings + rules, did not beat them, and were removed (details under M3.5). One default download (the embedding model). |
+| 2026-11-03 | M4 language models are **always explicit opt-in**, on a Models page: download a local model (several may be downloaded) or add your own provider and key, then press **Use**. Downloading or saving a provider does not switch anything on. |
+| 2026-11-03 | Built-in runtime: **mistral.rs** (Rust, MIT) running GGUF on CPU/Metal/CUDA. Default model **Qwen3-4B-Instruct-2507 Q4_K_M** (Apache-2.0, 2.5 GB). Bring-your-own via the **genai** crate (Anthropic, OpenAI, Gemini, Ollama, any OpenAI-compatible URL); keys live in the OS keychain. |
+| 2026-11-03 | Before notes go to a remote provider, Nought lists them and the destination and asks; the user can untick notes. It asks the first time and again whenever the destination changes. Local models never ask, because nothing leaves the machine. |
 | 2026-11-02 | Extensions reuse the CodeMirror 6 and unified (remark/rehype) ecosystems; no bespoke plugin ecosystem. |
 
 ---
@@ -244,11 +247,15 @@ Tier 2 is never required. The candidate model gets evaluated on a hand-labelled 
 note pairs before it is adopted. Model claims so far come from secondary write-ups.
 
 ### 6.6 Thinking workspace (on demand)
-Retrieval-augmented: hybrid search over the notebook, then the top-k notes with their dates, then
-the LLM, with a prompt that requires `[[note-id]]` citations. Answers are rendered with clickable
-citations, and nothing is saved unless the user clicks **Keep**, which writes to
-`.nought/artifacts/`, never to the vault. A banner shows which provider (local or remote) will see
-which notes before a remote call.
+The user asks within a **scope**: the whole notebook (hybrid search), this month, open questions,
+one note plus its related notes ("Ask about this note"), a theme from Ideas over time (its timeline,
+spread evenly when long), or a collection. At most 8 notes are chosen, deterministically, and shown
+before or while the model reads them (`Semantic::context`). The prompt numbers the notes oldest
+first, marks each as the user's own or "from <source>", and requires `[n]` citations
+(`nought-llm::prompt`). Answers stream in; citations become buttons that open the note, and an
+answer that cites nothing is flagged. Nothing is saved unless the user clicks **Keep**, which writes
+Markdown to `.nought/artifacts/`, never among the notes. For remote providers the user sees, and can
+trim, the list of notes and the destination before anything is sent.
 
 ---
 
@@ -388,6 +395,27 @@ Reproduce with `cargo run --release -p nought-core --example bench -- 10000`.
   - When active, candidates come from a slightly wider net (`min_related − 0.08`), and the model's probability (≥ 0.5) decides what is shown and in what order.
 - **Visibility and control:** the panel says "Tuned to what you open and dismiss here". `⌘K → Reset what related notes learned` clears it; dismissals stay hidden.
 - **Tests:** unit tests cover the prior and the learning. An integration test checks that feedback on other notes stops cross-topic look-alikes from appearing for a new note while same-topic suggestions remain.
+
+**M4 status (2026-11-03): built and verified with a real local model.**
+
+- **Model choice.** `tools/eval/slm_eval.py` asked each candidate the same 4 questions over the sample notebook on CPU (4 cores, no GPU, Q4_K_M; mistral.rs 0.9.5):
+
+  | Model | Valid citations | Faithfulness | Output speed |
+  |---|---|---|---|
+  | **Qwen3-4B-Instruct-2507** | 4 / 4 answers, all claims cited | One mild stretch | 7.7 tok/s |
+  | Qwen3.5-4B | 3 / 4 | Invented a causal link | 4.6 tok/s |
+  | Qwen3-1.7B | 4 / 4, but lumped citations | Echoed the question, slipped into first person | 16 tok/s |
+  | SmolLM3-3B | 0 / 4 | Padded | 10 tok/s |
+  | Phi-4-mini | — | Its GGUF tokenizer doesn't load in mistral.rs | — |
+
+  Qwen3-4B-Instruct is the recommended default. Qwen3-1.7B is offered for older machines and Qwen3.5-4B for GPUs.
+- **Through the app's own runtime**, Qwen3-4B answered a 3-note question with correct `[1][2][3]` citations. It took about 15 s to load and 25 s to answer, on CPU.
+- **Downloads** are pinned to a Hugging Face revision, checked against SHA-256, resumable (HTTP Range) and cancellable. A file that fails the checksum is deleted.
+- **Privacy rules are enforced in the backend.** `think_ask` refuses a remote provider without consent for a new or changed destination, and reads only the note ids the user was shown.
+- **Known limits:**
+  - The context is at most 8 notes, so there is no map-reduce over long scopes yet.
+  - Exchanges are single-turn.
+  - Without the system keychain (for example, Linux without Secret Service), keys are kept only until quit, and the form says so.
 
 **Concept extraction (2026-11-03): evaluated, not shipped.** Scripts are in `tools/eval/`.
 - **GLiNER** (`gliner_small-v2.1`, int8, 183 MB, Apache-2.0, about 20 ms per note):

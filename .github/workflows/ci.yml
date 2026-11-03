@@ -26,8 +26,23 @@ jobs:
       # tauri::generate_context! needs the frontend dist folder to exist.
       - run: mkdir -p dist && echo '<!doctype html>' > dist/index.html
       - run: cargo fmt --all --check
-      - run: cargo clippy --workspace --all-targets -- -D warnings
-      - run: cargo test --workspace
+      # The built-in LLM runtime (mistral.rs) is checked in its own job below.
+      - run: cargo clippy --workspace --all-targets --no-default-features --features nought-app/embedding-static -- -D warnings
+      - run: cargo test --workspace --no-default-features --features nought-app/embedding-static
+
+  # The local language-model runtime: a large dependency, so it gets its own cached job.
+  llm:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: llm
+      - run: cargo clippy -p nought-llm --all-targets --features local,remote,keychain -- -D warnings
+      - run: cargo test -p nought-llm --features remote,keychain
 
   # Downloads the real embedding model and checks that the similarity
   # thresholds separate related from unrelated notes.

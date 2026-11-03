@@ -1,0 +1,38 @@
+[package]
+name = "nought-llm"
+description = "Language-model providers for Nought: a local runtime and bring-your-own APIs"
+version.workspace = true
+edition.workspace = true
+license-file.workspace = true
+repository.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+sha2 = "0.10"
+ureq = "3"
+futures = "0.3"
+tokio = { version = "1", features = ["rt-multi-thread", "sync", "macros"] }
+# Local models (GGUF) on CPU / Metal / CUDA.
+mistralrs = { git = "https://github.com/EricLBuehler/mistral.rs", tag = "v0.9.5", optional = true }
+# Bring-your-own providers: Anthropic, OpenAI, Gemini, Ollama, OpenAI-compatible.
+genai = { version = "0.7", optional = true }
+# API keys live in the OS keychain, never in config files.
+keyring = { version = "4", optional = true }
+
+[features]
+default = []
+local = ["dep:mistralrs"]
+local-metal = ["local", "mistralrs/metal"]
+local-cuda = ["local", "mistralrs/cuda"]
+remote = ["dep:genai"]
+keychain = ["dep:keyring"]
+
+[[example]]
+name = "ask"
+required-features = ["local"]
+
+[dev-dependencies]
+tempfile = "3"

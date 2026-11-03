@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarDays, FilePlus2, FolderOpen, Notebook, PanelLeft, PenLine, Search, Sprout, Waypoints, X } from "lucide-react";
-import { api, isApiError, onEvent, pickFolder, type VaultInfo } from "./lib/api";
+import { CalendarDays, Cpu, FilePlus2, FolderOpen, MessageSquareText, Notebook, PanelLeft, PenLine, Search, Sprout, Waypoints, X } from "lucide-react";
+import { api, isApiError, pickFolder, type VaultInfo } from "./lib/api";
+import { useEvent } from "./lib/useEvent";
 import { NotePane } from "./components/NotePane";
 import { Stream } from "./components/Stream";
 import { SearchPalette } from "./components/SearchPalette";
@@ -9,6 +10,8 @@ import { RelatedPanel } from "./components/RelatedPanel";
 import { describeStatus, useSemanticStatus } from "./lib/useSemantic";
 import { Journal } from "./views/Journal";
 import { IdeasView, ThemeView } from "./views/Ideas";
+import { ThinkView, type ScopeChoice } from "./views/Think";
+import { ModelsView } from "./views/Models";
 import type { EditorHandle } from "./editor/Editor";
 
 /** "write" is the blank page; "notes" lists all notes (optionally one collection). */
@@ -17,7 +20,9 @@ type View =
   | { kind: "notes"; label?: string }
   | { kind: "journal" }
   | { kind: "ideas" }
-  | { kind: "theme"; id: string };
+  | { kind: "theme"; id: string }
+  | { kind: "think"; scope?: ScopeChoice }
+  | { kind: "models"; focus?: "local" | "remote" };
 
 export function App() {
   const [vault, setVault] = useState<VaultInfo | null | undefined>(undefined);
@@ -78,6 +83,14 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
 
   const { data: labels = [] } = useQuery({ queryKey: ["notes", "labels"], queryFn: api.labels });
 
+  // The scope Think was last opened with (`undefined` until first opened).
+  const [thinkScope, setThinkScope] = useState<ScopeChoice | null | undefined>(undefined);
+  useEffect(() => {
+    if (view.kind === "think") setThinkScope((s) => view.scope ?? s ?? null);
+    // Pages other than Write start at the top.
+    if (view.kind !== "write") window.scrollTo({ top: 0 });
+  }, [view]);
+
   // Optional: show the note list under the editor (off by default: the page stays blank).
   const [listUnderEditor, setListUnderEditor] = useState(() => readPref("nought.listUnderEditor") === "on");
   // A new note started from a collection gets that collection's label.
@@ -117,6 +130,20 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
   const showLabel = useCallback((label: string) => {
     setView({ kind: "notes", label });
     window.scrollTo({ top: 0 });
+  }, []);
+
+  // "Explore this note": think with the note and the notes related to it.
+  const askAboutNote = useCallback(async (id: string) => {
+    let label = "This note";
+    try {
+      const doc = await api.getNote(id);
+      const first = (doc.title ?? doc.content.split("\n").find((l) => l.trim()) ?? "").replace(/^[#>\-*+\s]+/, "").trim();
+      if (first) label = first.length > 40 ? `${first.slice(0, 40)}…` : first;
+    } catch {
+      /* keep the generic label */
+    }
+    setRelatedOpen(false);
+    setView({ kind: "think", scope: { scope: { kind: "note", id }, label } });
   }, []);
 
   const rebuildIndex = useCallback(async () => {
@@ -160,12 +187,8 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
   }, [newNote, toggleChrome, relatedOpen, paletteOpen]);
 
   // Backend events: external file changes and the global quick-capture shortcut.
-  useEffect(() => {
-    const offs: Array<() => void> = [];
-    void onEvent("vault-changed", () => qc.invalidateQueries({ queryKey: ["notes"] })).then((u) => offs.push(u));
-    void onEvent("quick-capture", () => newNote()).then((u) => offs.push(u));
-    return () => offs.forEach((f) => f());
-  }, [qc, newNote]);
+  useEvent("vault-changed", () => void qc.invalidateQueries({ queryKey: ["notes"] }));
+  useEvent("quick-capture", () => newNote());
 
   // While typing, chrome stays hidden even if the pointer rests on it; moving the mouse brings it back.
   const [typing, setTyping] = useState(false);
@@ -207,6 +230,7 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
             active={view.kind === "ideas" || view.kind === "theme"}
             onClick={() => setView({ kind: "ideas" })}
           />
+          <SideItem icon={<MessageSquareText size={15} />} label="Think" active={view.kind === "think"} onClick={() => setView({ kind: "think" })} />
         </nav>
         {labels.length > 0 && (
           <nav className="sidebar-section" aria-label="Collections">
@@ -218,6 +242,9 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
         )}
         <div className="sidebar-footer">
           {semanticLine && <p className="sidebar-status">{semanticLine}</p>}
+          <button className={`vault-path ${view.kind === "models" ? "is-active" : ""}`} onClick={() => setView({ kind: "models" })}>
+            <Cpu size={13} aria-hidden /> Models
+          </button>
           <button className="vault-path" title={`${vault.path}\nClick to switch folder`} onClick={onSwitchVault}>
             <FolderOpen size={13} aria-hidden /> {vault.path.split(/[\\/]/).pop()}
           </button>
@@ -290,8 +317,20 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
         {view.kind === "journal" && <Journal onOpen={openNote} onLabel={showLabel} />}
         {view.kind === "ideas" && <IdeasView onOpenNote={openNote} onOpenTheme={(id) => setView({ kind: "theme", id })} />}
         {view.kind === "theme" && (
-          <ThemeView id={view.id} onBack={() => setView({ kind: "ideas" })} onOpenNote={openNote} />
+          <ThemeView
+            id={view.id}
+            onBack={() => setView({ kind: "ideas" })}
+            onOpenNote={openNote}
+            onAsk={(name) => setView({ kind: "think", scope: { scope: { kind: "theme", id: view.id }, label: name } })}
+          />
         )}
+        {/* Like the editor, Think stays mounted once opened so this session's answers survive navigation. */}
+        {thinkScope !== undefined && (
+          <div hidden={view.kind !== "think"}>
+            <ThinkView initial={thinkScope ?? undefined} onOpenNote={openNote} onModels={(focus) => setView({ kind: "models", focus })} />
+          </div>
+        )}
+        {view.kind === "models" && <ModelsView focus={view.focus} />}
       </main>
 
       <SearchPalette
@@ -304,6 +343,9 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
         toggleListUnderEditor={toggleListUnderEditor}
         showJournal={() => setView({ kind: "journal" })}
         showIdeas={() => setView({ kind: "ideas" })}
+        showThink={() => setView({ kind: "think" })}
+        showModels={() => setView({ kind: "models" })}
+        askAboutNote={currentId ? () => void askAboutNote(currentId) : undefined}
         showLabel={showLabel}
         toggleChrome={toggleChrome}
         rebuildIndex={() => void rebuildIndex()}
@@ -329,6 +371,7 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
           noteId={currentId}
           onOpen={openNote}
           onOpenTheme={(id) => setView({ kind: "theme", id })}
+          onAsk={currentId ? () => void askAboutNote(currentId) : undefined}
           onClose={() => setRelatedOpen(false)}
           onNotice={setNotice}
         />

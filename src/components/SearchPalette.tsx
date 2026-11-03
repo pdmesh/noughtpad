@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Command } from "cmdk";
 import { useQuery } from "@tanstack/react-query";
-import { BookOpen, CalendarDays, FilePlus2, Notebook, PanelLeft, RefreshCw, RotateCcw, Rows3, Sparkle, Sprout, Tag, Waypoints } from "lucide-react";
+import { BookOpen, CalendarDays, Cpu, FilePlus2, MessageSquareText, Notebook, PanelLeft, RefreshCw, RotateCcw, Rows3, Sparkle, Sprout, Tag, Waypoints } from "lucide-react";
 import { api } from "../lib/api";
 import { formatDay, plainExcerpt, snippetParts } from "../lib/format";
 
@@ -13,6 +13,10 @@ export interface PaletteActions {
   toggleListUnderEditor: () => void;
   showJournal: () => void;
   showIdeas: () => void;
+  showThink: () => void;
+  showModels: () => void;
+  /** Present when a note is open. */
+  askAboutNote?: () => void;
   showLabel: (label: string) => void;
   toggleChrome: () => void;
   rebuildIndex: () => void;
@@ -57,6 +61,8 @@ export function SearchPalette({ open, onClose, ...actions }: Props) {
     { label: "All notes", icon: <Notebook size={14} />, run: actions.showNotes },
     { label: "Journal", icon: <CalendarDays size={14} />, run: actions.showJournal },
     { label: "Ideas over time", icon: <Sprout size={14} />, run: actions.showIdeas },
+    { label: "Think with your notes", icon: <MessageSquareText size={14} />, run: actions.showThink },
+    ...(actions.askAboutNote ? [{ label: "Ask about this note", icon: <MessageSquareText size={14} />, run: actions.askAboutNote }] : []),
     { label: "Related notes", icon: <Waypoints size={14} />, hint: "⌘J", run: actions.toggleRelated },
     { label: "Toggle sidebar & toolbar", icon: <PanelLeft size={14} />, hint: "⌘\\", run: actions.toggleChrome },
     {
@@ -69,6 +75,7 @@ export function SearchPalette({ open, onClose, ...actions }: Props) {
       icon: <Sparkle size={14} />,
       run: actions.toggleSemantic,
     },
+    { label: "Models (language models for thinking)", icon: <Cpu size={14} />, run: actions.showModels },
     { label: "Rebuild search index", icon: <RefreshCw size={14} />, run: actions.rebuildIndex },
     { label: "Reset what related notes learned", icon: <RotateCcw size={14} />, run: actions.resetRelatedFeedback },
   ];
