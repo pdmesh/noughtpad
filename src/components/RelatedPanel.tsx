@@ -93,7 +93,7 @@ export function RelatedPanel({ noteId, onOpen, onOpenTheme, onClose, onNotice }:
           {data.items.map((r) => (
             <li key={r.note.id} className="related-item">
               <div className="related-why">
-                <span className={r.relation === "tension" ? "related-tension" : undefined}>{describe(r)}</span>
+                <span>{describe(r)}</span>
                 <span className="faint"> · {timeRelation(r.daysApart)}</span>
               </div>
               <button
@@ -163,8 +163,6 @@ function Progress({ status }: { status: { state: "downloading"; received: number
 
 /** Cautious wording: the models suggest, they don't conclude. */
 function describe(r: Related): string {
-  if (r.relation === "tension") return "These notes seem to pull in different directions";
-  if (r.relation === "supports") return r.daysApart < 0 ? "This seems to build on it" : "This seems to build on your note";
   return r.strength === "strong" ? "These ideas appear connected" : "Possibly related";
 }
 

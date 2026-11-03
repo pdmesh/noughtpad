@@ -1,13 +1,11 @@
 //! Print themes, sections and a timeline for a notebook using the real model.
 //!
-//! cargo run --release -p nought-core --features embedding-static --example ideas -- <models-dir> <vault> [YYYY-MM-DD] [--no-judge]
+//! cargo run --release -p nought-core --features embedding-static --example ideas -- <models-dir> <vault> [YYYY-MM-DD]
 
 use std::sync::Arc;
 
 use nought_core::index::NoteSummary;
-use nought_core::semantic::model::{
-    bundle_dirs, download_bundle, FastEmbedder, FastJudge, DEFAULT_JUDGE_SPEC, DEFAULT_MODEL,
-};
+use nought_core::semantic::model::{download_bundle, model_dir, FastEmbedder, DEFAULT_MODEL};
 use nought_core::semantic::Semantic;
 use nought_core::userstate::UserState;
 use nought_core::Vault;
@@ -20,7 +18,6 @@ fn main() {
         .and_then(|d| chrono::NaiveDate::parse_from_str(d, "%Y-%m-%d").ok())
         .unwrap_or_else(|| chrono::Local::now().date_naive());
     download_bundle(&dir, |_, _| {}).unwrap();
-    let use_judge = !args.iter().any(|a| a == "--no-judge");
 
     // Work on a copy so the source folder is never touched.
     let tmp = tempfile::tempdir().unwrap();
@@ -37,12 +34,9 @@ fn main() {
     vault.rescan().unwrap();
     let sem = Semantic::new(vault.clone(), Arc::new(UserState::open_in_memory().unwrap())).unwrap();
     sem.set_embedder(Box::new(
-        FastEmbedder::load(&DEFAULT_MODEL, &bundle_dirs(&dir).0, 2).unwrap(),
+        FastEmbedder::load(&DEFAULT_MODEL, &model_dir(&dir), 2).unwrap(),
     ))
     .unwrap();
-    if use_judge {
-        sem.set_judge(Box::new(FastJudge::load(&dir, 2).unwrap()), DEFAULT_JUDGE_SPEC);
-    }
     sem.index_now().unwrap();
     sem.refresh_ideas_at(today).unwrap();
     let o = sem.ideas_overview().unwrap();
@@ -137,10 +131,9 @@ fn print_related(sem: &Semantic, vault: &Vault, needle: &str) {
     println!("\n== RELATED to «{}» ({:?})", short(&n.title), t.elapsed());
     for i in r.items {
         println!(
-            "  {:.3} {:?} {:?} [{}] {}",
+            "  {:.3} {:?} [{}] {}",
             i.score,
             i.strength,
-            i.relation,
             i.note.labels.join(","),
             short(&i.note.title)
         );

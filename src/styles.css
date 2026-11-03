@@ -1001,9 +1001,6 @@ button {
   color: var(--fg-muted);
   margin-bottom: 4px;
 }
-.related-tension {
-  color: var(--accent);
-}
 .related-link {
   display: block;
   width: 100%;

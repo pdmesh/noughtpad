@@ -49,12 +49,10 @@ pub fn start(app: &AppHandle, sem: Arc<Semantic>) {
 
 #[cfg(any(feature = "embedding-static", feature = "embedding-dynamic"))]
 fn load(sem: &Semantic, models: &std::path::Path) -> nought_core::Result<()> {
-    use nought_core::semantic::model::{
-        bundle_dirs, bundle_downloaded, download_bundle, judge_installed, FastEmbedder, FastJudge, DEFAULT_JUDGE_SPEC,
-    };
+    use nought_core::semantic::model::{bundle_downloaded, download_bundle, model_dir, FastEmbedder};
     // Background work should never make the machine hot: use at most half the cores.
     let threads = std::thread::available_parallelism().map_or(2, |n| (n.get() / 2).clamp(1, 4));
-    let (edir, _, _) = bundle_dirs(models);
+    let edir = model_dir(models);
 
     // One download for the default bundle.
     if !bundle_downloaded(models) {
@@ -70,13 +68,6 @@ fn load(sem: &Semantic, models: &std::path::Path) -> nought_core::Result<()> {
     }
     sem.set_status(Status::Loading);
     sem.set_embedder(Box::new(FastEmbedder::load(&DEFAULT_MODEL, &edir, threads)?))?;
-    // Optional judge models, if someone installed them (future advanced setting).
-    if judge_installed(models) {
-        match FastJudge::load(models, threads) {
-            Ok(j) => sem.set_judge(Box::new(j), DEFAULT_JUDGE_SPEC),
-            Err(e) => tracing::warn!("could not load judge models: {e}"),
-        }
-    }
     Ok(())
 }
 

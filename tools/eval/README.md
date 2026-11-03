@@ -14,7 +14,18 @@ python3 -m venv .venv && .venv/bin/pip install onnxruntime tokenizers numpy
 .venv/bin/python -I tools/eval/keyphrase_eval.py <models>/bge-small-en-v1.5-q samples/vault
 ```
 
-Rust-side tools (same models the app uses):
+# Laya (System 1 decision model) on 16 hand-labelled note pairs, and the same
+# pairs scored by the app's current approach (embeddings + "may rethink" rule)
+.venv/bin/pip install "laya[onnx]"            # pulls torch for evaluation
+.venv/bin/python -I tools/eval/laya_eval.py
+.venv/bin/python -I tools/eval/baseline_eval.py <models>/bge-small-en-v1.5-q tools/eval/laya_eval.py
+```
 
-- `cargo run --release -p nought-core --features embedding-static --example judges -- <models> samples/vault [--nli]`
-- `cargo run --release -p nought-core --features embedding-static --example ideas -- <models> samples/vault 2026-11-02 [--no-judge]`
+The reranker/NLI judge code was removed after evaluation (git history: commit
+`9d06f49`). To re-test such models, restore it from there or score them with a
+script like `laya_eval.py` against `baseline_eval.py`.
+
+Rust-side tool (same model the app uses):
+
+```sh
+cargo run --release -p nought-core --features embedding-static --example ideas -- <models> samples/vault 2026-11-02

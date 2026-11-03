@@ -10,7 +10,6 @@ pub mod chunk;
 pub mod embedder;
 pub mod feedback;
 pub mod ideas;
-pub mod judge;
 pub mod model;
 pub(crate) mod store;
 mod vectors;
@@ -36,10 +35,8 @@ const BATCH: usize = 16;
 /// Reciprocal-rank-fusion constant.
 const RRF_K: f32 = 60.0;
 const PASSAGE_CHARS: usize = 280;
-/// How far below `min_related` candidates may fall when a judge re-checks them.
-const JUDGE_WIDEN: f32 = 0.08;
-/// Search results the reranker re-orders.
-const RERANK_TOP: usize = 20;
+/// How far below `min_related` candidates may fall when the learned model re-checks them.
+const LEARNED_WIDEN: f32 = 0.08;
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
 #[serde(tag = "state", rename_all = "camelCase")]
@@ -85,19 +82,6 @@ pub struct Related {
     pub same_source: Option<String>,
     /// Days from the current note to the related one (negative = earlier).
     pub days_apart: i64,
-    /// How the later of the two notes relates to the earlier (needs a judge model).
-    pub relation: Relation,
-}
-
-#[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-pub enum Relation {
-    /// Connected; no clear direction.
-    Related,
-    /// The later note follows from / agrees with the earlier one.
-    Supports,
-    /// The notes seem to pull in different directions.
-    Tension,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
@@ -128,12 +112,8 @@ pub struct Semantic {
     version: AtomicU64,
     ideas: RwLock<Option<Arc<ideas::Model>>>,
     ideas_listener: Mutex<Option<Box<dyn Fn() + Send + Sync>>>,
-    judge: Mutex<Option<(Box<dyn judge::Judge>, judge::JudgeSpec)>>,
-    /// Judge results by hashed text pair, so a pair is never judged twice.
-    judged: Mutex<HashMap<String, f32>>,
     /// Learned relatedness model, keyed by the feedback count it was fitted on.
     learned: Mutex<Option<(usize, Option<feedback::Model>)>>,
-    inferred: Mutex<HashMap<String, judge::Nli>>,
 }
 
 fn lock<T>(m: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
@@ -156,10 +136,7 @@ impl Semantic {
             version: AtomicU64::new(1),
             ideas: RwLock::new(None),
             ideas_listener: Mutex::new(None),
-            judge: Mutex::new(None),
-            judged: Mutex::new(HashMap::new()),
             learned: Mutex::new(None),
-            inferred: Mutex::new(HashMap::new()),
         }))
     }
 
@@ -209,96 +186,10 @@ impl Semantic {
         Ok(())
     }
 
-    /// Activate judge models (reranker + inference). Optional: without them the
-    /// embedding-only heuristics apply.
-    pub fn set_judge(&self, j: Box<dyn judge::Judge>, spec: judge::JudgeSpec) {
-        *lock(&self.judge) = Some((j, spec));
-        // Judgements change related notes and timelines.
-        self.version.fetch_add(1, Ordering::SeqCst);
-        self.nudge();
-    }
-
-    pub fn has_judge(&self) -> bool {
-        lock(&self.judge).is_some()
-    }
-
-    /// Relevance of each doc to `query` (cached). `None` without a judge.
-    fn relevance(&self, query: &str, docs: &[String]) -> Result<Option<Vec<f32>>> {
-        let key = |d: &str| format!("{}:{}", hash(query), hash(d));
-        let mut out: Vec<Option<f32>> = {
-            let cache = lock(&self.judged);
-            docs.iter().map(|d| cache.get(&key(d)).copied()).collect()
-        };
-        let missing: Vec<usize> = (0..docs.len()).filter(|&i| out[i].is_none()).collect();
-        if !missing.is_empty() {
-            let mut guard = lock(&self.judge);
-            let Some((j, _)) = guard.as_mut() else { return Ok(None) };
-            let todo: Vec<String> = missing.iter().map(|&i| docs[i].clone()).collect();
-            let scores = j.rerank(query, &todo)?;
-            drop(guard);
-            let mut cache = lock(&self.judged);
-            if cache.len() > 50_000 {
-                cache.clear();
-            }
-            for (&i, s) in missing.iter().zip(scores) {
-                cache.insert(key(&docs[i]), s);
-                out[i] = Some(s);
-            }
-        }
-        Ok(Some(out.into_iter().map(|s| s.unwrap_or(0.0)).collect()))
-    }
-
-    /// Inference for `(premise, hypothesis)` pairs (cached). `None` without a judge.
-    fn infer(&self, pairs: &[(String, String)]) -> Result<Option<Vec<judge::Nli>>> {
-        let key = |(p, h): &(String, String)| format!("{}:{}", hash(p), hash(h));
-        let mut out: Vec<Option<judge::Nli>> = {
-            let cache = lock(&self.inferred);
-            pairs.iter().map(|p| cache.get(&key(p)).copied()).collect()
-        };
-        let missing: Vec<usize> = (0..pairs.len()).filter(|&i| out[i].is_none()).collect();
-        if !missing.is_empty() {
-            let mut guard = lock(&self.judge);
-            let Some((j, _)) = guard.as_mut().filter(|(j, _)| j.has_nli()) else {
-                return Ok(None);
-            };
-            let todo: Vec<(String, String)> = missing.iter().map(|&i| pairs[i].clone()).collect();
-            let res = j.nli(&todo)?;
-            drop(guard);
-            let mut cache = lock(&self.inferred);
-            if cache.len() > 50_000 {
-                cache.clear();
-            }
-            for (&i, r) in missing.iter().zip(res) {
-                cache.insert(key(&pairs[i]), r);
-                out[i] = Some(r);
-            }
-        }
-        Ok(Some(out.into_iter().map(|r| r.unwrap()).collect()))
-    }
-
-    /// Reranker relevance averaged over both directions (the reranker is
-    /// asymmetric: short-vs-long pairs can score high one way only).
-    fn mutual_relevance(&self, a: &str, others: &[String]) -> Result<Option<Vec<f32>>> {
-        let Some(fwd) = self.relevance(a, others)? else {
-            return Ok(None);
-        };
-        let mut out = Vec::with_capacity(others.len());
-        for (o, f) in others.iter().zip(fwd) {
-            let back = self.relevance(o, &[a.to_string()])?.map_or(f, |b| b[0]);
-            out.push((f + back) / 2.0);
-        }
-        Ok(Some(out))
-    }
-
-    fn judge_spec(&self) -> Option<judge::JudgeSpec> {
-        lock(&self.judge).as_ref().map(|(_, s)| *s)
-    }
-
     /// Turn semantic features off (cached vectors stay on disk for next time).
     pub fn disable(&self) {
         *self.spec.write().unwrap_or_else(|e| e.into_inner()) = None;
         *lock(&self.embedder) = None;
-        *lock(&self.judge) = None;
         *self.vectors.write().unwrap_or_else(|e| e.into_inner()) = VectorIndex::default();
         *self.ideas.write().unwrap_or_else(|e| e.into_inner()) = None;
         self.set_status(Status::Off);
@@ -488,12 +379,11 @@ impl Semantic {
             });
         };
         let dismissed = self.user.dismissed_for(id)?;
-        let jspec = self.judge_spec();
         let learned = self.learned_model(&spec)?;
-        // With a judge or a learned model, the embeddings cast a slightly wider
-        // net and the judge / model decides what is shown.
-        let floor = if jspec.is_some() || learned.is_some() {
-            spec.min_related - JUDGE_WIDEN
+        // With a learned model, the embeddings cast a slightly wider net and the
+        // model decides what is shown.
+        let floor = if learned.is_some() {
+            spec.min_related - LEARNED_WIDEN
         } else {
             spec.min_related
         };
@@ -570,8 +460,7 @@ impl Semantic {
         let my_day = day_number(&me.day);
 
         let mut items = Vec::new();
-        let mut full: Vec<(String, String)> = Vec::new(); // (my passage, their passage) per item
-        for c in cands.into_iter().take(if jspec.is_some() { 20 } else { usize::MAX }) {
+        for c in cands {
             let Some(note) = self.vault.summary(&c.id)? else {
                 continue;
             };
@@ -600,7 +489,6 @@ impl Semantic {
                 Ok((p, sp))
             })?;
             let source_passage = (source_chunks > 1).then(|| mine.clone());
-            full.push((mine, passage.clone()));
             items.push(Related {
                 days_apart: day_number(&note.day) - my_day,
                 strength: if c.score >= spec.strong_related {
@@ -614,11 +502,7 @@ impl Semantic {
                 shared_labels,
                 same_source,
                 note,
-                relation: Relation::Related,
             });
-        }
-        if let Some(js) = jspec {
-            items = self.judge_related(items, full, &spec, &js)?;
         }
         items.sort_by(|a, b| b.score.total_cmp(&a.score));
         items.truncate(limit);
@@ -729,7 +613,7 @@ impl Semantic {
                 .filter_map(|r| v.notes.get(&r.id).map(|nv| nv.mean.clone()).map(|m| (r, m)))
                 .unzip()
         };
-        let mut model = ideas::compute(
+        let model = ideas::compute(
             rows,
             &means,
             &previous,
@@ -740,9 +624,6 @@ impl Semantic {
             today,
             version,
         );
-        if let Some(js) = self.judge_spec() {
-            self.judge_ideas(&mut model, &js)?;
-        }
         let save: Vec<(String, Vec<String>)> = model
             .themes
             .iter()
@@ -763,50 +644,6 @@ impl Semantic {
         *self.ideas.write().unwrap_or_else(|e| e.into_inner()) = Some(Arc::new(model));
         if let Some(f) = lock(&self.ideas_listener).as_ref() {
             f();
-        }
-        Ok(())
-    }
-
-    /// Replace the timeline heuristics with judgements: "may rethink" comes
-    /// from the inference model (contradiction) instead of contrast words, and
-    /// an influence must pass the reranker.
-    fn judge_ideas(&self, model: &mut ideas::Model, js: &judge::JudgeSpec) -> Result<()> {
-        let text = |i: usize| clip(&model.notes[i].text, 1500);
-        // A revisit only counts if the reranker agrees the notes are about the same thing.
-        let revisits: Vec<(usize, usize)> = model.revisits.iter().map(|(&p, l)| (p, l.to)).collect();
-        let mut kept = Vec::new();
-        for (p, q) in revisits {
-            match self.mutual_relevance(&text(q), &[text(p)])? {
-                Some(r) if r[0] < js.min_relevance => {
-                    model.revisits.remove(&p);
-                }
-                _ => kept.push((p, q)),
-            }
-        }
-        let texts: Vec<(String, String)> = kept.iter().map(|&(p, q)| (text(q), text(p))).collect();
-        match self.infer(&texts)? {
-            // With an inference model, "may rethink" means it sees a contradiction.
-            Some(nli) => {
-                model.may_revise = kept
-                    .iter()
-                    .zip(nli)
-                    .filter(|(_, n)| n.contradict >= js.contradiction)
-                    .map(|(&(p, _), _)| p)
-                    .collect();
-            }
-            // Otherwise keep the wording cue, but only on confirmed revisits.
-            None => {
-                let confirmed: HashSet<usize> = kept.iter().map(|&(p, _)| p).collect();
-                model.may_revise.retain(|p| confirmed.contains(p));
-            }
-        }
-        let influences: Vec<(usize, usize)> = model.influenced_by.iter().map(|(&p, l)| (p, l.to)).collect();
-        for (p, src) in influences {
-            if let Some(r) = self.mutual_relevance(&text(src), &[text(p)])? {
-                if r[0] < js.min_relevance {
-                    model.influenced_by.remove(&p);
-                }
-            }
         }
         Ok(())
     }
@@ -918,65 +755,6 @@ impl Semantic {
         Ok(model.and_then(|m| m.note_theme.get(note_id).map(|&ti| m.summary(ti))))
     }
 
-    /// Re-score related candidates with the reranker (relevance of their
-    /// passage to mine) and label the direction with the inference model.
-    fn judge_related(
-        &self,
-        items: Vec<Related>,
-        passages: Vec<(String, String)>,
-        spec: &ModelSpec,
-        js: &judge::JudgeSpec,
-    ) -> Result<Vec<Related>> {
-        let Some(mine) = passages.first().map(|p| p.0.clone()) else {
-            return Ok(items);
-        };
-        let theirs: Vec<String> = passages.iter().map(|p| p.1.clone()).collect();
-        // Each candidate's best passage may pair with a different passage of
-        // mine; the first is a good proxy and keeps it to one reranker query.
-        let Some(rel) = self.mutual_relevance(&mine, &theirs)? else {
-            return Ok(items);
-        };
-        let mut kept: Vec<(Related, (String, String))> = items
-            .into_iter()
-            .zip(passages)
-            .zip(rel)
-            .filter(|(_, r)| *r >= js.min_relevance)
-            .map(|((mut item, p), r)| {
-                let emb = item.score;
-                item.score = 0.5 * emb + 0.5 * r;
-                item.strength = if r >= js.strong_relevance || emb >= spec.strong_related {
-                    Strength::Strong
-                } else {
-                    Strength::Possible
-                };
-                (item, p)
-            })
-            .collect();
-        // Direction: does the later note follow from, or push against, the earlier one?
-        let pairs: Vec<(String, String)> = kept
-            .iter()
-            .map(|(item, (m, t))| {
-                if item.days_apart >= 0 {
-                    (m.clone(), t.clone())
-                } else {
-                    (t.clone(), m.clone())
-                }
-            })
-            .collect();
-        if let Some(nli) = self.infer(&pairs)? {
-            for ((item, _), n) in kept.iter_mut().zip(nli) {
-                item.relation = if n.contradict >= js.contradiction {
-                    Relation::Tension
-                } else if n.entail >= js.entailment {
-                    Relation::Supports
-                } else {
-                    Relation::Related
-                };
-            }
-        }
-        Ok(kept.into_iter().map(|(i, _)| i).collect())
-    }
-
     /// "Not related": hide the pair for good, and learn from it.
     pub fn dismiss(&self, a: &str, b: &str) -> Result<()> {
         self.record(a, b, false)?;
@@ -1069,51 +847,8 @@ impl Semantic {
             });
         }
         out.sort_by(|a, b| b.score.total_cmp(&a.score));
-        if let Some(js) = self.judge_spec() {
-            out = self.rerank_hits(&parsed.text, out, &js)?;
-        }
         out.truncate(limit as usize);
         Ok(out)
-    }
-
-    /// Re-order the top hits by reranker relevance and drop meaning-only
-    /// matches the reranker doesn't believe. Exact word matches always stay.
-    fn rerank_hits(&self, query: &str, hits: Vec<SearchHit>, js: &judge::JudgeSpec) -> Result<Vec<SearchHit>> {
-        let n = hits.len().min(RERANK_TOP);
-        let docs: Vec<String> = hits[..n]
-            .iter()
-            .map(|h| {
-                let text = if h.matched == MatchKind::Meaning {
-                    &h.snippet
-                } else {
-                    &h.note.excerpt
-                };
-                let title = if h.note.has_title {
-                    format!("{}\n", h.note.title)
-                } else {
-                    String::new()
-                };
-                format!("{title}{}", text.replace(['\u{2}', '\u{3}'], ""))
-            })
-            .collect();
-        let Some(rel) = self.relevance(query, &docs)? else {
-            return Ok(hits);
-        };
-        let mut hits = hits;
-        let rest = hits.split_off(n);
-        let mut top: Vec<SearchHit> = hits
-            .into_iter()
-            .zip(rel)
-            .filter(|(h, r)| h.matched != MatchKind::Meaning || *r >= js.min_relevance)
-            .map(|(mut h, r)| {
-                // Relevance decides the order; matching the words is a small tie-breaker.
-                h.score = r as f64 + if h.matched == MatchKind::Meaning { 0.0 } else { 0.05 };
-                h
-            })
-            .collect();
-        top.sort_by(|a, b| b.score.total_cmp(&a.score));
-        top.extend(rest);
-        Ok(top)
     }
 }
 
@@ -1482,19 +1217,6 @@ mod ideas_tests {
     }
 
     #[test]
-    fn may_rethink_comes_from_the_inference_model_when_present() {
-        let (_d, _v, sem) = notebook();
-        sem.set_judge(Box::new(super::judge::LexicalJudge), super::judge::LexicalJudge::SPEC);
-        sem.refresh_ideas_at(today()).unwrap();
-        let o = sem.ideas_overview().unwrap();
-        let tl = sem.theme_timeline(&o.returning[0].id).unwrap().unwrap();
-        let vc4 = tl.entries.iter().find(|e| e.note.id == "vc4").unwrap();
-        let vc3 = tl.entries.iter().find(|e| e.note.id == "vc3").unwrap();
-        assert!(vc4.may_revise, "'less … but' contradicts the earlier claim");
-        assert!(!vc3.may_revise);
-    }
-
-    #[test]
     fn theme_identity_survives_new_notes() {
         let (d, v, sem) = notebook();
         sem.refresh_ideas_at(today()).unwrap();
@@ -1528,86 +1250,6 @@ mod ideas_tests {
         let vault = Arc::new(Vault::open(dir.path()).unwrap());
         let sem = Semantic::new(vault, Arc::new(UserState::open_in_memory().unwrap())).unwrap();
         assert!(!sem.ideas_overview().unwrap().enabled);
-    }
-}
-
-#[cfg(test)]
-mod judge_tests {
-    use super::embedder::HashEmbedder;
-    use super::judge::LexicalJudge;
-    use super::*;
-    use crate::vault::{EditableMeta, NewNote};
-
-    fn setup(with_judge: bool) -> (tempfile::TempDir, Arc<Vault>, Arc<Semantic>, Vec<String>) {
-        let dir = tempfile::tempdir().unwrap();
-        let v = Arc::new(Vault::open(dir.path()).unwrap());
-        let add = |t: &str| {
-            v.create(NewNote {
-                content: t.into(),
-                meta: EditableMeta {
-                    labels: vec!["VC".into()],
-                    ..Default::default()
-                },
-            })
-            .unwrap()
-            .id
-        };
-        let ids = vec![
-            add("Fund returns follow a power law: outlier companies return the fund."),
-            add("Outlier companies return the fund, so ownership in outlier companies drives fund returns."),
-            add("Ownership in outlier companies does not drive fund returns; diversification matters more."),
-            add("Kyoto temples and the Tokyo itinerary."),
-        ];
-        let sem = Semantic::new(v.clone(), Arc::new(UserState::open_in_memory().unwrap())).unwrap();
-        sem.set_embedder(Box::new(HashEmbedder::default())).unwrap();
-        if with_judge {
-            sem.set_judge(Box::new(LexicalJudge), LexicalJudge::SPEC);
-        }
-        sem.index_now().unwrap();
-        (dir, v, sem, ids)
-    }
-
-    #[test]
-    fn related_notes_get_relations_from_the_judge() {
-        let (_d, _v, sem, ids) = setup(true);
-        let r = sem.related(&ids[1], 5).unwrap();
-        let rel = |id: &str| r.items.iter().find(|i| i.note.id == id).map(|i| i.relation);
-        assert_eq!(rel(&ids[0]), Some(Relation::Supports), "{r:?}");
-        assert_eq!(rel(&ids[2]), Some(Relation::Tension), "negation of shared claim");
-        assert_eq!(rel(&ids[3]), None, "unrelated stays out");
-    }
-
-    #[test]
-    fn without_a_judge_relations_are_plain() {
-        let (_d, _v, sem, ids) = setup(false);
-        let r = sem.related(&ids[1], 5).unwrap();
-        assert!(!r.items.is_empty());
-        assert!(r.items.iter().all(|i| i.relation == Relation::Related));
-    }
-
-    #[test]
-    fn judged_pairs_are_cached() {
-        let (_d, _v, sem, ids) = setup(true);
-        sem.related(&ids[1], 5).unwrap();
-        let (a, b) = (lock(&sem.judged).len(), lock(&sem.inferred).len());
-        assert!(a > 0 && b > 0);
-        sem.related(&ids[1], 5).unwrap();
-        assert_eq!(
-            (lock(&sem.judged).len(), lock(&sem.inferred).len()),
-            (a, b),
-            "no new judgements"
-        );
-    }
-
-    #[test]
-    fn search_drops_meaning_only_hits_the_judge_rejects() {
-        let (_d, _v, sem, _ids) = setup(true);
-        let hits = sem.search("outlier ownership", 10).unwrap();
-        assert!(!hits.is_empty());
-        assert!(hits
-            .iter()
-            .all(|h| h.matched != MatchKind::Meaning || h.score >= LexicalJudge::SPEC.min_relevance as f64));
-        assert!(!hits.iter().any(|h| h.note.title.contains("Kyoto")));
     }
 }
 
