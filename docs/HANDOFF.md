@@ -11,12 +11,12 @@ Read this first next session, then `ROADMAP.md` (what's next) and
 - **Releases move to the public `pdmesh/noughtpad-releases`** (installers only), and the
   updater asks there. Installed 0.1.1 copies still ask the old address, so the next release is
   installed by hand once.
-- **v0.1.2 is built, as a draft on `pdmesh/noughtpad-releases`** (2026-11-04): the first release
+- **v0.1.2 is published on `pdmesh/noughtpad-releases`** (2026-11-04; the updater address answers 200 with version 0.1.2): the first release
   through the new path, with sync linked in (each job's log shows `noughtpad-sync v0.1.0 (…)`) and
   the Google client secret compiled in. All three jobs green; `latest.json` says 0.1.2, every URL
   points at `noughtpad-releases/releases/download/v0.1.2/…`, all nine entries signed, Mac
   `.dmg` and `Noughtpad_aarch64.app.tar.gz` + `.sig` present. Nothing new on pdmesh/noughtpad.
-  **Waiting on the user to publish it.** Both secrets (`RELEASE_TOKEN`,
+  Both secrets (`RELEASE_TOKEN`,
   `NOUGHTPAD_GOOGLE_CLIENT_SECRET`) are set.
 
 Earlier the same day:
@@ -112,7 +112,7 @@ The user is living with 0.1.1 on several machines for a few days. Good next piec
   Run the binary from Terminal for the log (`sync failed: …`, Drive error messages). Things
   most likely to need fixing: Drive API responses I couldn't test here (revisions on a new
   file, change-feed edge cases), the browser hand-off, the keychain prompt for the new entry.
-- **Release 0.1.2** (built, draft checked): once published, install it by hand once (0.1.1 asks
+- **Release 0.1.2** (published): install it by hand once (0.1.1 asks
   the old address), then the two-release updater check (below) with 0.1.3 as release B. The
   release build has the Google secret compiled in, so it's also the easiest way to try sync
   (steps above, skipping 2–3).
