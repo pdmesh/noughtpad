@@ -1,0 +1,61 @@
+---
+import CompareLayout from "../components/CompareLayout.astro";
+---
+
+<CompareLayout
+  title="Noughtpad vs Evernote: an Evernote alternative with plain files"
+  h1="Noughtpad vs Evernote"
+  other="Evernote"
+  description="Noughtpad vs Evernote compared honestly: Evernote's current plans and free-plan limits, and how Noughtpad differs, with unlimited notes kept as Markdown files on your computer."
+>
+  <p class="lede">
+    Evernote was many people's first notes app. It's still a capable one, with web clipping, scanning and apps everywhere. But its free plan is now small, and your notes live on Evernote's servers. Noughtpad takes the opposite approach: unlimited notes, kept as files on your own computer.
+  </p>
+
+  <h2>The short version</h2>
+  <ul>
+    <li><strong>Choose Evernote</strong> if you rely on clipping web pages, scanning documents, searching text in images and PDFs, or having notes on your phone.</li>
+    <li><strong>Choose Noughtpad</strong> if you mostly write, want as many notes as you like for free, and want them as plain files that no service can lock away.</li>
+  </ul>
+
+  <h2>What Evernote does better</h2>
+  <ul>
+    <li><strong>Capture from everywhere.</strong> A web clipper, document scanning, and search inside images and PDFs.</li>
+    <li><strong>Every device.</strong> Web, Mac, Windows, iPhone, iPad and Android.</li>
+    <li><strong>Tasks and calendar</strong> built in, plus team plans.</li>
+    <li><strong>Years of history and polish.</strong></li>
+  </ul>
+
+  <h2>What Noughtpad does differently</h2>
+  <ul>
+    <li><strong>No limits.</strong> Write as many notes as you like. Evernote's free plan stops at 50 notes and one notebook.</li>
+    <li><strong>Files you own.</strong> Markdown files in a folder on your computer, readable by any app, with no account needed.</li>
+    <li><strong>Private by default.</strong> Search by meaning, related notes and ideas over time run on your computer.</li>
+    <li><strong>See how ideas connect and change</strong> with <a href="/guide/related-notes/">related notes</a> and <a href="/guide/ideas-over-time/">ideas over time</a>.</li>
+  </ul>
+
+  <h2>Side by side</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th scope="col"></th><th scope="col">Noughtpad</th><th scope="col">Evernote</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Price</th><td>Free, unlimited notes</td><td>Free (50 notes, 1 notebook); Starter (1,000 notes, 20 notebooks) and Advanced plans are paid</td></tr>
+        <tr><th scope="row">Where notes live</th><td>Markdown files on your computer</td><td>Evernote's cloud</td></tr>
+        <tr><th scope="row">Account needed</th><td>No</td><td>Yes</td></tr>
+        <tr><th scope="row">Devices</th><td>Mac (Apple Silicon), Windows, Linux</td><td>Web, Mac, Windows, iPhone, iPad, Android</td></tr>
+        <tr><th scope="row">Web clipper, scanning</th><td>No (paste from the web works well)</td><td>Yes</td></tr>
+        <tr><th scope="row">Related notes and ideas over time</th><td>Yes</td><td>No</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Moving from Evernote</h2>
+  <p>
+    Noughtpad doesn't import Evernote's export format (<code>.enex</code>) yet. You can convert an export to Markdown files with a free tool such as Obsidian's Importer plugin, then choose that folder in Noughtpad.
+  </p>
+
+  <h2 class="small">Sources</h2>
+  <p class="muted small">
+    <a href="https://evernote.com/compare-plans">Evernote plans</a> · <a href="https://help.evernote.com/hc/en-us/articles/46317642175763-Discontinuing-Evernote-Personal-Professional-Introducing-Starter-Advanced-FAQ">Evernote Starter and Advanced FAQ</a> · <a href="https://help.evernote.com/hc/en-us/articles/23565231682323-Understanding-Evernote-Free-and-Starter-plans-limits-note-and-notebook-limits-explained">Evernote Free and Starter limits</a>
+  </p>
+</CompareLayout>

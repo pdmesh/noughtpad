@@ -1,0 +1,60 @@
+---
+import CompareLayout from "../components/CompareLayout.astro";
+import Shot from "../components/Shot.astro";
+---
+
+<CompareLayout
+  title="An Obsidian alternative that needs no plugins"
+  h1="Looking for an Obsidian alternative?"
+  other="Obsidian"
+  description="Noughtpad is an Obsidian alternative for people who want plain Markdown files without the setup: related notes, search by meaning and chat with your notes are built in and run on your computer."
+>
+  <p class="lede">
+    Obsidian is excellent, and many people should keep using it. But if you've found yourself spending more time arranging your notes than writing them, here's another way to work with the same kind of files.
+  </p>
+
+  <h2>Why people look for something else</h2>
+  <p>The usual reasons are these:</p>
+  <ul>
+    <li><strong>Too much setup.</strong> Choosing folders, templates, tags and plugins before you can just write.</li>
+    <li><strong>Keeping plugins working.</strong> Plugins update, clash or stop being maintained.</li>
+    <li><strong>Linking by hand.</strong> Connections only exist if you remember to make them.</li>
+    <li><strong>AI that sends notes away.</strong> Many AI plugins need an online service by default.</li>
+  </ul>
+  <p>If none of these bother you, Obsidian is probably still the right choice. See <a href="/noughtpad-vs-obsidian/">Noughtpad vs Obsidian</a> for a fair comparison.</p>
+
+  <h2>How Noughtpad works instead</h2>
+  <ul>
+    <li><strong>The same kind of files.</strong> Plain Markdown in a folder you choose. You can even point Noughtpad at your Obsidian vault and use both.</li>
+    <li><strong>A blank page.</strong> No setup. Open it and write. Labels and sources are there when you want them and hidden when you don't.</li>
+    <li><strong>Connections found for you.</strong> Press <kbd>⌘</kbd> <kbd>J</kbd> on any note to see others that seem related, with the passage that matched.</li>
+    <li><strong>Your ideas over time.</strong> See which threads you keep returning to and how they changed, month by month.</li>
+    <li><strong>Local by default.</strong> Search by meaning, related notes and ideas over time run on your computer. Chat can too, with a free model you download once.</li>
+  </ul>
+  <Shot name="related" alt="A note with the related-notes panel open, showing earlier notes and the passages that matched." />
+
+  <h2>What you'd give up</h2>
+  <p>Be clear-eyed about this before switching:</p>
+  <ul>
+    <li>No plugins, no graph view, no canvas, and no <code>[[links]]</code> or backlinks.</li>
+    <li>No phone or tablet app yet.</li>
+    <li>Sync between computers is still in testing (you can use any folder sync meanwhile).</li>
+    <li>It's a young app, at version 0.1.5, used daily on a Mac and much less tested on Windows and Linux.</li>
+  </ul>
+
+  <h2>Other alternatives worth a look</h2>
+  <ul>
+    <li><strong>Logseq</strong>, if you think in outlines and want open source. <a href="/noughtpad-vs-logseq/">Noughtpad vs Logseq</a></li>
+    <li><strong>Bear</strong>, if you only use Apple devices and want a polished writing app. <a href="/noughtpad-vs-bear/">Noughtpad vs Bear</a></li>
+    <li><strong>Apple Notes</strong>, if you want something already on your Mac and iPhone. <a href="/noughtpad-vs-apple-notes/">Noughtpad vs Apple Notes</a></li>
+    <li><strong>Notion</strong>, if you need to share and work with a team. <a href="/noughtpad-vs-notion/">Noughtpad vs Notion</a></li>
+  </ul>
+
+  <h2>Try it on your vault</h2>
+  <ol>
+    <li><a href="/download/">Download Noughtpad</a> and install it.</li>
+    <li>When it asks where to keep your notes, click <strong>Choose another folder…</strong> and pick your Obsidian vault.</li>
+    <li>Turn on <strong>Settings → Finding connections</strong>, give it a moment to read your notes, then open a note and press <kbd>⌘</kbd> <kbd>J</kbd>.</li>
+  </ol>
+  <p>Your files stay where they are. Noughtpad only changes a file when you edit that note in Noughtpad. If it isn't for you, delete the app and the hidden <code>.noughtpad</code> folder it added.</p>
+</CompareLayout>

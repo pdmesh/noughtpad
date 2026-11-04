@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="assets/gsap.min.js"></script>
+    <style>
+      /* Noughtpad's own palette (app tokens). */
+      :root {
+        --ground: #faf8f4;
+        --ink: #23262d;
+        --muted: #5f6470;
+        --accent: #b9772c;
+        --font-display: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: var(--ground); }
+      #root { position: relative; width: 100%; height: 100%; font-family: var(--font-display); }
+      .clip { position: absolute; inset: 0; }
+      .scene { overflow: hidden; background: var(--ground); }
+      /* Screenshots are 2560x1600 (16:10). Shown 1920 wide; the bottom 120px falls outside the frame. */
+      .shot { position: absolute; left: 0; top: 0; width: 1920px; height: 1200px; transform-origin: 50% 30%; }
+      .shot img { width: 1920px; height: 1200px; display: block; }
+      .mask { position: absolute; background: rgb(250, 248, 244); transform-origin: 100% 50%; }
+      .caption {
+        position: absolute; left: 50%; bottom: 72px; transform: translateX(-50%);
+        background: var(--ink); color: var(--ground);
+        font-size: 40px; font-weight: 600; letter-spacing: -0.01em;
+        padding: 20px 36px; border-radius: 18px; white-space: nowrap;
+        box-shadow: 0 16px 48px rgba(35, 38, 45, 0.25);
+      }
+      #end { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px; background: var(--ground); }
+      #end svg { width: 150px; height: 150px; }
+      #end h1 { font-size: 104px; font-weight: 700; letter-spacing: -0.035em; color: var(--ink); }
+      #end p { font-size: 46px; color: var(--muted); }
+      #end .url { font-size: 36px; color: var(--accent); font-weight: 600; margin-top: 8px; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="20" data-width="1920" data-height="1080">
+      <!-- 1. Writing on a blank page -->
+      <div id="s1" class="clip scene" data-start="0" data-duration="4.4" data-track-index="0">
+        <div class="shot" id="s1shot" style="transform-origin: 40% 25%">
+          <img src="assets/write.webp" alt="" />
+          <div class="mask" id="m1" style="left: 452px; top: 244px; width: 630px; height: 48px"></div>
+          <div class="mask" id="m2" style="left: 452px; top: 306px; width: 790px; height: 48px"></div>
+        </div>
+        <div class="caption" id="c1">Write on a blank page.</div>
+      </div>
+
+      <!-- 2. Related notes -->
+      <div id="s2" class="clip scene" data-start="4" data-duration="3.9" data-track-index="1">
+        <div class="shot" id="s2shot" style="transform-origin: 96% 16%"><img src="assets/related.webp" alt="" /></div>
+        <div class="caption" id="c2">Related notes, found by meaning.</div>
+      </div>
+
+      <!-- 3. A thread over time -->
+      <div id="s3" class="clip scene" data-start="7.5" data-duration="3.9" data-track-index="2">
+        <div class="shot" id="s3shot" style="transform-origin: 55% 20%"><img src="assets/thread.webp" alt="" /></div>
+        <div class="caption" id="c3">See how an idea changed over months.</div>
+      </div>
+
+      <!-- 4. Journal -->
+      <div id="s4" class="clip scene" data-start="11" data-duration="3.4" data-track-index="3">
+        <div class="shot" id="s4shot" style="transform-origin: 62% 12%"><img src="assets/journal.webp" alt="" /></div>
+        <div class="caption" id="c4">A year of writing, at a glance.</div>
+      </div>
+
+      <!-- 5. Chat -->
+      <div id="s5" class="clip scene" data-start="14" data-duration="2.9" data-track-index="4">
+        <div class="shot" id="s5shot" style="transform-origin: 40% 22%"><img src="assets/chat.webp" alt="" /></div>
+        <div class="caption" id="c5">Ask your notes. On your computer.</div>
+      </div>
+
+      <!-- 6. End card -->
+      <div id="end" class="clip" data-start="16.5" data-duration="3.5" data-track-index="5">
+        <svg viewBox="0 0 1024 1024" aria-hidden="true"><rect width="1024" height="1024" rx="224" fill="#1f2430" /><circle cx="512" cy="512" r="250" fill="none" stroke="#f3efe6" stroke-width="72" /></svg>
+        <h1>Noughtpad</h1>
+        <p>A blank page that quietly remembers.</p>
+        <p class="url">noughtpad.com</p>
+      </div>
+    </div>
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+
+      // 1. Typing: masks step away left to right, line by line.
+      tl.fromTo("#m1", { scaleX: 1 }, { scaleX: 0, duration: 1.3, ease: "steps(52)" }, 0.5);
+      tl.fromTo("#m2", { scaleX: 1 }, { scaleX: 0, duration: 1.5, ease: "steps(66)" }, 1.95);
+      tl.fromTo("#s1shot", { scale: 1.75 }, { scale: 1.82, duration: 4.4, ease: "none" }, 0);
+      tl.fromTo("#c1", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, 0.3);
+
+      // Scenes 2-5: cross-fade in, slow push, caption rises.
+      const scenes = [
+        ["#s2", "#s2shot", "#c2", 4, 3.9],
+        ["#s3", "#s3shot", "#c3", 7.5, 3.9],
+        ["#s4", "#s4shot", "#c4", 11, 3.4],
+        ["#s5", "#s5shot", "#c5", 14, 2.9],
+      ];
+      for (const [scene, shot, cap, at, dur] of scenes) {
+        tl.fromTo(scene, { opacity: 0 }, { opacity: 1, duration: 0.4, ease: "power1.inOut" }, at);
+        tl.fromTo(shot, { scale: 1.32 }, { scale: 1.38, duration: dur, ease: "none" }, at);
+        tl.fromTo(cap, { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, at + 0.3);
+      }
+
+      // 6. End card.
+      tl.fromTo("#end", { opacity: 0 }, { opacity: 1, duration: 0.5, ease: "power1.inOut" }, 16.5);
+      tl.fromTo("#end > *", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.5, stagger: 0.12, ease: "power2.out" }, 16.7);
+
+      window.__timelines["main"] = tl;
+      tl.seek(0);
+    </script>
+  </body>
+</html>

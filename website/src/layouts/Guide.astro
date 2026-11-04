@@ -1,0 +1,49 @@
+---
+import Base from "./Base.astro";
+import { GUIDE } from "../guide";
+import { SITE_URL } from "../config";
+
+// Used as the `layout` of each Markdown page in src/pages/guide/.
+const { frontmatter } = Astro.props;
+const slug = Astro.url.pathname.replace(/^\/guide\/|\/$/g, "");
+const i = GUIDE.findIndex((g) => g.slug === slug);
+const prev = i > 0 ? GUIDE[i - 1] : null;
+const next = i >= 0 && i < GUIDE.length - 1 ? GUIDE[i + 1] : null;
+const crumbs = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    { "@type": "ListItem", position: 1, name: "User guide", item: `${SITE_URL}/guide/` },
+    { "@type": "ListItem", position: 2, name: frontmatter.title, item: new URL(Astro.url.pathname, SITE_URL).href },
+  ],
+};
+---
+
+<Base title={`${frontmatter.title} (user guide)`} description={frontmatter.description} section="guide" jsonld={[crumbs]}>
+  <div class="page">
+    <div class="wrap guide">
+      <aside class="guide-nav">
+        <details open>
+          <summary>User guide: all pages</summary>
+          <nav aria-label="User guide">
+            <p><a href="/guide/">Guide home</a></p>
+            <ol>
+              {GUIDE.map((g) => (
+                <li><a href={`/guide/${g.slug}/`} aria-current={g.slug === slug ? "page" : undefined}>{g.title}</a></li>
+              ))}
+            </ol>
+          </nav>
+        </details>
+      </aside>
+      <article class="prose">
+        <p class="eyebrow"><a href="/guide/" style="color:inherit;text-decoration:none">User guide</a></p>
+        <h1>{frontmatter.title}</h1>
+        <slot />
+        <nav class="pager" aria-label="Next and previous pages">
+          {prev ? <a href={`/guide/${prev.slug}/`}><span>Previous</span>{prev.title}</a> : <span />}
+          {next ? <a href={`/guide/${next.slug}/`} style="text-align:right"><span>Next</span>{next.title}</a> : <a href="/guide/" style="text-align:right"><span>Back to</span>Guide home</a>}
+        </nav>
+      </article>
+    </div>
+  </div>
+</Base>

@@ -1,0 +1,132 @@
+---
+import { SITE_NAME, SITE_URL, CONTACT_EMAIL, SOURCE_URL } from "../config";
+import "../styles/global.css";
+
+interface Props {
+  /** Page title, without the site name. */
+  title: string;
+  description: string;
+  /** Social card image, relative to the site root. */
+  image?: string;
+  imageAlt?: string;
+  /** Extra structured data (JSON-LD objects). */
+  jsonld?: object[];
+  /** Mark a nav item as current. */
+  section?: "features" | "guide" | "compare" | "download";
+  /** Keep this page out of search results (legal pages, 404). */
+  noindex?: boolean;
+}
+
+const { noindex = false, title, description, image = "/img/og.png", imageAlt = "The Noughtpad app: a quiet writing page with related notes beside it.", jsonld = [], section } = Astro.props;
+const canonical = new URL(Astro.url.pathname, SITE_URL).href;
+const fullTitle = title === SITE_NAME ? title : `${title} | ${SITE_NAME}`;
+const imageUrl = new URL(image, SITE_URL).href;
+const nav = [
+  { href: "/features/", label: "Features", key: "features" },
+  { href: "/guide/", label: "Guide", key: "guide" },
+  { href: "/compare/", label: "Compare", key: "compare" },
+];
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    {noindex && <meta name="robots" content="noindex, follow" />}
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/img/apple-touch-icon.png" />
+    <link rel="sitemap" href="/sitemap.xml" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#faf8f4" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#17191e" media="(prefers-color-scheme: dark)" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={SITE_NAME} />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={imageUrl} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={imageAlt} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={fullTitle} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={imageUrl} />
+    <meta name="twitter:image:alt" content={imageAlt} />
+
+    {jsonld.map((d) => <script type="application/ld+json" set:html={JSON.stringify(d)} />)}
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <header class="site-header">
+      <div class="wrap header-row">
+        <a class="brand" href="/" aria-label="Noughtpad home">
+          <img src="/favicon.svg" width="28" height="28" alt="" />
+          <span>Noughtpad</span>
+        </a>
+        <nav aria-label="Main">
+          <ul>
+            {
+              nav.map((n) => (
+                <li>
+                  <a href={n.href} aria-current={section === n.key ? "page" : undefined}>
+                    {n.label}
+                  </a>
+                </li>
+              ))
+            }
+            <li><a class="btn btn-small" href="/download/" aria-current={section === "download" ? "page" : undefined}>Download</a></li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main">
+      <slot />
+    </main>
+
+    <footer class="site-footer">
+      <div class="wrap footer-grid">
+        <div>
+          <p class="brand"><img src="/favicon.svg" width="22" height="22" alt="" /> <span>Noughtpad</span></p>
+          <p class="muted">A local-first notebook. Your notes are plain Markdown files on your computer.</p>
+          {SOURCE_URL && <p class="muted">Source available: <a href={SOURCE_URL}>read the code on GitHub</a>.</p>}
+        </div>
+        <div>
+          <h2 class="footer-h">Noughtpad</h2>
+          <ul>
+            <li><a href="/features/">Features</a></li>
+            <li><a href="/download/">Download</a></li>
+            <li><a href="/guide/">User guide</a></li>
+            <li><a href="/guide/common-problems/">Common problems</a></li>
+          </ul>
+        </div>
+        <div>
+          <h2 class="footer-h">Compare</h2>
+          <ul>
+            <li><a href="/noughtpad-vs-obsidian/">Noughtpad vs Obsidian</a></li>
+            <li><a href="/obsidian-alternative/">An Obsidian alternative</a></li>
+            <li><a href="/noughtpad-vs-notion/">Noughtpad vs Notion</a></li>
+            <li><a href="/noughtpad-vs-logseq/">Noughtpad vs Logseq</a></li>
+            <li><a href="/noughtpad-vs-bear/">Noughtpad vs Bear</a></li>
+            <li><a href="/noughtpad-vs-apple-notes/">Noughtpad vs Apple Notes</a></li>
+            <li><a href="/noughtpad-vs-evernote/">Noughtpad vs Evernote</a></li>
+          </ul>
+        </div>
+        <div>
+          <h2 class="footer-h">Contact</h2>
+          <ul>
+            <li><a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a></li>
+            <li><a href="/privacy/">Privacy</a></li>
+            <li><a href="/terms/">Terms</a></li>
+          </ul>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,84 @@
+---
+import Base from "../layouts/Base.astro";
+import { CONTACT_EMAIL, LEGAL_NAME, GOVERNING_LAW, LEGAL_UPDATED, SOURCE_URL } from "../config";
+const who = LEGAL_NAME ?? "Noughtpad";
+---
+
+<Base title="Terms of use" description="The terms for using the Noughtpad app and noughtpad.com, in plain English." noindex>
+  <div class="page">
+    <div class="wrap prose">
+      <p class="eyebrow">Legal</p>
+      <h1>Terms of use</h1>
+      <p class="dated">Last updated {LEGAL_UPDATED}.</p>
+
+      <p class="lede">These terms are for the Noughtpad app and this website. We've kept them short and plain.</p>
+      <p>"We" means {who}. "You" means the person using Noughtpad or this site.</p>
+
+      <h2>Using Noughtpad</h2>
+      <ul>
+        <li>Noughtpad is free to download and use, for personal use and for work.</li>
+        <li>You can install it on as many of your own computers as you like.</li>
+        <li>
+          The app's code is licensed separately, under the licence that comes with it{SOURCE_URL ? <> (<a href={`${SOURCE_URL}/blob/main/LICENSE.md`}>read the licence</a>)</> : ""}. If the licence and these terms ever disagree about the code, the licence wins.
+        </li>
+      </ul>
+
+      <h2>Your notes are yours</h2>
+      <p>
+        Everything you write in Noughtpad belongs to you. We don't receive your notes and claim no rights over them. They're plain files on your computer, so you can take them anywhere.
+      </p>
+
+      <h2>Keep your own backups</h2>
+      <p>
+        Noughtpad saves carefully, but no software is perfect, and Noughtpad is still young. Please keep backups of your notes folder, for example with Time Machine, a cloud drive or git. We can't recover notes for you, because we never have them.
+      </p>
+
+      <h2>Things that are still being tested</h2>
+      <p>
+        Some features are marked "in testing", including sync. They may change, stop working for a while, or be withdrawn. Sync is planned to become a paid add-on; if that happens, we'll say so clearly before you're asked to pay, and these terms will be updated.
+      </p>
+
+      <h2>Other services you choose to use</h2>
+      <p>
+        If you connect Noughtpad to another service, such as an AI provider for chat or Google Drive for sync, your use of that service is between you and them, under their terms. You're responsible for any costs they charge, for example per-question charges from an AI provider.
+      </p>
+
+      <h2>AI answers</h2>
+      <p>
+        Chat answers and suggestions (related notes, ideas over time) can be wrong. They're there to help you find and think about your own notes, not to be relied on as advice.
+      </p>
+
+      <h2>No warranty</h2>
+      <p>
+        Noughtpad is provided "as is", without any warranty, to the extent the law allows. We don't promise it will be free of errors or always available.
+      </p>
+
+      <h2>Limit of liability</h2>
+      <p>
+        To the extent the law allows, we aren't liable for any indirect or consequential loss, or for loss of data, arising from your use of Noughtpad or this site. Nothing in these terms limits liability that can't be limited by law.
+      </p>
+
+      <h2>This website</h2>
+      <p>
+        You're welcome to read, link to and share pages from this site. Please don't copy the site as a whole or present our content as your own. Comparisons with other apps reflect what those apps' own websites said on the date shown, and may have changed since.
+      </p>
+
+      <h2>Changes</h2>
+      <p>
+        We may update these terms. When we do, we'll change the date at the top. If a change matters, we'll make it clear on this site before it takes effect.
+      </p>
+
+      {
+        GOVERNING_LAW && (
+          <>
+            <h2>Governing law</h2>
+            <p>These terms are governed by {GOVERNING_LAW}.</p>
+          </>
+        )
+      }
+
+      <h2>Contact</h2>
+      <p>Questions about these terms: <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.</p>
+    </div>
+  </div>
+</Base>

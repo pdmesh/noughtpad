@@ -1,0 +1,7 @@
+# Privacy, terms and 404 are kept out of search results with a noindex tag (and left out of
+# the sitemap). They are not disallowed here on purpose: a crawler blocked by robots.txt
+# can't see the noindex tag, and may still list the bare URL.
+User-agent: *
+Allow: /
+
+Sitemap: https://noughtpad.com/sitemap.xml

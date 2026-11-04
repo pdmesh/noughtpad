@@ -1,0 +1,60 @@
+---
+import CompareLayout from "../components/CompareLayout.astro";
+import { SOURCE_URL } from "../config";
+---
+
+<CompareLayout
+  title="Noughtpad vs Logseq: pages vs outlines"
+  h1="Noughtpad vs Logseq"
+  other="Logseq"
+  description="Noughtpad vs Logseq compared honestly: both are local-first and free. Logseq is an open-source outliner with links and plugins; Noughtpad is a blank-page notebook that finds connections for you."
+>
+  <p class="lede">
+    Logseq and Noughtpad both keep your notes on your own computer and both are free. The big difference is how you write: Logseq is an outliner, where every line is a block you can link and nest. Noughtpad is a page, where you write however you like.
+  </p>
+
+  <h2>The short version</h2>
+  <ul>
+    <li><strong>Choose Logseq</strong> if you think in bullet points, want to link blocks and pages by hand, like a daily journal page as your starting point, and want fully open-source software.</li>
+    <li><strong>Choose Noughtpad</strong> if you prefer writing in paragraphs on a blank page, and want the app to find connections and show how your ideas change, without making links yourself.</li>
+  </ul>
+
+  <h2>What Logseq does better</h2>
+  <ul>
+    <li><strong>Open source.</strong> Logseq is open source under the AGPL-3.0 licence, with a large community on GitHub.</li>
+    <li><strong>Outlines, links and queries.</strong> Block references, backlinks, a graph view, and queries over your notes.</li>
+    <li><strong>Plugins and themes.</strong> A plugin system with a growing collection. Noughtpad has none.</li>
+    <li><strong>Phone apps.</strong> Logseq has mobile apps. Noughtpad doesn't yet.</li>
+    <li><strong>Collaboration.</strong> Logseq is building real-time collaboration (in early testing). Noughtpad is for one person.</li>
+  </ul>
+
+  <h2>What Noughtpad does differently</h2>
+  <ul>
+    <li><strong>Pages, not bullets.</strong> Write paragraphs, lists or anything else. The file on disk is exactly what you typed.</li>
+    <li><strong>Plain Markdown files, one per note.</strong> Logseq's newer database version (in beta) stores notes in a database, with a read-only Markdown copy you can turn on. Its older file-based version uses Markdown files. Noughtpad is files only.</li>
+    <li><strong>Connections found for you.</strong> <a href="/guide/related-notes/">Related notes</a> by meaning, with the passage that matched, and <a href="/guide/ideas-over-time/">ideas over time</a>.</li>
+    <li><strong>Search by meaning and chat built in</strong>, running on your computer by default.</li>
+  </ul>
+
+  <h2>Side by side</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th scope="col"></th><th scope="col">Noughtpad</th><th scope="col">Logseq</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Writing style</th><td>Free-form pages</td><td>Outliner (blocks)</td></tr>
+        <tr><th scope="row">Storage</th><td>Markdown files</td><td>Markdown or Org files (file version); a database with optional read-only Markdown copy (database version, in beta)</td></tr>
+        <tr><th scope="row">Price</th><td>Free</td><td>Free; local features stay free</td></tr>
+        <tr><th scope="row">Sync</th><td>Google Drive sync in testing; planned as a paid add-on</td><td>Logseq Sync for supporters during its beta; part of a future subscription</td></tr>
+        <tr><th scope="row">Source code</th><td>{SOURCE_URL ? <a href={SOURCE_URL}>Source available</a> : "Not published yet"}</td><td>Open source (AGPL-3.0)</td></tr>
+        <tr><th scope="row">Links</th><td>Suggested by meaning</td><td>Made by hand, with backlinks and graph</td></tr>
+        <tr><th scope="row">Phone apps</th><td>No (planned)</td><td>Yes</td></tr>
+        <tr><th scope="row">Plugins</th><td>No</td><td>Yes</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 class="small">Sources</h2>
+  <p class="muted small">
+    <a href="https://github.com/logseq/logseq">Logseq on GitHub</a> · <a href="https://discuss.logseq.com/t/whats-new-with-logseq-db-may-16th-2026/35020">What's new with Logseq DB (May 2026)</a> · <a href="https://discuss.logseq.com/t/syncing-logseq-db/31285">Syncing Logseq DB</a>
+  </p>
+</CompareLayout>

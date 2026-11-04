@@ -1,0 +1,105 @@
+---
+import Base from "../layouts/Base.astro";
+import { RELEASES_URL, VERSION, SITE_URL, CONTACT_EMAIL } from "../config";
+
+const app = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "Noughtpad",
+  applicationCategory: "ProductivityApplication",
+  operatingSystem: "macOS (Apple Silicon), Windows, Linux",
+  softwareVersion: VERSION,
+  downloadUrl: RELEASES_URL,
+  url: SITE_URL + "/download/",
+  image: SITE_URL + "/img/og.png",
+  offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+};
+---
+
+<Base
+  title="Download"
+  description={`Download Noughtpad ${VERSION} free for Mac (Apple Silicon), Windows and Linux. Includes how to open the app on a Mac while it isn't signed with an Apple certificate yet.`}
+  section="download"
+  jsonld={[app]}
+>
+  <div class="page">
+    <div class="wrap prose">
+      <p class="eyebrow">Download</p>
+      <h1>Download Noughtpad</h1>
+      <p class="lede">Version {VERSION}. Free. No account needed.</p>
+      <p>
+        All downloads are on the <a href={RELEASES_URL}>latest release page on GitHub</a>. Scroll down to "Assets" and pick the file for your computer.
+      </p>
+    </div>
+
+    <div class="wrap">
+      <div class="platforms">
+        <div class="card platform" id="mac-card">
+          <h3>Mac</h3>
+          <p>Apple Silicon (M1 and later). Download the file ending in <code>aarch64.dmg</code>.</p>
+          <p class="small">There's no version for Intel Macs yet.</p>
+          <a class="btn" href={RELEASES_URL}>Download for Mac</a>
+        </div>
+        <div class="card platform">
+          <h3>Windows</h3>
+          <p>Download the file ending in <code>setup.exe</code>. It installs for your user only, without asking for admin rights.</p>
+          <p class="small">An <code>.msi</code> installer is there too.</p>
+          <a class="btn" href={RELEASES_URL}>Download for Windows</a>
+        </div>
+        <div class="card platform">
+          <h3>Linux</h3>
+          <p>Download the <code>.AppImage</code>, or the <code>.deb</code> (Debian, Ubuntu) or <code>.rpm</code> (Fedora) package.</p>
+          <a class="btn" href={RELEASES_URL}>Download for Linux</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="wrap prose">
+      <div class="callout">
+        <strong>How tested is each version?</strong>
+        The Mac version is used every day. The Windows and Linux versions are built from the same code and pass the same tests, but have had far less real use. If something goes wrong, please write to <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
+      </div>
+
+      <h2 id="mac">Opening Noughtpad on a Mac for the first time</h2>
+      <p>
+        Noughtpad isn't signed with an Apple developer certificate yet. That means macOS can't check who made it, so the first time you open it, macOS stops it and shows a warning. You only need to do this once.
+      </p>
+      <ol class="steps">
+        <li>Open the <code>.dmg</code> file you downloaded and drag <strong>Noughtpad</strong> into <strong>Applications</strong>.</li>
+        <li>Open Noughtpad from Applications. macOS says it can't be opened. Click <strong>Done</strong> (or <strong>OK</strong>).</li>
+        <li>Open <strong>System Settings</strong>, then <strong>Privacy &amp; Security</strong>.</li>
+        <li>Scroll down to the <strong>Security</strong> section. You'll see a line saying Noughtpad was blocked. Click <strong>Open Anyway</strong>.</li>
+        <li>Enter your Mac password if asked, then click <strong>Open Anyway</strong> once more.</li>
+      </ol>
+      <p>
+        From then on Noughtpad opens normally. Updates installed from inside the app don't ask again.
+      </p>
+      <p class="muted small">
+        Why does it need to be in Applications? Updates replace the app where it sits, and a disk image (the opened <code>.dmg</code>) can't be changed.
+      </p>
+
+      <h2 id="windows">Windows: "Windows protected your PC"</h2>
+      <p>
+        Windows may show a blue SmartScreen box because the installer isn't signed. Click <strong>More info</strong>, then <strong>Run anyway</strong>.
+      </p>
+
+      <h2 id="linux">Linux</h2>
+      <p>
+        For the AppImage, make it executable (right-click, Properties, "Allow executing file as program", or <code>chmod +x</code> in a terminal) and open it. The <code>.deb</code> and <code>.rpm</code> install like any other package.
+      </p>
+
+      <h2>After installing</h2>
+      <ul>
+        <li>The first time, Noughtpad asks where to keep your notes. <a href="/guide/install-and-first-note/">Your first note, step by step</a></li>
+        <li>Noughtpad checks for updates on its own and shows an "Update to …" button at the bottom of the sidebar when there's a new version. Nothing downloads until you click it. <a href="/guide/updating/">About updates</a></li>
+        <li>On a Mac, the first start after each update can take a few seconds longer than usual. <a href="/guide/common-problems/#slow-first-launch">Why</a></li>
+      </ul>
+
+      <h2>What you need</h2>
+      <ul>
+        <li>A Mac with Apple Silicon, or a Windows or Linux computer. The download is about 60 MB.</li>
+        <li>Optional extras: about 65 MB if you turn on search by meaning, and about 2.5 GB if you download a chat model to run on your computer (1.1 GB for the smaller one).</li>
+      </ul>
+    </div>
+  </div>
+</Base>

@@ -1,0 +1,41 @@
+---
+import Base from "../layouts/Base.astro";
+import { COMPARISONS_CHECKED } from "../config";
+
+const pages = [
+  { href: "/noughtpad-vs-obsidian/", title: "Noughtpad vs Obsidian", text: "Both keep Markdown files in a folder, so you can use them together. Obsidian has plugins and phone apps; Noughtpad finds connections for you." },
+  { href: "/obsidian-alternative/", title: "Looking for an Obsidian alternative?", text: "For people who want the same plain files with less setup." },
+  { href: "/noughtpad-vs-notion/", title: "Noughtpad vs Notion", text: "A private notebook on your computer vs a shared online workspace." },
+  { href: "/noughtpad-vs-logseq/", title: "Noughtpad vs Logseq", text: "Free-form pages vs an open-source outliner. Both local-first." },
+  { href: "/noughtpad-vs-bear/", title: "Noughtpad vs Bear", text: "Two quiet Markdown apps: plain files on any desktop vs a polished Apple-only library." },
+  { href: "/noughtpad-vs-apple-notes/", title: "Noughtpad vs Apple Notes", text: "Built in and synced vs files you own that show how ideas connect." },
+  { href: "/noughtpad-vs-evernote/", title: "Noughtpad vs Evernote", text: "Unlimited notes as local files vs a cloud service with a 50-note free plan." },
+];
+---
+
+<Base
+  title="Compare Noughtpad"
+  description="Honest comparisons of Noughtpad with Obsidian, Notion, Logseq, Bear, Apple Notes and Evernote, including what each of them does better."
+  section="compare"
+>
+  <div class="page">
+    <div class="wrap">
+      <div class="prose">
+        <p class="eyebrow">Compare</p>
+        <h1>How Noughtpad compares</h1>
+        <p class="lede">
+          Every app here is good at something. These pages try to say plainly what each does better than Noughtpad, as well as where Noughtpad is different, so you can pick what suits you.
+        </p>
+        <p class="dated">Based on each app's own website as of {COMPARISONS_CHECKED}.</p>
+      </div>
+      <div class="cards" style="margin-top:2rem">
+        {pages.map((p) => (
+          <a class="card" href={p.href}>
+            <h2 style="font-size:1.08rem;margin:0 0 0.35rem">{p.title}</h2>
+            <p>{p.text}</p>
+          </a>
+        ))}
+      </div>
+    </div>
+  </div>
+</Base>

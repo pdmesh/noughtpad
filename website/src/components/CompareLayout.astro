@@ -1,0 +1,46 @@
+---
+import Base from "../layouts/Base.astro";
+import DownloadCta from "./DownloadCta.astro";
+import { COMPARISONS_CHECKED, SITE_URL } from "../config";
+
+interface Props {
+  title: string;
+  description: string;
+  h1: string;
+  /** The other app's name, for structured data. */
+  other: string;
+}
+const { title, description, h1, other } = Astro.props;
+const crumbs = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    { "@type": "ListItem", position: 1, name: "Compare", item: `${SITE_URL}/compare/` },
+    { "@type": "ListItem", position: 2, name: `Noughtpad vs ${other}`, item: new URL(Astro.url.pathname, SITE_URL).href },
+  ],
+};
+const article = {
+  "@context": "https://schema.org",
+  "@type": "Article",
+  headline: h1,
+  description,
+  dateModified: "2026-11-04",
+  author: { "@type": "Organization", name: "Noughtpad" },
+};
+---
+
+<Base title={title} description={description} section="compare" jsonld={[crumbs, article]}>
+  <article class="page">
+    <div class="wrap prose">
+      <p class="eyebrow"><a href="/compare/" style="color:inherit;text-decoration:none">Compare</a></p>
+      <h1>{h1}</h1>
+      <p class="dated">Based on {other}'s own website as of {COMPARISONS_CHECKED}. Prices and features change; if something here is out of date, please tell us at <a href="mailto:hello@noughtpad.com">hello@noughtpad.com</a> and we'll fix it.</p>
+      <slot />
+      <hr />
+      <h2>Try Noughtpad</h2>
+      <p>It's free, it works without an account, and your notes stay plain Markdown files. If it isn't for you, the files open in any other Markdown app.</p>
+      <DownloadCta />
+      <p class="muted small">More comparisons: <a href="/compare/">all comparisons</a>.</p>
+    </div>
+  </article>
+</Base>
