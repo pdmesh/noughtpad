@@ -23,7 +23,11 @@
   --heat-3: #9a5f1c;
   --heat-4: #6b3e0c;
   --font-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
-  --font-text: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  /* Note text: the system font and size unless changed in Settings → Writing (lib/textStyle.ts). */
+  --font-text: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --text-size: 1rem;
+  --sidebar-w: 260px;
+  --related-w: 340px;
   --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
   --measure: 720px;
   color-scheme: light;
@@ -163,13 +167,9 @@ button {
   padding: 72px 24px 120px;
   transition: margin-left 0.2s ease;
 }
+/* With a panel open, the note is centred in the space left beside it. */
 .chrome-pinned .main {
-  margin-left: max(260px, calc((100vw - var(--measure)) / 2));
-}
-@media (max-width: 1240px) {
-  .chrome-pinned .main {
-    margin-left: 260px;
-  }
+  margin-left: calc(var(--sidebar-w) + max(0px, (100vw - var(--sidebar-w) - var(--measure)) / 2));
 }
 
 
@@ -207,7 +207,8 @@ button {
   top: 0;
   bottom: 0;
   left: 0;
-  width: 240px;
+  box-sizing: border-box;
+  width: var(--sidebar-w);
   padding: 52px 10px 12px;
   background: var(--bg-sunk);
   border-right: 1px solid var(--border);
@@ -540,7 +541,7 @@ button {
 
 /* ---------- editor (CodeMirror live preview) ---------------------------- */
 .noughtpad-editor .cm-editor {
-  font-size: 18px;
+  font-size: var(--text-size);
   line-height: 1.7;
 }
 .noughtpad-editor .cm-scroller {
@@ -971,7 +972,7 @@ button {
   top: 0;
   right: 0;
   bottom: 0;
-  width: 340px;
+  width: var(--related-w);
   max-width: 100vw;
   overflow-y: auto;
   padding: 52px 18px 24px;
@@ -981,12 +982,14 @@ button {
   box-sizing: border-box;
 }
 .related-open .main {
-  margin-right: 360px;
-  margin-left: max(24px, calc((100vw - 360px - var(--measure)) / 2));
+  margin-right: var(--related-w);
+  margin-left: max(0px, calc((100vw - var(--related-w) - var(--measure)) / 2));
 }
 .chrome-pinned.related-open .main {
-  margin-left: 260px;
-  margin-right: 360px;
+  margin-right: var(--related-w);
+  margin-left: calc(
+    var(--sidebar-w) + max(0px, (100vw - var(--sidebar-w) - var(--related-w) - var(--measure)) / 2)
+  );
 }
 .related-head {
   display: flex;
@@ -1690,6 +1693,36 @@ button.cue:hover {
   color: var(--fg);
   min-width: 0;
   flex: 1;
+}
+.settings-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.settings-select,
+.settings-input {
+  font: inherit;
+  font-size: 0.88rem;
+  padding: 5px 8px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--bg-elev);
+  color: var(--fg);
+}
+.settings-input {
+  width: 170px;
+}
+.settings-select:focus,
+.settings-input:focus {
+  outline: 2px solid var(--accent-soft);
+  border-color: var(--accent);
+}
+.settings-sample {
+  margin: 10px 0 0;
+  font-family: var(--font-text);
+  font-size: var(--text-size);
+  line-height: 1.7;
+  color: var(--fg-muted);
 }
 .field input:focus {
   outline: 2px solid var(--accent-soft);

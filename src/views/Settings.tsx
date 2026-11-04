@@ -6,6 +6,7 @@ import { checkForUpdates, describeUpdate, installUpdate, useUpdateState } from "
 import { describeSync, syncNotices, useSync } from "../lib/sync";
 import { useState } from "react";
 import { useLlm } from "./Models";
+import { FONTS, SIZES, loadStyle, saveStyle, type FontChoice, type TextStyle } from "../lib/textStyle";
 
 const isMac = typeof navigator !== "undefined" && /Mac/i.test(navigator.platform);
 const mod = isMac ? "⌘" : "Ctrl";
@@ -100,6 +101,8 @@ export function SettingsView({
           <ChevronRight size={15} aria-hidden />
         </button>
       </section>
+
+      <WritingSettings />
 
       <section className="settings-section">
         <h3 className="ideas-section-title">Layout</h3>
@@ -255,6 +258,60 @@ function Updates() {
         )}
       </Row>
       {update.kind === "available" && update.notes && <p className="settings-hint faint settings-notes">{update.notes}</p>}
+    </section>
+  );
+}
+
+/** The note text's font and size (this computer only). */
+function WritingSettings() {
+  const [style, setStyle] = useState<TextStyle>(loadStyle);
+  const change = (patch: Partial<TextStyle>) => {
+    const next = { ...style, ...patch };
+    setStyle(next);
+    saveStyle(next);
+  };
+  return (
+    <section className="settings-section">
+      <h3 className="ideas-section-title">Writing</h3>
+      <Row label="Font" hint="For note text. System uses your computer's own font.">
+        <span className="settings-controls">
+          {style.font === "custom" && (
+            <input
+              className="settings-input"
+              aria-label="Font name"
+              placeholder="Font name, e.g. Charter"
+              spellCheck={false}
+              value={style.custom}
+              onChange={(e) => change({ custom: e.target.value })}
+            />
+          )}
+          <select className="settings-select" aria-label="Font" value={style.font} onChange={(e) => change({ font: e.target.value as FontChoice })}>
+            {FONTS.map((f) => (
+              <option key={f.value} value={f.value}>
+                {f.label}
+              </option>
+            ))}
+          </select>
+        </span>
+      </Row>
+      <Row label="Text size" hint="System uses your computer's default size.">
+        <select
+          className="settings-select"
+          aria-label="Text size"
+          value={style.size ?? ""}
+          onChange={(e) => change({ size: e.target.value ? Number(e.target.value) : null })}
+        >
+          <option value="">System</option>
+          {SIZES.map((n) => (
+            <option key={n} value={n}>
+              {n} px
+            </option>
+          ))}
+        </select>
+      </Row>
+      <p className="settings-sample" aria-hidden>
+        The quick brown fox jumps over the lazy dog.
+      </p>
     </section>
   );
 }
