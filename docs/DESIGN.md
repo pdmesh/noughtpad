@@ -448,6 +448,25 @@ What was seen with release v0.1.1 (2026-11-03, published):
   a few days of using 0.1.1 on their machines. Until then nothing about Gatekeeper on install or
   update has been seen: the expectations in HANDOFF ("Auto-update: parked on where releases live") are unverified.
 
+What was seen with 0.1.2 → 0.1.3 (2026-11-04, the first real update, on the user's Mac):
+- 0.1.2 was installed by hand from the `.dmg` (System Settings → Privacy & Security → Open Anyway
+  for the unsigned app). Noughtpad → Check for Updates… offered 0.1.3, Install and restart worked,
+  and the updated app opened with no Gatekeeper prompt, as expected for a download the app made
+  itself (not quarantined).
+- The first launch of each new build (the hand install and the update alike) was slow before the
+  notes appeared; the second launch was fast (0.4 s to the editor).
+
+**First launch of a new build is slow when the notes are in ~/Documents** (measured 2026-11-04
+with the `open step` log): a build that had never run opened `~/Documents/Noughtpad` in 5.9 s
+(Opening your notes 4.4 s, Loading your preferences 1.0 s); its second launch took 0.36 s, and
+a fresh copy of the release opening `~/Noughtpad Sample` (outside Documents) took 0.4 s on its
+first launch. So the time goes on macOS's privacy check for the protected Documents folder,
+which treats every ad-hoc signed build as a new app: the first file access waits while macOS
+checks the new build. It happens once per installed build (each update), shows the startup
+loader rather than a blank window since 0.1.3, and should go away with a stable Developer ID
+signature (macOS remembers a signed app across updates) or with notes outside the protected
+folders (Documents, Desktop, Downloads, iCloud Drive).
+
 : complete, verified with the real model** in the desktop app on the sample notebook. 33 notes were connected about 3 s after launch. Indexing runs at about 37 notes/s using 2 CPU threads. Related-note lookup takes about 3 ms and hybrid search about 25 ms, including the query embedding. On a hand-written 13-note test set, all 20 related suggestions were on the same topic (still 20 of 20 at `min_related` 0.63 in M5).
 - Background worker: notes are embedded only after 3 s without edits, newest first, in batches of 16, yielding between batches.
 - Vectors are cached by `(model, chunk-text hash)`, so index rebuilds, renames and unchanged saves never re-run the model.

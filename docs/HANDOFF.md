@@ -26,8 +26,9 @@ Read this first next session, then `ROADMAP.md` (what's next) and
   running window and exits); a startup loader with the current step ("Opening your notes"…,
   `startup-step` event, shown after 250 ms; `pnpm dev` with `?slowstart` to see it) and each step's
   time in the log (`open step: … ms=`), so the next slow start says where it went; and the app
-  icon without the amber dot. Next: the updater check from the installed 0.1.2 (Check for Updates… →
-  Install and restart), recorded in DESIGN § Auto-update.
+  icon without the amber dot. The updater check passed (0.1.2 → 0.1.3, no Gatekeeper prompt).
+  The slow first launch is macOS's privacy check on `~/Documents` for each new ad-hoc build
+  (DESIGN § Auto-update): 5.9 s once per build, then 0.4 s. Goes away with signing.
 
 Earlier the same day:
 
