@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { mayHaveChanged } from "./api";
 import { ago, describeSync, SYNC_OFF, syncNotices, type SyncSummary } from "./sync";
 
 const now = Date.UTC(2026, 10, 4, 12, 0, 0);
@@ -45,5 +46,16 @@ describe("sync status in words", () => {
     );
     expect(n[1]).toMatch(/kept with the edit/);
     expect(n[2]).toMatch(/over 50 MB.*video\.mov/);
+  });
+});
+
+describe("reloading the open note", () => {
+  it("reloads after a sync (no list of changes) or when the note is named", () => {
+    expect(mayHaveChanged([], "N1")).toBe(true);
+    expect(mayHaveChanged([{ type: "upserted", id: "N1", path: "a.md" }], "N1")).toBe(true);
+  });
+  it("ignores changes to other notes", () => {
+    expect(mayHaveChanged([{ type: "upserted", id: "N2", path: "b.md" }], "N1")).toBe(false);
+    expect(mayHaveChanged([{ type: "unchanged" }], "N1")).toBe(false);
   });
 });

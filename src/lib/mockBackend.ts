@@ -384,6 +384,13 @@ export async function mock(cmd: string, a: Record<string, any> = {}): Promise<un
       setTimeout(() => {
         sync.state = "idle";
         sync.lastSync = Date.now();
+        // `?remoteedit`: another device edited the newest note. Like the app,
+        // say only that something changed (an empty list).
+        if (new URLSearchParams(location.search).has("remoteedit")) {
+          const newest = notes.reduce((a, b) => (a.created > b.created ? a : b));
+          newest.content += `\n\nEdited on another device at ${new Date().toLocaleTimeString()}.`;
+          emit("vault-changed", []);
+        }
         emit("sync-status", syncMock());
       }, 800);
       return;

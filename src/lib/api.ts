@@ -178,6 +178,15 @@ export type Change =
   | { type: "upserted"; id: string; path: string }
   | { type: "removed"; path: string };
 
+/**
+ * Whether a `vault-changed` event may have changed note `id`. An empty list
+ * means "something changed, not saying what" (sent after a sync, which writes
+ * and re-indexes files itself, so the watcher reports nothing for them).
+ */
+export function mayHaveChanged(changes: Change[], id: string): boolean {
+  return changes.length === 0 || changes.some((c) => c.type === "upserted" && c.id === id);
+}
+
 // ---- M4: models and thinking ----------------------------------------------
 
 export type ChatScope =

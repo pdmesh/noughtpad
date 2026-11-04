@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
 import { useEvent } from "../lib/useEvent";
-import { api, assetUrl, isApiError, openExternal, type Change, type EditableMeta, type NoteDoc } from "../lib/api";
+import { api, assetUrl, isApiError, mayHaveChanged, openExternal, type Change, type EditableMeta, type NoteDoc } from "../lib/api";
 import { Editor, type EditorHandle } from "../editor/Editor";
 import { MetaStrip } from "./MetaStrip";
 import { formatDateTime } from "../lib/format";
@@ -140,12 +140,15 @@ export function NotePane({ noteId, vaultRoot, presetLabels, onCreated, onTrashed
     };
   }, [flush]);
 
-  // Reload if this note was edited elsewhere and we have no pending edits.
+  // Reload if this note was edited elsewhere (another app, or another device
+  // through sync) and we have no pending edits.
   useEvent<Change[]>("vault-changed", async (changes) => {
     const cur = docRef.current;
     if (!cur || dirty.current.content || dirty.current.meta) return;
-    if (!changes.some((c) => c.type === "upserted" && c.id === cur.id)) return;
-    const fresh = await api.getNote(cur.id);
+    if (!mayHaveChanged(changes, cur.id)) return;
+    const fresh = await api.getNote(cur.id).catch(() => null);
+    // Typed meanwhile, switched notes, or nothing new: leave the editor alone.
+    if (!fresh || docRef.current !== cur || dirty.current.content || dirty.current.meta) return;
     if (fresh.hash === cur.hash) return;
     docRef.current = fresh;
     content.current = fresh.content;
