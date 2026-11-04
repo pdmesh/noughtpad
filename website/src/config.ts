@@ -14,10 +14,10 @@ export const VERSION = "0.1.5";
 export const RELEASES_URL = "https://github.com/pdmesh/noughtpad-releases/releases/latest";
 
 /**
- * Link to the source code. Leave null while the repo is private; set it to
- * "https://github.com/pdmesh/noughtpad" once it is public; the GitHub icon in the top bar, the footer link and the licence links all appear.
+ * Link to the source code (the repo is public). Set to null to hide every GitHub link:
+ * the icon in the top bar, the footer line and the licence links.
  */
-export const SOURCE_URL: string | null = null;
+export const SOURCE_URL: string | null = "https://github.com/pdmesh/noughtpad";
 
 /** No email address on the site (spam). People write through /contact/, which emails us. */
 
