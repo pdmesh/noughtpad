@@ -9,9 +9,8 @@
 //! time order into an in-memory database that answers the queries; the newest
 //! event for a key wins. See `docs/DESIGN.md` §12.6.
 //!
-//! Before M6 this was a single SQLite file, `.noughtpad/user-state.sqlite`.
-//! Opening a notebook that still has one copies its rows into this device's
-//! log once and renames the file to `user-state.sqlite.bak`.
+//! Before M6 this was a single SQLite file, `.noughtpad/user-state.sqlite`. It
+//! is ignored now (there were no users to carry over).
 
 use std::collections::HashSet;
 use std::fs::{self, OpenOptions};
@@ -27,8 +26,6 @@ use crate::Result;
 
 /// Folder (inside `.noughtpad/`) holding one log per device.
 pub const USER_STATE_DIR: &str = "user-state";
-/// The pre-M6 single-file store, migrated on open.
-pub const LEGACY_USER_STATE_FILE: &str = "user-state.sqlite";
 
 /// One line of a device's log.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -112,7 +109,6 @@ impl UserState {
             conn: Mutex::new(Self::fresh()?),
             logs: Some((dir, own)),
         };
-        state.migrate_legacy(&data_dir.join(LEGACY_USER_STATE_FILE))?;
         state.reload()?;
         Ok(state)
     }
@@ -181,62 +177,6 @@ impl UserState {
             f.sync_data().at(own)?;
         }
         apply(&self.conn(), event.at, &event.op)
-    }
-
-    /// Copy the pre-M6 SQLite store into this device's log, once.
-    fn migrate_legacy(&self, legacy: &Path) -> Result<()> {
-        if !legacy.exists() {
-            return Ok(());
-        }
-        let Some((_, own)) = &self.logs else { return Ok(()) };
-        let old = Connection::open(legacy)?;
-        old.execute_batch(SCHEMA)?;
-        let mut events = Vec::new();
-        {
-            let mut stmt = old.prepare("SELECT a, b, at FROM dismissed_relations")?;
-            let rows = stmt.query_map([], |r| {
-                Ok(Event {
-                    at: r.get(2)?,
-                    op: Op::Dismiss {
-                        a: r.get(0)?,
-                        b: r.get(1)?,
-                    },
-                })
-            })?;
-            for e in rows {
-                events.push(e?);
-            }
-            let mut stmt = old.prepare("SELECT a, b, useful, model, features, at FROM relation_feedback")?;
-            let rows = stmt.query_map([], |r| {
-                Ok(Event {
-                    at: r.get(5)?,
-                    op: Op::Feedback {
-                        a: r.get(0)?,
-                        b: r.get(1)?,
-                        useful: r.get(2)?,
-                        model: r.get(3)?,
-                        features: r.get(4)?,
-                    },
-                })
-            })?;
-            for e in rows {
-                events.push(e?);
-            }
-        }
-        drop(old);
-        events.sort_by_key(|e| e.at);
-        let mut text = String::new();
-        for e in &events {
-            text.push_str(&serde_json::to_string(e).expect("events serialise"));
-            text.push('\n');
-        }
-        let mut f = OpenOptions::new().create(true).append(true).open(own).at(own)?;
-        f.write_all(text.as_bytes()).at(own)?;
-        f.sync_all().at(own)?;
-        let bak = legacy.with_extension("sqlite.bak");
-        fs::rename(legacy, &bak).at(legacy)?;
-        tracing::info!(rows = events.len(), "moved user-state into {}", own.display());
-        Ok(())
     }
 
     /// Record that two notes should not be shown as related (either direction).
@@ -418,33 +358,5 @@ mod tests {
         let s = UserState::open(dir.path(), "DEV1").unwrap();
         assert!(s.feedback("m").unwrap().is_empty());
         assert!(s.dismissed_for("a").unwrap().contains("b"));
-    }
-
-    #[test]
-    fn the_old_sqlite_store_is_moved_into_this_devices_log_once() {
-        let dir = tempfile::tempdir().unwrap();
-        let legacy = dir.path().join(LEGACY_USER_STATE_FILE);
-        {
-            let c = Connection::open(&legacy).unwrap();
-            c.execute_batch(SCHEMA).unwrap();
-            c.execute("INSERT INTO dismissed_relations VALUES ('a', 'b', 5)", [])
-                .unwrap();
-            c.execute(
-                "INSERT INTO relation_feedback VALUES ('a', 'c', 1, 'm', '{\"s\":1}', 6)",
-                [],
-            )
-            .unwrap();
-        }
-        let s = UserState::open(dir.path(), "DEV1").unwrap();
-        assert!(s.dismissed_for("a").unwrap().contains("b"));
-        assert_eq!(s.feedback("m").unwrap(), vec![("{\"s\":1}".to_string(), true)]);
-        assert!(!legacy.exists());
-        assert!(dir.path().join("user-state.sqlite.bak").exists());
-        drop(s);
-        // Reopening does not copy the rows a second time.
-        let s = UserState::open(dir.path(), "DEV1").unwrap();
-        assert_eq!(s.feedback("m").unwrap().len(), 1);
-        let log = fs::read_to_string(dir.path().join(USER_STATE_DIR).join("DEV1.jsonl")).unwrap();
-        assert_eq!(log.lines().count(), 2);
     }
 }

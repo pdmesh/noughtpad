@@ -840,8 +840,8 @@ over a USB drive or a NAS) later.
 All in the open core, in this repo, testable without Google:
 1. **Device id** in the app data dir, with a name the user can change.
 2. **User-state as per-device logs** (`.noughtpad/user-state/<device-id>.jsonl`), with
-   `user-state.sqlite` rebuilt from them. On first start the existing rows are copied into this
-   device's log once. Useful already for anyone syncing the folder with Dropbox or Syncthing.
+   `user-state.sqlite` rebuilt from them. (The old rows were first copied over on first start;
+   dropped in 0.1.3, since there were no users.) Useful already for anyone syncing the folder with Dropbox or Syncthing.
 3. **`SyncBackend` trait and types** in `noughtpad-core::sync`, plus the **folder backend** and
    its tests (including the "only if still at `expected`" rule).
 4. **`Vault::apply_synced`** (atomic, refuses if the file changed) and the **change journal**
@@ -849,7 +849,7 @@ All in the open core, in this repo, testable without Google:
 
 As built: `device.rs` (`device.json` in the app data folder, named from the computer's name);
 `userstate.rs` (logs replayed into an in-memory database; `reload()` after sync brings in other
-devices' logs; a torn last line is skipped; the old file is renamed `user-state.sqlite.bak`);
+devices' logs; a torn last line is skipped; an old `user-state.sqlite` is ignored);
 `sync/` (`is_synced`, the trait, `FolderBackend` with a lock file and a `changes.jsonl` feed,
 `Journal` in `.noughtpad/sync/journal.sqlite`); `Vault::{synced_files, read_synced,
 apply_synced, remove_synced}`, with a write lock shared with the editor's saves;

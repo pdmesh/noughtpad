@@ -25,13 +25,12 @@ Earlier the same day:
   with the user: eager merge rules, edit beats delete, notes + images/other files + user-state +
   chats + trash sync, Google Drive first in Testing mode, iCloud after the signing decision, the
   smaller points as recommended (§12.12).
-  - Open core (this repo): device id, user-state as per-device logs (the old
-    `user-state.sqlite` is moved over on first open and kept as `.bak`), `noughtpad_core::sync`
+  - Open core (this repo): device id, user-state as per-device logs (an old
+    `user-state.sqlite` is ignored; the one-time copy was dropped after 0.1.2), `noughtpad_core::sync`
     (`SyncBackend`, `FolderBackend`, `Journal`, `is_synced`), `Vault::apply_synced` and friends.
   - Private repo `pdmesh/noughtpad-sync` (check it out next to this one; `cargo test` there):
     the engine and merge rules, 39 tests including a random three-device test.
-  - **Not in the app yet:** the app doesn't run the engine. The one change you'll notice in the
-    app: on first launch of a build from now on, dismissals and feedback move into
+  - **Not in the app yet:** the app doesn't run the engine. Dismissals and feedback now live in
     `.noughtpad/user-state/<device-id>.jsonl`.
 
 - **M1–M4.5 are done**, and CI is green.
@@ -116,8 +115,6 @@ The user is living with 0.1.1 on several machines for a few days. Good next piec
   the old address), then the two-release updater check (below) with 0.1.3 as release B. The
   release build has the Google secret compiled in, so it's also the easiest way to try sync
   (steps above, skipping 2–3).
-- **Before relying on sync:** check on the Mac that a new build moves the real notebook's
-  dismissals (`user-state.sqlite.bak` appears, related notes still hide dismissed pairs).
 - **Minor items** from "Parked" below (UX leftovers such as dark mode and the minimum window size,
   chat history delete, related-notes dismiss/undo), or anything the user hit while dogfooding.
 
