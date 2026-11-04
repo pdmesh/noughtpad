@@ -416,9 +416,10 @@ fire once). Edit → Undo/Cut/Copy/Paste are the standard items: paste of Markdo
 renders, and copy puts Markdown text and HTML on the clipboard.
 
 **Auto-update:** the app asks
-`https://github.com/pdmesh/noughtpad-releases/releases/latest/download/latest.json` (a public repo
-that holds only installers, since this one is private; moved there 2026-11-04, so 0.1.1 installs
-can't follow and need one manual install), which GitHub serves
+`https://github.com/pdmesh/noughtpad/releases/latest/download/latest.json` (this repo, public
+since 2026-11-04; from 0.1.6). 0.1.2 to 0.1.5 ask `pdmesh/noughtpad-releases`, the installers-only
+repo used while this one was private; it gets one bridge release whose `latest.json` points at
+0.1.6 here, and is then archived (archived repos keep serving release files). GitHub serves it
 from the newest published (not draft, not pre-release) release. `latest.json` lists, per platform,
 the version, the bundle's URL and its signature. The Release workflow makes these only when the
 `TAURI_SIGNING_PRIVATE_KEY` secret is set (it passes `--config src-tauri/tauri.updater.conf.json`,
