@@ -902,7 +902,23 @@ The engine and the merge rules, tested against the folder backend:
 Not yet: the app doesn't run the engine (it comes in with slice 3, behind a `sync` cargo
 feature), and the private repo has no CI (it would need a token to check out this repo).
 
-### 12.15 Third slice (code done 2026-11-04; not yet tried against real Drive)
+### 12.15 Third slice (done 2026-11-04; two Macs syncing through real Drive)
+
+**What was seen with real Drive (0.1.3–0.1.5, the user's two Macs):**
+- Turning sync on in 0.1.3 made two `Noughtpad` folders in My Drive, each with its own notebook
+  folder. Two weak points, both fixed in 0.1.4: a replaced sync worker could finish its sync while
+  the new one started (each sync now holds a lock, and a replaced worker stops), and finding the
+  folders was find-else-create with no second look, while Drive's search can lag behind a create
+  (now: after creating, look again and keep the oldest; the losing copy is deleted). The switch is
+  also idempotent, so a double click starts one worker. Re-enabled on 0.1.4: one worker, exactly
+  two folders created, a new notebook id, the sync state reset and everything uploaded.
+- An open note kept showing the old text after a sync brought an edit (0.1.4). Sync writes and
+  re-indexes files itself, so the file watcher reports nothing for them; the app then sends
+  `vault-changed` with an empty list, which the open note ignored. Since 0.1.5 an empty list
+  means "may have changed": the note re-reads its file and updates unless the user is typing.
+  Seen working on a Mac: the other Mac's line appeared in the open note within a minute.
+- Timing: upload about 5 s after typing stops; every device syncs every 60 s and about 5 s after
+  its window gets focus.
 
 - **Drive backend** (`noughtpad-sync/src/drive/`): §12.10 as written. Sign-in is PKCE through
   the system browser and a one-time listener on `127.0.0.1:<random port>` (desktop OAuth clients

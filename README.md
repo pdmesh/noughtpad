@@ -6,7 +6,7 @@ Notes are plain Markdown files you own. AI stays out of the way during capture a
 
 - Design: [docs/DESIGN.md](docs/DESIGN.md)
 - Roadmap: [ROADMAP.md](ROADMAP.md) · Next session: [docs/HANDOFF.md](docs/HANDOFF.md)
-- Status: **M1–M4.5 complete** (notebook, quiet retrieval, ideas over time, opt-in models, chat with your notes). Now: M5, release builds and dogfooding on a real Mac
+- Status: **M1–M4.5 complete** (notebook, quiet retrieval, ideas over time, opt-in models, chat with your notes). M5: v0.1.5 released with auto-update, dogfooding on two Macs. M6: Google Drive sync working between two Macs
 
 ## What works today
 

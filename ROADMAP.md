@@ -44,7 +44,7 @@ stays FSL; sync lives in a private repo (`pdmesh/noughtpad-sync`) that plugs int
 - [x] Slice 1, open core (2026-11-04): device id, user-state as per-device logs, `SyncBackend` and a folder backend for tests, `Vault::apply_synced` and the change journal
 
 - [x] Slice 2, sync engine (private repo, 2026-11-04): per-file change journal, three-way merge for Markdown against a base copy in `.noughtpad/sync/`, conflict copies only when a merge fails, tombstones, edit beats delete; tested against the folder backend
-- [ ] Slice 3, Google Drive backend and the app wiring (Settings → Sync, status dot). Code done 2026-11-04 (DESIGN §12.15); left: a real sign-in and two-Mac sync. Details: `drive.file` access, OAuth (PKCE, desktop loopback), Drive changes feed, works on every platform. Testing mode while dogfooding (sign in again every 7 days); production needs Google's basic project checks
+- [x] Slice 3, Google Drive backend and the app wiring (Settings → Sync, status dot). Done 2026-11-04 (DESIGN §12.15): two Macs syncing through real Drive in 0.1.5. Left for the M6 exit: deletes and same-paragraph edits on both, a non-Apple device, a week of use. Details: `drive.file` access, OAuth (PKCE, desktop loopback), Drive changes feed, works on every platform. Testing mode while dogfooding (sign in again every 7 days); production needs Google's basic project checks
 - [ ] iCloud backend: the app's iCloud container, using CloudKit or `NSFileCoordinator`. Needs the Apple Developer Program (signed app). **Only works on Apple devices**, because iCloud has no official API for Windows, Linux or Android. Non-Apple devices use Google Drive (or a future Noughtpad server)
 - [ ] Licensing and billing: account, licence key check, subscription (e.g. Paddle or Lemon Squeezy, which handle VAT)
 - [ ] The index stays local and disposable on every device; notes, other files, user-state, chats and trash sync
@@ -57,6 +57,10 @@ Exit: edit the same notebook on two Macs and one non-Apple device for a week wit
 - [ ] Same distraction-free capture: open to a blank page, labels and source on demand, quick capture widget or shortcut
 - [ ] Search and related notes on device (BGE-small is small enough); chat through your own provider. Local LLMs on phones are a later experiment
 - [ ] Sync through M6
+
+## Website (in progress, own sessions)
+
+- [ ] Marketing and SEO pages, an Obsidian comparison, a download page and a plain-English user guide, hosted on Cloudflare. Brief: `docs/WEBSITE.md`
 
 ## Backlog
 
