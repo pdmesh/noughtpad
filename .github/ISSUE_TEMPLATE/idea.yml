@@ -1,6 +1,6 @@
 name: Idea or request
 description: Suggest something Noughtpad could do better.
-labels: [idea]
+labels: [enhancement]
 body:
   - type: textarea
     id: problem
