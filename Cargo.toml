@@ -6,7 +6,7 @@ members = ["crates/noughtpad-core", "crates/noughtpad-llm", "src-tauri"]
 exclude = ["crates/noughtpad-sync-stub"]
 
 [workspace.package]
-version = "0.1.3"
+version = "0.1.4"
 edition = "2021"
 license-file = "LICENSE.md"
 repository = "https://github.com/pdmesh/noughtpad"
