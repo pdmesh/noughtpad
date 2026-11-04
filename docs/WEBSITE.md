@@ -11,7 +11,7 @@ product does and why. Use only what those say the app does today; don't promise 
    - Features: capture, related notes, search by meaning, ideas over time, journal and activity
      map, chat with your notes (your own model or provider), sync.
    - Download: links to the latest release on
-     `https://github.com/pdmesh/noughtpad-releases/releases/latest` (public; installers only).
+     `https://github.com/pdmesh/noughtpad/releases/latest` (`RELEASES_URL` in `website/src/config.ts`).
      Explain plainly how to open an unsigned app on a Mac (System Settings → Privacy & Security →
      Open Anyway), since the app isn't signed with an Apple certificate yet.
 2. **Obsidian pages**, for people who search for Obsidian: an honest comparison page

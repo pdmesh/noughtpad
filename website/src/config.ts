@@ -7,11 +7,8 @@ export const TAGLINE = "A blank page that quietly remembers.";
 /** Current release. Bump with each published release. */
 export const VERSION = "0.1.5";
 
-/**
- * Where installers live. When releases move to the main repo, change this one line
- * to "https://github.com/pdmesh/noughtpad/releases/latest".
- */
-export const RELEASES_URL = "https://github.com/pdmesh/noughtpad-releases/releases/latest";
+/** Where installers live: the newest published release on the main repo. */
+export const RELEASES_URL = "https://github.com/pdmesh/noughtpad/releases/latest";
 
 /**
  * Link to the source code (the repo is public). Set to null to hide every GitHub link:

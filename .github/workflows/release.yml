@@ -11,21 +11,22 @@ name: Release
 #            APPLE_ID, APPLE_PASSWORD, APPLE_TEAM_ID  (needs the $99/yr Apple Developer Program)
 #   Updater: TAURI_SIGNING_PRIVATE_KEY, TAURI_SIGNING_PRIVATE_KEY_PASSWORD (free; `pnpm tauri signer generate`)
 #
-# Noughtpad Sync and public releases:
-#   RELEASE_TOKEN  A fine-grained token with Contents read and write on
-#                  pdmesh/noughtpad-sync and pdmesh/noughtpad-releases. With it,
-#                  builds include sync (the private crate is checked out next to
-#                  this repo and patched in by scripts/sync-build.mjs) and tag
-#                  pushes make the draft release on the public
-#                  pdmesh/noughtpad-releases, where the updater and the website
-#                  download from. Without it: no sync, and the draft is made here.
+# Noughtpad Sync:
+#   RELEASE_TOKEN  A fine-grained token with Contents read on pdmesh/noughtpad-sync.
+#                  With it, builds include sync (the private crate is checked out
+#                  next to this repo and patched in by scripts/sync-build.mjs).
+#                  Without it, builds have no sync.
 #   NOUGHTPAD_GOOGLE_CLIENT_SECRET  Google sign-in for sync (compiled in).
+#
+# Releases: a tag push makes a draft release on this repo (pdmesh/noughtpad), which
+# the website and the updater download from. (Up to 0.1.5 they lived on
+# pdmesh/noughtpad-releases, while this repo was private.)
 #
 # Auto-update: with the updater secrets set, each build also makes a signed
 # update bundle (macOS .app.tar.gz, Windows NSIS .exe, Linux .AppImage, each
 # with a .sig) and a tag push adds them and `latest.json` to the draft release.
-# The app reads pdmesh/noughtpad-releases' releases/latest/download/latest.json,
-# which GitHub serves from the newest *published* release: updates reach people when you press
+# The app reads this repo's releases/latest/download/latest.json, which GitHub
+# serves from the newest *published* release: updates reach people when you press
 # Publish on the draft, not before.
 
 on:
@@ -120,16 +121,13 @@ jobs:
           fi
       - uses: tauri-apps/tauri-action@v0
         env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NOUGHTPAD_GOOGLE_CLIENT_SECRET: ${{ secrets.NOUGHTPAD_GOOGLE_CLIENT_SECRET }}
         with:
           projectPath: noughtpad
           tauriScript: ${{ env.WITH_SYNC == 'true' && 'node scripts/sync-build.mjs pnpm tauri' || 'pnpm tauri' }}
           args: ${{ matrix.args }} ${{ steps.signing.outputs.updater_args }}
-          # Releases go to the public releases repo (installers only, no source).
-          owner: pdmesh
-          repo: ${{ env.WITH_SYNC == 'true' && 'noughtpad-releases' || 'noughtpad' }}
-          releaseCommitish: ${{ env.WITH_SYNC == 'true' && 'main' || github.sha }}
+          releaseCommitish: ${{ github.sha }}
           # Windows: point latest.json at the per-user NSIS installer (no admin prompt).
           updaterJsonPreferNsis: true
           # A tag push creates a draft release; a manual run only uploads artifacts.

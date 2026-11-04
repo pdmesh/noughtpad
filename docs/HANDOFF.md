@@ -5,8 +5,9 @@ they are). For the website, read `docs/WEBSITE.md`.
 
 ## Where things stand (2026-11-04, end of day)
 
-- **Released: v0.1.5**, published on the public `pdmesh/noughtpad-releases` (installers only; this
-  repo stays private). The user runs it on two Macs. Each release is built by `release.yml` on a
+- **This repo is public** (2026-11-04), and releases live here from 0.1.6. Up to 0.1.5 they were
+  on `pdmesh/noughtpad-releases` (see "Releases" under Gotchas).
+- **Released: v0.1.5**, on `pdmesh/noughtpad-releases`. The user runs it on two Macs. Each release is built by `release.yml` on a
   `v*` tag, with sync linked in (`RELEASE_TOKEN`) and the Google client secret compiled in
   (`NOUGHTPAD_GOOGLE_CLIENT_SECRET`); both are GitHub secrets on this repo.
 - **Auto-update works:** 0.1.2 → 0.1.3 → 0.1.4 → 0.1.5 through Check for Updates…, with no
@@ -45,11 +46,11 @@ they are). For the website, read `docs/WEBSITE.md`.
 
 Bump `version` in the root `Cargo.toml` and `package.json`, run `cargo check -p noughtpad-app` (so
 `Cargo.lock` follows), commit, tag `v0.1.x`, push both. Wait for all three Release jobs (20–40
-min). Check the draft on `pdmesh/noughtpad-releases`: 14 files, and `latest.json` with the new
+min). Check the draft on this repo's Releases page: 14 files, and `latest.json` with the new
 version, a `darwin-aarch64` entry and signatures. Check each job's log shows the `noughtpad-sync`
 commit you expect. **Ask the user before publishing.** Then
-`gh release edit v0.1.x --repo pdmesh/noughtpad-releases --draft=false --latest` and check
-`https://github.com/pdmesh/noughtpad-releases/releases/latest/download/latest.json`. If a job fails
+`gh release edit v0.1.x --draft=false --latest` and check
+`https://github.com/pdmesh/noughtpad/releases/latest/download/latest.json`. If a job fails
 while uploading, see "Release upload race" below. Sync changes must be pushed to
 `pdmesh/noughtpad-sync` main before tagging: the release checks out its `main`.
 
@@ -130,8 +131,11 @@ cargo clippy -p noughtpad-llm --all-targets --features local,remote,keychain -- 
 - **`examples/ask`** answers without `[n]` citations, unlike the app; don't use it to check citing.
 - **Unsigned builds:** macOS Gatekeeper blocks them until `xattr -cr` or right-click → Open, and
   Windows SmartScreen warns.
-- **Releases up to 0.1.1** are on the private `pdmesh/noughtpad` and can't update themselves;
-  everything from 0.1.2 is on `pdmesh/noughtpad-releases`.
+- **Releases:** 0.1.1 was published here while the repo was private (now a hidden draft; those
+  installs can't update). 0.1.2 to 0.1.5 are on `pdmesh/noughtpad-releases` and ask there for
+  updates; from 0.1.6, releases and the updater use this repo. To move 0.1.5 installs over, that
+  repo gets one bridge release holding only 0.1.6's `latest.json` (its URLs point here), and is then
+  archived, never deleted.
 - **Updates only reach published releases:** tag pushes make drafts; nothing updates until you
   press Publish. A release built without the updater secret has no `latest.json`, and publishing
   it makes "Check for updates" fail until a release with one is published.
