@@ -1,7 +1,8 @@
 //! Updates from GitHub Releases (`tauri-plugin-updater`).
 //!
-//! Nothing runs on its own: the user asks from Settings or the app menu, the UI calls
-//! `update_check`, and only if they then choose "Install and restart" is anything downloaded.
+//! The UI calls `update_check` quietly after start-up and every few hours, and when the user
+//! asks (Settings or the app menu). Nothing is downloaded until they press "Update to …" in the
+//! sidebar or "Install and restart" in Settings.
 //! The download is checked against the public key in `tauri.conf.json` before it replaces the app.
 
 use std::sync::Mutex;

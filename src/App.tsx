@@ -1,6 +1,6 @@
 import { lazy, Suspense, type ComponentType, useCallback, useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarDays, History, Settings as SettingsIcon, FilePlus2, FolderOpen, MessageSquareText, Notebook, PanelLeft, PenLine, Search, Sprout, Waypoints, X } from "lucide-react";
+import { ArrowUpCircle, CalendarDays, History, Settings as SettingsIcon, FilePlus2, FolderOpen, MessageSquareText, Notebook, PanelLeft, PenLine, Search, Sprout, Waypoints, X } from "lucide-react";
 import { api, isApiError, onEvent, pickFolder, type VaultInfo } from "./lib/api";
 import { useEvent } from "./lib/useEvent";
 import { NotePane } from "./components/NotePane";
@@ -12,7 +12,7 @@ import { ChatHistory } from "./components/ChatHistory";
 import { useChatLive, type ScopeChoice } from "./lib/chat";
 import type { EditorHandle } from "./editor/Editor";
 import { loadMarkdownPipeline } from "./editor/clipboard";
-import { checkForUpdates } from "./lib/updates";
+import { checkForUpdates, describeUpdate, installUpdate, startUpdateChecks, updateButtonLabel, useUpdateState } from "./lib/updates";
 import { describeSync, useSync } from "./lib/sync";
 
 // Pages other than writing load after the editor is ready, keeping them out of
@@ -330,6 +330,8 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
 
   // Backend events: external file changes and the global quick-capture shortcut.
   useEvent("vault-changed", () => void qc.invalidateQueries({ queryKey: ["notes"] }));
+  // Look for a newer version quietly after start-up and every few hours (sidebar button).
+  useEffect(() => startUpdateChecks(), []);
   useEvent("quick-capture", () => newNote());
 
   // ⌘L toggles chat. Caught before the editor, whose keymap uses Mod-L to select a line.
@@ -397,6 +399,7 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
         )}
         <div className="sidebar-footer">
           {semanticLine && <p className="sidebar-status">{semanticLine}</p>}
+          <UpdateButton />
           <button
             className={`vault-path ${view.kind === "settings" || view.kind === "models" ? "is-active" : ""}`}
             onClick={() => setView({ kind: "settings" })}
@@ -610,6 +613,24 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
         </div>
       )}
     </div>
+  );
+}
+
+/** "Update to 0.1.x" at the foot of the sidebar when a newer version is out. */
+function UpdateButton() {
+  const update = useUpdateState();
+  const label = updateButtonLabel(update);
+  if (!label) return null;
+  const busy = update.kind === "installing";
+  return (
+    <button
+      className="update-button"
+      disabled={busy}
+      title={update.kind === "error" ? `${describeUpdate(update)} Click to try again.` : "Download, install and restart Noughtpad"}
+      onClick={() => void installUpdate()}
+    >
+      <ArrowUpCircle size={14} aria-hidden /> {label}
+    </button>
   );
 }
 
