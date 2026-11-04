@@ -108,6 +108,7 @@ kbd {
   font: 600 1rem/1.2 var(--font);
   cursor: pointer;
 }
+.btn, .prose a.btn, .lede a.btn, .fine a.btn { text-decoration: none; }
 .btn:hover { background: color-mix(in srgb, var(--ink) 86%, var(--paper)); }
 .btn-ghost { background: transparent; color: var(--ink); border-color: var(--rule); }
 .btn-ghost:hover { background: var(--paper-2); }
@@ -129,6 +130,13 @@ kbd {
 @media (prefers-reduced-motion: reduce) { .caret { animation: none; } }
 .hero .fine { margin-top: 0; }
 .hero-media { margin-top: clamp(2.5rem, 6vw, 4.5rem); }
+/* Wide screens: headline and demo side by side, so the demo is in the first screen. */
+@media (min-width: 1000px) {
+  .hero { padding: clamp(3rem, 6vw, 5rem) 0 3.5rem; }
+  .hero .wrap { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: clamp(2.5rem, 4vw, 4rem); align-items: center; }
+  .hero h1 { font-size: clamp(3rem, 4.4vw, 4.3rem); }
+  .hero-media { margin-top: 0; }
+}
 
 /* App frames: a thin edge, a soft lift. No heavy shadows. */
 .frame {
