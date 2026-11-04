@@ -19,20 +19,6 @@
   --measure: 42rem;
   color-scheme: light;
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --paper: #14171d;
-    --paper-2: #1a1e25;
-    --ink: #e7e9ee;
-    --graphite: #9aa1ae;
-    --rule: #2a2f38;
-    --link: #a9c1f2;
-    --marker: #8a6a12;
-    --marker-ink: #ffe08a;
-    --code-bg: #20242c;
-    color-scheme: dark;
-  }
-}
 
 *, *::before, *::after { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
@@ -110,6 +96,7 @@ kbd {
 .site-header nav a { color: var(--graphite); font-size: 0.97rem; }
 .site-header nav a:hover, .site-header nav a[aria-current="page"] { color: var(--ink); }
 .site-header nav a.btn { color: var(--paper); }
+.site-header nav a.gh { display: inline-flex; padding: 0.3rem; }
 
 /* Buttons */
 .btn {
@@ -174,7 +161,7 @@ figcaption { font-size: 0.9rem; color: var(--graphite); margin-top: 0.8rem; }
 .split p strong { color: var(--ink); }
 
 /* Lists of short items, separated by hairlines rather than boxed. */
-.points { list-style: none; margin: 0; padding: 0; display: grid; gap: 0 3rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); }
+.points { list-style: none; margin: 0; padding: 0; display: grid; gap: 2.5rem 3rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); }
 .points li { border-top: 1px solid var(--rule); padding: 1.1rem 0 1.4rem; }
 .points h3 { font-size: 1.08rem; margin: 0 0 0.3rem; }
 .points p { margin: 0; color: var(--graphite); font-size: 0.98rem; }
@@ -244,8 +231,8 @@ tbody th { font-weight: 600; min-width: 9rem; }
 .pager span { display: block; font-family: var(--font); font-size: 0.85rem; color: var(--graphite); }
 
 /* Download */
-.platforms { list-style: none; padding: 0; display: grid; gap: 0 3rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); margin: 2.5rem 0 1rem; }
-.platforms li { border-top: 1px solid var(--ink); padding-top: 1.1rem; display: flex; flex-direction: column; }
+.platforms { list-style: none; padding: 0; display: grid; gap: 2.5rem 3rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); margin: 2.5rem 0 1rem; }
+.platforms li { display: flex; flex-direction: column; }
 .platforms h2 { font-size: 1.5rem; margin: 0 0 0.5rem; }
 .platforms p { color: var(--graphite); font-size: 0.98rem; }
 .platforms .btn { margin-top: auto; align-self: flex-start; }
@@ -280,5 +267,5 @@ tbody th { font-weight: 600; min-width: 9rem; }
 @media (max-width: 520px) {
   .header-row { flex-wrap: nowrap; min-height: 64px; }
   .site-header nav ul { gap: 1rem; flex-wrap: nowrap; }
-  .site-header nav li:nth-child(1), .site-header nav li:nth-child(3) { display: none; }
+  .site-header nav li:nth-child(1), .site-header nav li:nth-child(3), .site-header nav li:has(.gh) { display: none; }
 }

@@ -15,7 +15,7 @@ export const RELEASES_URL = "https://github.com/pdmesh/noughtpad-releases/releas
 
 /**
  * Link to the source code. Leave null while the repo is private; set it to
- * "https://github.com/pdmesh/noughtpad" once it is public and the links appear.
+ * "https://github.com/pdmesh/noughtpad" once it is public; the GitHub icon in the top bar, the footer link and the licence links all appear.
  */
 export const SOURCE_URL: string | null = null;
 
