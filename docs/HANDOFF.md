@@ -25,8 +25,11 @@ Read this first next session, then `ROADMAP.md` (what's next) and
   and note text in the system font and size with Settings → Writing (font and size, in
   localStorage). Turning sync on in 0.1.3 had made two `Noughtpad` folders in My Drive. Sync
   is off on the user's Mac until they trash both folders in Drive and update; then turn it on
-  with the log (`open --stdout … /Applications/Noughtpad.app`): expect one `sync worker started`
-  and two `created Drive folder` lines. Not yet seen.
+  with the log (`open --stdout … /Applications/Noughtpad.app`). **Seen** after the user trashed
+  both folders and updated: one `sync worker started`, exactly two `created Drive folder` lines
+  (root and notebook), no `removing ours`; a new notebook id, the sync state reset, the note and
+  the user-state log uploaded, "Synced just now". Next: a second Mac. Also seen on that launch:
+  the webview's page load started 5.9 s after setup (notes code then took ms); not chased.
 - **v0.1.3 is published** (2026-11-04; `latest.json` serves 0.1.3). It holds: on the user's first launch 0.1.2 stuck on a blank
   window (the UI waiting for `vault_info`); cause not pinned down. A restart opened in 9.7 s, the
   next in 0.4 s. In response: the one-time `user-state.sqlite` migration is gone (no users to carry
