@@ -1,6 +1,6 @@
 ---
 import Base from "../layouts/Base.astro";
-import { RELEASES_URL, VERSION, SITE_URL, CONTACT_EMAIL } from "../config";
+import { RELEASES_URL, VERSION, SITE_URL } from "../config";
 
 const app = {
   "@context": "https://schema.org",
@@ -57,7 +57,7 @@ const app = {
     <div class="wrap prose">
       <div class="callout">
         <strong>How tested is each version?</strong>
-        The Mac version is used every day. The Windows and Linux versions are built from the same code and pass the same tests, but have had far less real use. If something goes wrong, please write to <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
+        The Mac version is used every day. The Windows and Linux versions are built from the same code and pass the same tests, but have had far less real use. If something goes wrong, please <a href="/contact/">write to us</a>.
       </div>
 
       <h2 id="mac">Opening Noughtpad on a Mac for the first time</h2>

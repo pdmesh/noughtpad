@@ -2,11 +2,11 @@
 
 The Noughtpad website: marketing pages, comparisons, download page and user guide. Built with
 [Astro](https://astro.build) to plain static files in `dist/`. No client-side JavaScript except
-the hero video. Brief: [`docs/WEBSITE.md`](../docs/WEBSITE.md).
+the hero video. The contact form is a plain HTML form handled by a small Worker (below). Brief: [`docs/WEBSITE.md`](../docs/WEBSITE.md).
 
 ```sh
 cd website
-npm ci
+npm ci            # needs Node 22.23.4 or later (Astro 7)
 npm run dev       # http://localhost:4321
 npm run build     # dist/, then scripts/check-build.mjs
 npm run preview   # serve dist/
@@ -20,7 +20,8 @@ brief rules out (seamless, unlock, supercharge…) or an em dash.
 
 | What | Where |
 |---|---|
-| Version, release URL, source link, contact, legal name | `src/config.ts` |
+| Version, release URL, source link, legal name | `src/config.ts` |
+| Contact form and its result pages | `src/pages/contact/`, `functions/api/contact.ts`, `contact-worker/` |
 | Home, features, download, compare, privacy, terms | `src/pages/*.astro` |
 | User guide (one Markdown file per page) | `src/pages/guide/*.md`, order in `src/guide.ts` |
 | Colours and layout | `src/styles/global.css` (the app's own tokens) |
@@ -41,23 +42,33 @@ and 404 are left out). Those three pages carry `<meta name="robots" content="noi
 deliberately *not* disallowed in `robots.txt`, because a crawler that can't fetch a page can't see
 its `noindex`, and may list the bare URL anyway.
 
-## Deploying to Cloudflare Pages (from the Mac, with `wrangler` signed in)
+## Deploying to Cloudflare (from the Mac, with `wrangler` signed in)
 
-```sh
-cd website && npm ci && npm run build
-npx wrangler pages project create noughtpad --production-branch main
-npx wrangler pages deploy dist --project-name noughtpad --branch main
-```
+Three pieces, all in the `noughtpad.com` zone:
 
-Then in the Cloudflare dashboard:
+| Piece | What | Deploy |
+|---|---|---|
+| Pages project `noughtpad` | The site (`dist/`) plus `functions/api/contact.ts`. Config in `wrangler.toml`. | `npm run build && npx wrangler pages deploy dist --project-name noughtpad --branch main` |
+| Worker `noughtpad-contact` | Sends contact-form email through Email Routing. Reached from the Pages Function over the `CONTACT` service binding. | `cd contact-worker && npx wrangler deploy` |
+| Worker `noughtpad-www` | 301 from `www.noughtpad.com` to the apex. Owns www as a Worker custom domain. | `cd www-redirect && npx wrangler deploy` |
 
-1. **Workers & Pages → noughtpad → Custom domains:** add `noughtpad.com`, and `www.noughtpad.com`
-   with a redirect to the apex (Rules → Redirect Rules, or a Bulk Redirect).
-2. **Web Analytics:** turn it on for the Pages project (Metrics → Web Analytics → Enable). This
-   injects Cloudflare's cookie-free beacon; nothing in the code needs to change. The privacy page
-   already says so.
-3. **Email:** `hello@noughtpad.com` appears on every page. Set up Email Routing
-   (domain → Email → Email Routing) to forward it to a real inbox.
+Normally only the Pages deploy is needed.
+
+**Contact form.** There is no email address on the site, to keep spam down. `/contact/` posts to
+`/api/contact`; the Worker checks the fields, drops bots (a hidden honeypot field, link-stuffed
+messages, foreign `Origin`), and sends one plain-text email from `website@noughtpad.com` with
+`Reply-To` set to the sender. It then redirects to `/contact/sent/` or `/contact/problem/` (both
+`noindex`, not in the sitemap). The destination is a Worker secret, not in the repo:
+`cd contact-worker && npx wrangler secret put DESTINATION`. It must be a verified Email Routing
+destination address. Email Routing must stay enabled on the zone.
+
+**Dashboard-only settings** (the wrangler token can't change these):
+
+1. **DNS:** the apex is a proxied `CNAME @ → noughtpad.pages.dev`, which the Pages custom domain
+   `noughtpad.com` needs. www needs no record of ours; the Worker custom domain manages it.
+2. **Web Analytics:** on for the Pages project (Workers & Pages → noughtpad → Metrics → Web
+   Analytics). This injects Cloudflare's cookie-free beacon; nothing in the code changes. The
+   privacy page already says so.
 
 `public/_headers` sets security and cache headers; `404.html` is served for unknown paths.
 

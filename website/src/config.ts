@@ -19,7 +19,7 @@ export const RELEASES_URL = "https://github.com/pdmesh/noughtpad-releases/releas
  */
 export const SOURCE_URL: string | null = null;
 
-export const CONTACT_EMAIL = "hello@noughtpad.com";
+/** No email address on the site (spam). People write through /contact/, which emails us. */
 
 /** The date the comparison pages were checked against each app's own site. */
 export const COMPARISONS_CHECKED = "4 November 2026";

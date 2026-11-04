@@ -1,0 +1,9 @@
+# Cloudflare Pages project config. `npx wrangler pages deploy` reads this.
+name = "noughtpad"
+pages_build_output_dir = "./dist"
+compatibility_date = "2026-11-01"
+
+# The contact form posts to /api/contact (functions/api/contact.ts), which forwards to this Worker.
+[[services]]
+binding = "CONTACT"
+service = "noughtpad-contact"

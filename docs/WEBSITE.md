@@ -72,10 +72,12 @@ non-private ones).
   once `pdmesh/noughtpad` is public (`SOURCE_URL` in `website/src/config.ts`); the repo is to be
   audited first, and releases moved into it.
 - **Analytics:** Cloudflare Web Analytics, turned on in the Pages project (no script in the code).
-- **Contact:** hello@noughtpad.com (needs Email Routing on the domain).
+- **Contact:** a contact form at /contact/, which emails the owner through Email Routing. No email
+  address is shown on the site, to avoid spam (changed at launch, 2026-11-04).
 - **Also asked for:** comparison pages for Notion, Logseq, Bear, Apple Notes and Evernote; privacy
   and terms pages kept out of search (noindex, not in the sitemap); a short demo video
   (HyperFrames).
-- **Still open:** the legal name and governing law for the terms (`LEGAL_NAME`, `GOVERNING_LAW`).
+- **Legal name:** none; the terms and privacy pages name "Noughtpad" itself (`LEGAL_NAME` stays null).
+- **Still open:** governing law for the terms (`GOVERNING_LAW`, null for now, so the clause is left out).
 
 Built in `website/`; see `website/README.md` for editing, regenerating media and deploying.

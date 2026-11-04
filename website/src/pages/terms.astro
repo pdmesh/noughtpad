@@ -1,6 +1,6 @@
 ---
 import Base from "../layouts/Base.astro";
-import { CONTACT_EMAIL, LEGAL_NAME, GOVERNING_LAW, LEGAL_UPDATED, SOURCE_URL } from "../config";
+import { LEGAL_NAME, GOVERNING_LAW, LEGAL_UPDATED, SOURCE_URL } from "../config";
 const who = LEGAL_NAME ?? "Noughtpad";
 ---
 
@@ -78,7 +78,7 @@ const who = LEGAL_NAME ?? "Noughtpad";
       }
 
       <h2>Contact</h2>
-      <p>Questions about these terms: <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.</p>
+      <p>Questions about these terms: use the <a href="/contact/">contact form</a>.</p>
     </div>
   </div>
 </Base>

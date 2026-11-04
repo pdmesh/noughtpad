@@ -1,5 +1,5 @@
 ---
-import { SITE_NAME, SITE_URL, CONTACT_EMAIL, SOURCE_URL } from "../config";
+import { SITE_NAME, SITE_URL, SOURCE_URL } from "../config";
 import "../styles/global.css";
 
 interface Props {
@@ -121,7 +121,7 @@ const nav = [
         <div>
           <h2 class="footer-h">Contact</h2>
           <ul>
-            <li><a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a></li>
+            <li><a href="/contact/">Contact us</a></li>
             <li><a href="/privacy/">Privacy</a></li>
             <li><a href="/terms/">Terms</a></li>
           </ul>

@@ -235,3 +235,15 @@ tbody th { font-weight: 600; min-width: 9rem; }
 .site-footer .brand { margin-bottom: 0.75rem; }
 
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+
+/* Contact form */
+.contact-form { display: grid; gap: 0.4rem; margin: 2rem 0 1rem; max-width: 34rem; }
+.contact-form label { font-weight: 600; margin-top: 0.75rem; }
+.contact-form input, .contact-form textarea {
+  font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--border);
+  border-radius: 8px; padding: 0.6rem 0.75rem; width: 100%; box-sizing: border-box;
+}
+.contact-form textarea { resize: vertical; min-height: 10rem; }
+.contact-form input:focus-visible, .contact-form textarea:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 1px; }
+.contact-form .btn { justify-self: start; margin-top: 1rem; cursor: pointer; }
+.contact-form .hp { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }

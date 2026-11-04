@@ -4,7 +4,7 @@ title: Sync (in testing)
 description: How Noughtpad's Google Drive sync keeps one notebook the same on several computers, how to turn it on, what happens when the same note changes on two computers, and its current limits.
 ---
 
-> **Sync is in testing.** It works between Macs today, used daily by a small group. While it's in testing, Google only lets listed testers sign in, so you'll need an invitation: write to [hello@noughtpad.com](mailto:hello@noughtpad.com). Sync is planned as a paid add-on later; there's no price yet.
+> **Sync is in testing.** It works between Macs today, used daily by a small group. While it's in testing, Google only lets listed testers sign in, so you'll need an invitation: ask through the [contact form](/contact/). Sync is planned as a paid add-on later; there's no price yet.
 
 Sync keeps the same notebook on two or more computers, through your own Google Drive.
 

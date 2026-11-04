@@ -1,9 +1,9 @@
-// Builds /sitemap.xml from the pages in this folder. Legal pages and 404 are left out
+// Builds /sitemap.xml from the pages in this folder. Legal pages, 404 and the contact-form result pages are left out
 // on purpose: they carry `noindex` and shouldn't be offered to search engines.
 import type { APIRoute } from "astro";
 import { SITE_URL } from "../config";
 
-const EXCLUDE = new Set(["/404/", "/privacy/", "/terms/"]);
+const EXCLUDE = new Set(["/404/", "/privacy/", "/terms/", "/contact/sent/", "/contact/problem/"]);
 
 export const GET: APIRoute = () => {
   const files = Object.keys(import.meta.glob("./**/*.{astro,md}"));

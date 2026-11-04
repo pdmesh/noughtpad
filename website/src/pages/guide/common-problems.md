@@ -36,7 +36,7 @@ This should go away once Noughtpad is signed with an Apple certificate.
 
 While sync is in testing, Google ends each sign-in after 7 days. Open **Settings → Sync** and click **Sign in with Google…** again. Nothing is lost while you're signed out; sync catches up once you're back.
 
-If Google says you don't have access, sync is still limited to invited testers. Write to [hello@noughtpad.com](mailto:hello@noughtpad.com).
+If Google says you don't have access, sync is still limited to invited testers. Ask for an invitation through the [contact form](/contact/).
 
 <h2 id="conflict-copy">A note appeared twice after syncing</h2>
 
@@ -62,4 +62,4 @@ Noughtpad needs to be running. On a Mac, closing the window keeps it running, bu
 
 ## Still stuck?
 
-Write to [hello@noughtpad.com](mailto:hello@noughtpad.com). It helps to say which computer you use, your Noughtpad version (in **Settings → Updates**) and what you were doing when it happened.
+Write to us through the [contact form](/contact/). It helps to say which computer you use, your Noughtpad version (in **Settings → Updates**) and what you were doing when it happened.
