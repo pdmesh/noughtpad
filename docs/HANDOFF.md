@@ -259,6 +259,12 @@ Noughtpad's signature".
   (Backlog).
 - **Release run #2** predates the rename, so its macOS artifact is named `nought-macos-arm64`.
 - **⌘L** opens chat; the editor's select-line binding is overridden.
+- **Release upload race:** the three jobs each edit `latest.json` on the draft. On v0.1.5 the macOS
+  job built fine but failed uploading ("Not Found - update a release asset"), leaving the `.dmg`
+  but no update bundle and no `darwin-aarch64` entry. Fix used: delete the half-uploaded Mac
+  assets from the draft, `gh run rerun <id> --failed`, then check `latest.json` lists
+  `darwin-aarch64`. If it recurs, serialise the jobs' uploads (e.g. `max-parallel: 1` on the
+  upload, or a final job that writes `latest.json`).
 - **Release CI time:** the release build compiles mistral.rs, which takes 20–40 minutes per
   platform on GitHub runners.
 - **Old answers:** answers saved with "Keep" before M4.5 remain in `.noughtpad/artifacts/` and
