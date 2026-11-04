@@ -5,19 +5,15 @@ import DownloadCta from "../components/DownloadCta.astro";
 ---
 
 <Base
-  title="Features"
-  description="What Noughtpad does today: blank-page capture, related notes, search by meaning, ideas over time, a journal with an activity map, chat with your notes using your own model, and Google Drive sync in testing."
+  title="Noughtpad features: related notes, local AI, plain Markdown"
+  description="Everything in Noughtpad: distraction-free writing, related notes, search by meaning, ideas over time, a journal, chat with your notes on a local model or your own provider, and sync."
   section="features"
 >
   <div class="page">
     <div class="wrap prose">
-      <p class="eyebrow">Features</p>
-      <h1>What Noughtpad does</h1>
+      <h1>Everything Noughtpad does</h1>
       <p class="lede">
-        Noughtpad does two jobs. It gets out of the way while you write, and it helps you find your way back through what you've written. Everything below works today, in version 0.1.5.
-      </p>
-      <p class="muted small">
-        Jump to: <a href="#capture">Capture</a> · <a href="#related">Related notes</a> · <a href="#search">Search by meaning</a> · <a href="#ideas">Ideas over time</a> · <a href="#journal">Journal</a> · <a href="#chat">Chat</a> · <a href="#sync">Sync</a> · <a href="#files">Your files</a>
+        Noughtpad does two jobs well. It stays out of the way while you write, and it helps you find your way back through everything you've written.
       </p>
 
       <h2 id="capture">Capture</h2>
@@ -97,13 +93,12 @@ import DownloadCta from "../components/DownloadCta.astro";
       </p>
       <Shot name="chat" alt="A chat with a question about ownership and an answer that cites notes by number." />
 
-      <h2 id="sync">Sync between computers (in testing)</h2>
+      <h2 id="sync">Sync between computers</h2>
       <p>
         Noughtpad can keep the same notebook on two or more computers through your own Google Drive. It syncs every minute and a few seconds after you stop typing. If you edit different parts of a note on two computers, both edits are kept. Only when the same lines change on both does it save a second copy next to the note so nothing is lost.
       </p>
-      <div class="callout">
-        <strong>Sync is in testing.</strong>
-        It works between Macs today, with a small group of testers. Google limits sign-in to listed testers while it's in testing, and each sign-in lasts 7 days. Sync is planned as a paid add-on later; there's no price yet. Want to help test? <a href="/contact/">Get in touch</a>.
+      <div class="note">
+        <p>Sync is in beta and open by invitation. It will become an optional paid add-on; the app itself stays free. <a href="/contact/">Ask to join the beta</a>.</p>
       </div>
       <p>
         You don't need Noughtpad's sync to use more than one computer. Your notes are plain files, so any folder sync you already use will carry them.
@@ -120,9 +115,9 @@ import DownloadCta from "../components/DownloadCta.astro";
         <a href="/guide/where-files-live/">More about where your files live</a>
       </p>
 
-      <h2>Coming later</h2>
+      <h2>What's next</h2>
       <p>
-        These are planned, not built: iCloud sync on Apple devices, phone apps, wider testing of sync on Windows and Linux, and a paid plan for sync. We'll say so here when they're ready.
+        On the way: phone apps, iCloud sync for Apple devices, and sync for everyone on Windows and Linux.
       </p>
 
       <DownloadCta />

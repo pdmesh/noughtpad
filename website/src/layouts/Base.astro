@@ -1,5 +1,6 @@
 ---
 import { SITE_NAME, SITE_URL, SOURCE_URL } from "../config";
+import "@fontsource-variable/literata/opsz.css";
 import "../styles/global.css";
 
 interface Props {
@@ -19,7 +20,7 @@ interface Props {
 
 const { noindex = false, title, description, image = "/img/og.png", imageAlt = "The Noughtpad app: a quiet writing page with related notes beside it.", jsonld = [], section } = Astro.props;
 const canonical = new URL(Astro.url.pathname, SITE_URL).href;
-const fullTitle = title === SITE_NAME ? title : `${title} | ${SITE_NAME}`;
+const fullTitle = title.includes(SITE_NAME) ? title : `${title} | ${SITE_NAME}`;
 const imageUrl = new URL(image, SITE_URL).href;
 const nav = [
   { href: "/features/", label: "Features", key: "features" },
@@ -41,8 +42,8 @@ const nav = [
     <link rel="apple-touch-icon" href="/img/apple-touch-icon.png" />
     <link rel="sitemap" href="/sitemap.xml" />
     <meta name="color-scheme" content="light dark" />
-    <meta name="theme-color" content="#faf8f4" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#17191e" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#fcfcfa" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#14171d" media="(prefers-color-scheme: dark)" />
 
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content={SITE_NAME} />
@@ -66,7 +67,7 @@ const nav = [
     <header class="site-header">
       <div class="wrap header-row">
         <a class="brand" href="/" aria-label="Noughtpad home">
-          <img src="/favicon.svg" width="28" height="28" alt="" />
+          <img src="/favicon.svg" width="26" height="26" alt="" />
           <span>Noughtpad</span>
         </a>
         <nav aria-label="Main">
@@ -94,11 +95,11 @@ const nav = [
       <div class="wrap footer-grid">
         <div>
           <p class="brand"><img src="/favicon.svg" width="22" height="22" alt="" /> <span>Noughtpad</span></p>
-          <p class="muted">A local-first notebook. Your notes are plain Markdown files on your computer.</p>
-          {SOURCE_URL && <p class="muted">Source available: <a href={SOURCE_URL}>read the code on GitHub</a>.</p>}
+          <p class="muted">A private notebook for Mac, Windows and Linux. Your notes stay plain Markdown files on your own computer.</p>
+          {SOURCE_URL && <p class="muted"><a href={SOURCE_URL}>Source available on GitHub</a></p>}
         </div>
         <div>
-          <h2 class="footer-h">Noughtpad</h2>
+          <h2 class="footer-h">Product</h2>
           <ul>
             <li><a href="/features/">Features</a></li>
             <li><a href="/download/">Download</a></li>
@@ -119,7 +120,7 @@ const nav = [
           </ul>
         </div>
         <div>
-          <h2 class="footer-h">Contact</h2>
+          <h2 class="footer-h">Support</h2>
           <ul>
             <li><a href="/contact/">Contact us</a></li>
             <li><a href="/privacy/">Privacy</a></li>

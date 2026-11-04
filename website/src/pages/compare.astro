@@ -1,6 +1,5 @@
 ---
 import Base from "../layouts/Base.astro";
-import { COMPARISONS_CHECKED } from "../config";
 
 const pages = [
   { href: "/noughtpad-vs-obsidian/", title: "Noughtpad vs Obsidian", text: "Both keep Markdown files in a folder, so you can use them together. Obsidian has plugins and phone apps; Noughtpad finds connections for you." },
@@ -14,28 +13,28 @@ const pages = [
 ---
 
 <Base
-  title="Compare Noughtpad"
-  description="Honest comparisons of Noughtpad with Obsidian, Notion, Logseq, Bear, Apple Notes and Evernote, including what each of them does better."
+  title="Noughtpad compared with Obsidian, Notion, Bear and more"
+  description="How Noughtpad compares with Obsidian, Notion, Logseq, Bear, Apple Notes and Evernote: prices, privacy, files, AI and what each app does best."
   section="compare"
 >
   <div class="page">
     <div class="wrap">
       <div class="prose">
-        <p class="eyebrow">Compare</p>
         <h1>How Noughtpad compares</h1>
         <p class="lede">
-          Every app here is good at something. These pages try to say plainly what each does better than Noughtpad, as well as where Noughtpad is different, so you can pick what suits you.
+          Every app here is good at something. Each page sets out what the other app does best, where Noughtpad is different, and how to try both on the same notes.
         </p>
-        <p class="dated">Based on each app's own website as of {COMPARISONS_CHECKED}.</p>
       </div>
-      <div class="cards" style="margin-top:2rem">
+      <ul class="rows">
         {pages.map((p) => (
-          <a class="card" href={p.href}>
-            <h2 style="font-size:1.08rem;margin:0 0 0.35rem">{p.title}</h2>
-            <p>{p.text}</p>
-          </a>
+          <li>
+            <a href={p.href}>
+              <h2>{p.title}</h2>
+              <p>{p.text}</p>
+            </a>
+          </li>
         ))}
-      </div>
+      </ul>
     </div>
   </div>
 </Base>

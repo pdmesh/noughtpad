@@ -1,42 +1,35 @@
 ---
 layout: ../../layouts/Guide.astro
 title: Common problems
-description: Fixes for common Noughtpad problems, including the macOS "can't be opened" warning, a slow first start after an update, signing in to Google again for sync, and chat models that won't load.
+description: Fixes for common Noughtpad problems, including opening it on a Mac the first time, a slow first start after an update, signing in to Google again for sync, and chat models that won't load.
 ---
 
 <h2 id="unsigned-app">"Noughtpad can't be opened" on a Mac</h2>
 
-Noughtpad isn't signed with an Apple developer certificate yet, so macOS blocks it the first time.
-
-1. Click **Done** on the warning.
-2. Open **System Settings → Privacy & Security**.
-3. Scroll to **Security** and click **Open Anyway** next to the Noughtpad line.
-4. Enter your password if asked and click **Open Anyway** again.
-
-You only need to do this once. Updates installed from inside Noughtpad don't ask again.
+During the beta, macOS asks you to confirm Noughtpad once, the first time you open it. [Here's how](/guide/install-and-first-note/#first-open-mac). It takes a few seconds and this step goes away after the beta.
 
 <h2 id="smartscreen">"Windows protected your PC"</h2>
 
-Click **More info**, then **Run anyway**. Windows shows this because the installer isn't signed yet.
+Click **More info**, then **Run anyway**. You'll only see this during the beta.
 
 <h2 id="slow-first-launch">The first start after an update is slow (Mac)</h2>
 
 After installing an update, Noughtpad may show "Opening your notes…" for several seconds (about 6 seconds has been seen). The next start is quick again, under half a second.
 
-**Why:** macOS protects the Documents, Desktop and Downloads folders, and iCloud Drive. Each time an unsigned app changes, macOS treats it as a new app and checks it again the first time it reads from one of those folders.
+**Why:** macOS protects the Documents, Desktop and Downloads folders, and iCloud Drive. Until Noughtpad is notarised, macOS treats each updated version as a new app and checks it again the first time it reads from one of those folders.
 
 **What you can do:**
 
 - Nothing. It only happens once per update.
 - Or keep your notes outside those folders, for example in a folder called **Noughtpad** in your home folder. Quit Noughtpad, move the folder, then choose it in **Settings → Notes folder → Switch…**.
 
-This should go away once Noughtpad is signed with an Apple certificate.
+This goes away after the beta.
 
 <h2 id="sync-signed-out">Sync says "Signed out"</h2>
 
-While sync is in testing, Google ends each sign-in after 7 days. Open **Settings → Sync** and click **Sign in with Google…** again. Nothing is lost while you're signed out; sync catches up once you're back.
+During the beta, Google ends each sign-in after 7 days. Open **Settings → Sync** and click **Sign in with Google…** again. Nothing is lost while you're signed out; sync catches up once you're back.
 
-If Google says you don't have access, sync is still limited to invited testers. Ask for an invitation through the [contact form](/contact/).
+If Google says you don't have access, sync is open by invitation during the beta. Ask for an invitation through the [contact form](/contact/).
 
 <h2 id="conflict-copy">A note appeared twice after syncing</h2>
 

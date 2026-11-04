@@ -1,10 +1,10 @@
 ---
 layout: ../../layouts/Guide.astro
-title: Sync (in testing)
+title: Sync (beta)
 description: How Noughtpad's Google Drive sync keeps one notebook the same on several computers, how to turn it on, what happens when the same note changes on two computers, and its current limits.
 ---
 
-> **Sync is in testing.** It works between Macs today, used daily by a small group. While it's in testing, Google only lets listed testers sign in, so you'll need an invitation: ask through the [contact form](/contact/). Sync is planned as a paid add-on later; there's no price yet.
+> **Sync is in beta.** It works between Macs today, used daily by a small group. During the beta, Google only lets invited people sign in, so you'll need an invitation: ask through the [contact form](/contact/). Sync is planned as a paid add-on later; there's no price yet.
 
 Sync keeps the same notebook on two or more computers, through your own Google Drive.
 
@@ -47,9 +47,9 @@ A small dot at the top right shows sync: it's highlighted while syncing and turn
 - **The same lines changed on both:** Noughtpad keeps one version in the note and saves the other as a separate copy next to it. Nothing is lost. Settings → Sync tells you when this happens, so you can merge the two by hand.
 - **Deleted on one, edited on the other:** the edit wins and the note stays.
 
-## Limits while in testing
+## Limits during the beta
 
-- **Sign in again every 7 days.** Google ends testing sign-ins after a week. Settings will say "Signed out"; click **Sign in with Google…** again. Nothing is lost while signed out; it catches up after.
+- **Sign in again every 7 days.** During the beta, Google ends each sign-in after a week. Settings will say "Signed out"; click **Sign in with Google…** again. Nothing is lost while signed out; it catches up after.
 - **Files over 50 MB** don't sync. Settings → Sync lists them.
 - **Don't rename files inside Google Drive by hand.** Noughtpad would see a new file and a deleted one.
 - **Windows and Linux** haven't been tested with sync as much as Macs.

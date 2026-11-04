@@ -12,6 +12,8 @@ npm run build     # dist/, then scripts/check-build.mjs
 npm run preview   # serve dist/
 ```
 
+Copy rules: plain, confident, specific. No version numbers or hedges in marketing copy (the version shows on the download page only). Beta caveats, such as the one-time Mac confirmation, live in one guide section (`/guide/install-and-first-note/#first-open-mac`) and are linked from elsewhere. Comparison pages name the other app's main domain once, at the foot (`site` prop on `CompareLayout`).
+
 `npm run build` fails if any page lacks one `h1`, a unique title, a description or a canonical
 link, if an image has no alt text, if an internal link is broken, or if the copy uses a word the
 brief rules out (seamless, unlock, supercharge…) or an em dash.
@@ -24,7 +26,7 @@ brief rules out (seamless, unlock, supercharge…) or an em dash.
 | Contact form and its result pages | `src/pages/contact/`, `functions/api/contact.ts`, `contact-worker/` |
 | Home, features, download, compare, privacy, terms | `src/pages/*.astro` |
 | User guide (one Markdown file per page) | `src/pages/guide/*.md`, order in `src/guide.ts` |
-| Colours and layout | `src/styles/global.css` (the app's own tokens) |
+| Colours, type and layout | `src/styles/global.css`: paper, blue-black ink, graphite, one marker yellow used only as a highlight; Literata (self-hosted from `@fontsource-variable/literata`) for headings, the system face for text |
 | Screenshots, social card, video | `public/img/`, `public/video/`; sources in `media/` |
 
 **Each release:** bump `VERSION` in `src/config.ts`.

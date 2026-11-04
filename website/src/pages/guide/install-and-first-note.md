@@ -16,16 +16,20 @@ Go to the [download page](/download/) and get the file for your computer:
 
 ## 2. Install
 
-**Mac.** Open the `.dmg` and drag Noughtpad into your Applications folder. The first time you open it, macOS blocks it, because Noughtpad isn't signed with an Apple certificate yet. To open it:
+**Mac.** Open the `.dmg` and drag Noughtpad into your Applications folder, then open it from there.
 
-1. Click **Done** on the warning.
+<h3 id="first-open-mac">Opening it on a Mac the first time</h3>
+
+While Noughtpad is in beta, Apple hasn't notarised it yet, so macOS asks you to confirm it once. This step goes away after the beta.
+
+1. Click **Done** on the message that appears.
 2. Open **System Settings**, then **Privacy & Security**.
 3. Scroll down to **Security** and click **Open Anyway** next to the line about Noughtpad.
 4. Enter your password if asked, and click **Open Anyway** again.
 
-You only do this once.
+You only do this once. Updates from inside the app open straight away.
 
-**Windows.** Run the installer. If a blue "Windows protected your PC" box appears, click **More info**, then **Run anyway**.
+**Windows.** Run the installer. During the beta, Windows may show a blue "Windows protected your PC" box. Click **More info**, then **Run anyway**.
 
 **Linux.** Make the AppImage executable and open it, or install the `.deb` or `.rpm` package.
 
