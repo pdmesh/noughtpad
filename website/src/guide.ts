@@ -8,7 +8,7 @@ export const GUIDE = [
   { slug: "ideas-over-time", title: "Ideas over time" },
   { slug: "journal", title: "Journal and activity map" },
   { slug: "chat-and-models", title: "Chat and models" },
-  { slug: "sync", title: "Sync (in testing)" },
+  { slug: "sync", title: "Sync (beta)" },
   { slug: "settings", title: "Settings" },
   { slug: "keyboard-shortcuts", title: "Keyboard shortcuts" },
   { slug: "where-files-live", title: "Where your files live" },

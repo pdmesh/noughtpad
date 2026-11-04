@@ -1,0 +1,7 @@
+# Redirects www.noughtpad.com to the apex with a 301. Deploy from this folder: npx wrangler deploy
+# The custom domain below makes Cloudflare create the www DNS record and certificate itself.
+name = "noughtpad-www"
+main = "index.js"
+compatibility_date = "2026-11-01"
+workers_dev = false
+routes = [{ pattern = "www.noughtpad.com", custom_domain = true }]

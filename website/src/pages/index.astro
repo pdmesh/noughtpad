@@ -2,7 +2,7 @@
 import Base from "../layouts/Base.astro";
 import Shot from "../components/Shot.astro";
 import DownloadCta from "../components/DownloadCta.astro";
-import { SITE_URL, VERSION, RELEASES_URL, TAGLINE, SOURCE_URL } from "../config";
+import { SITE_URL, VERSION, RELEASES_URL } from "../config";
 
 const app = {
   "@context": "https://schema.org",
@@ -12,7 +12,7 @@ const app = {
   operatingSystem: "macOS (Apple Silicon), Windows, Linux",
   softwareVersion: VERSION,
   description:
-    "A local-first notebook. Write on a blank page; notes are saved as plain Markdown files. Related notes, search by meaning and ideas over time run on your computer.",
+    "A private notes app. Write on a blank page; every note is saved as a plain Markdown file on your computer. Related notes, search by meaning and ideas over time run on your computer.",
   url: SITE_URL + "/",
   downloadUrl: RELEASES_URL,
   image: SITE_URL + "/img/og.png",
@@ -22,18 +22,17 @@ const site = { "@context": "https://schema.org", "@type": "WebSite", name: "Noug
 ---
 
 <Base
-  title="Noughtpad"
-  description="Noughtpad is a quiet notebook for Mac, Windows and Linux. Write on a blank page, keep notes as plain Markdown files, and see how your ideas connect and change over time."
+  title="Noughtpad: private Markdown notes that find each other"
+  description="Noughtpad is a free notes app for Mac, Windows and Linux. Write on a blank page, keep every note as a Markdown file on your computer, and see which notes connect and how your ideas change."
   jsonld={[app, site]}
 >
   <section class="hero">
     <div class="wrap">
-      <p class="eyebrow">A notebook for your computer</p>
-      <h1>{TAGLINE}</h1>
+      <h1>A blank page that quietly remembers<span class="caret" aria-hidden="true"></span></h1>
       <p class="lede">
-        Write anything on a blank page. Noughtpad saves it as a plain Markdown file in a folder you choose. Later, it shows you which notes belong together and how your thinking has changed.
+        Write the way you think. Noughtpad keeps every note as a plain Markdown file on your computer, then shows you which notes belong together and how your thinking has changed.
       </p>
-      <DownloadCta center />
+      <DownloadCta />
       <div class="hero-media">
         <div class="frame">
           <video
@@ -57,27 +56,27 @@ const site = { "@context": "https://schema.org", "@type": "WebSite", name: "Noug
   <section class="section">
     <div class="wrap split">
       <div>
-        <h2>Write first. Nothing else on the page.</h2>
+        <h2>Open it and write</h2>
         <p>
-          Noughtpad opens to an empty page with the cursor ready. There are no fields to fill in and no folders to pick. The sidebar and toolbar stay hidden until you move the pointer to the edge.
+          No titles, folders or templates to set up first. Noughtpad opens on an empty page with the cursor ready, and saves as you type. The sidebar stays out of sight until you reach for it.
         </p>
         <p>
-          Press <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>Space</kbd> from any app to start a new note. On Windows and Linux it's <kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>Space</kbd>.
+          Press <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>Space</kbd> in any app to start a new note. On Windows and Linux it's <kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>Space</kbd>.
         </p>
       </div>
       <Shot name="write" alt="The Noughtpad writing page: two lines of text on an otherwise empty page, with no toolbar or sidebar showing." />
     </div>
   </section>
 
-  <section class="section section-alt">
+  <section class="section">
     <div class="wrap split flip">
       <div>
-        <h2>Notes that find each other</h2>
+        <h2>Old notes come back when they matter</h2>
         <p>
-          Press <kbd>⌘</kbd> <kbd>J</kbd> to see notes that seem related to the one you're reading, each with the passage that matched. A thought from March sits next to the one you wrote today.
+          Open any note and press <kbd>⌘</kbd> <kbd>J</kbd>. Noughtpad finds earlier notes on the same idea, even when they use different words, and shows the exact passage that matched.
         </p>
         <p>
-          If a suggestion is wrong, mark it "Not related" and it won't come back. Over time, suggestions adjust to what you open and what you dismiss.
+          A thought from March sits next to the one you wrote today. Mark a suggestion "Not related" and it won't come back, and the suggestions get better as you use them.
         </p>
       </div>
       <Shot name="related" alt="A note about a venture capital framework, with a Related panel on the right listing three earlier notes on ownership and fund returns, each with the matching passage." />
@@ -87,27 +86,27 @@ const site = { "@context": "https://schema.org", "@type": "WebSite", name: "Noug
   <section class="section">
     <div class="wrap split">
       <div>
-        <h2>See how an idea changed</h2>
+        <h2>Watch an idea grow</h2>
         <p>
-          Ideas over time shows the threads you keep coming back to, ideas that started in the last few weeks, and ones you dropped months ago. Open a thread to read it month by month.
+          Ideas over time gathers your notes into threads and lays them out month by month: what you keep coming back to, what's just starting, what you set aside, and the books and articles that shaped it.
         </p>
         <p>
-          It also points out what you read that may have shaped a later note, and questions you asked and never came back to. These are suggestions worked out on your computer, not text written by AI.
+          It's all worked out on your computer from your own words. Nothing is written for you.
         </p>
       </div>
       <Shot name="thread" alt="A thread called read, power, return, showing 10 notes over 8 months, laid out by month, with cues such as May build on Venture Deals and Asks a question." />
     </div>
   </section>
 
-  <section class="section section-alt">
+  <section class="section">
     <div class="wrap split flip">
       <div>
         <h2>Ask your notes</h2>
         <p>
-          Chat with your notes when you want to. Ask how your view on something changed, or what a month was about. The answer points to the notes it used.
+          Ask how your view on something has changed, or what last spring was really about. Every answer points to the notes it came from.
         </p>
         <p>
-          Use a model that runs on your computer, free and offline. Or add your own account with Anthropic, OpenAI or Gemini, or point it at Ollama. Before notes go to an online service, Noughtpad shows you which ones and asks first.
+          Run a free model on your own computer, fully offline. Or bring your own Anthropic, OpenAI or Gemini account, or Ollama. Before any note goes online, Noughtpad shows you which ones and asks.
         </p>
       </div>
       <Shot name="chat" alt="A chat asking how the writer's thinking on ownership changed this year. The answer cites two notes by number, and the model is shown as running on this computer." />
@@ -116,61 +115,52 @@ const site = { "@context": "https://schema.org", "@type": "WebSite", name: "Noug
 
   <section class="section">
     <div class="wrap">
-      <div class="intro center">
-        <h2>Your notes are plain files</h2>
+      <div class="intro">
+        <h2>Plain files. Nothing locked in.</h2>
         <p>
-          Every note is a Markdown text file in a folder on your computer. You can open them in any editor, back them up however you like, or keep them in git. Nothing is locked inside an app or a server.
+          Every note is a Markdown file in a folder you choose. Open it in any editor, back it up however you like, or keep it in git. Your notes are yours in the most literal sense.
         </p>
       </div>
-      <div class="cards">
-        <div class="card">
-          <h3>Works with Obsidian</h3>
-          <p>Point Obsidian and Noughtpad at the same folder. Edits in one show up in the other. <a href="/noughtpad-vs-obsidian/">How they compare</a></p>
-        </div>
-        <div class="card">
+      <ul class="points">
+        <li>
+          <h3>Works alongside Obsidian</h3>
+          <p>Point both apps at the same folder and edits in one show up in the other. <a href="/noughtpad-vs-obsidian/">See how they compare</a></p>
+        </li>
+        <li>
           <h3>No account</h3>
-          <p>Download it and start writing. Nothing needs a sign-in unless you turn on sync.</p>
-        </div>
-        <div class="card">
+          <p>Download it and start writing. Nothing asks you to sign up.</p>
+        </li>
+        <li>
           <h3>Private by default</h3>
-          <p>Search, related notes and ideas over time run on your computer. Your notes go nowhere unless you choose an online model.</p>
-        </div>
-        <div class="card">
-          <h3>Fast with lots of notes</h3>
-          <p>Tested with 10,000 notes: search answers in milliseconds, and opening the notebook never holds up writing.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="section section-alt">
-    <div class="wrap">
-      <div class="intro center">
-        <h2>Also in the box</h2>
-      </div>
-      <div class="cards">
-        <div class="card"><h3>Search by meaning</h3><p><kbd>⌘</kbd> <kbd>K</kbd> finds notes by their words, and by meaning once you turn it on. "Getting fit" finds your running notes.</p></div>
-        <div class="card"><h3>Journal and activity map</h3><p>Your notes by day, week or month, with a year of writing shown as squares. No goals, no reminders.</p></div>
-        <div class="card"><h3>Labels and sources</h3><p>Add as many labels as you like. Note where an idea came from: a book, an article, a talk.</p></div>
-        <div class="card"><h3>Paste from anywhere</h3><p>Paste from a web page, Google Docs or Word and get clean Markdown. Pasted images are saved next to your notes.</p></div>
-        <div class="card"><h3>Diagrams and maths</h3><p>Mermaid diagrams and LaTeX maths show up rendered as you write.</p></div>
-        <div class="card"><h3>Sync, in testing</h3><p>Keep two computers in step through your own Google Drive. Testing now with a small group. <a href="/features/#sync">More</a></p></div>
-      </div>
+          <p>Search, related notes and ideas over time all run on your computer.</p>
+        </li>
+        <li>
+          <h3>Fast with thousands of notes</h3>
+          <p>Tested with 10,000 notes. Search answers in milliseconds.</p>
+        </li>
+      </ul>
     </div>
   </section>
 
   <section class="section">
-    <div class="wrap prose" style="margin:0 auto">
-      <h2 class="center" style="margin-top:0">Where things stand</h2>
-      <p>
-        Noughtpad is young. It's at version {VERSION}, and it's written in daily on a Mac. The Windows and Linux versions are built from the same code but have had much less use. A few things to know before you download:
-      </p>
-      <ul>
-        <li>It's free to download and use. Sync between computers is planned as a paid add-on; prices aren't set yet.</li>
-        <li>The Mac app isn't signed with an Apple certificate yet, so macOS asks you to confirm the first time you open it. <a href="/download/#mac">Here's how</a>.</li>
-        <li>There are no phone apps yet.</li>
-        {SOURCE_URL && <li>The source code is public. It's source available: <a href={SOURCE_URL}>read it on GitHub</a>.</li>}
+    <div class="wrap">
+      <div class="intro">
+        <h2>Everything else a notebook needs</h2>
+      </div>
+      <ul class="points">
+        <li><h3>Search by meaning</h3><p><kbd>⌘</kbd> <kbd>K</kbd> finds notes by their words and by what they mean. "Getting fit" finds your running notes.</p></li>
+        <li><h3>Journal and activity map</h3><p>Your notes by day, week or month, and a year of writing at a glance. No streaks to keep up.</p></li>
+        <li><h3>Labels and sources</h3><p>As many labels as you like, and a place to note the book, article or talk an idea came from.</p></li>
+        <li><h3>Clean paste</h3><p>Paste from a web page, Google Docs or Word and get tidy Markdown. Images are saved next to your notes.</p></li>
+        <li><h3>Diagrams and maths</h3><p>Mermaid diagrams and LaTeX maths render as you write.</p></li>
+        <li><h3>Sync across computers</h3><p>Keep your notebook in step through your own Google Drive. Now in beta, by invitation. <a href="/features/#sync">Learn more</a></p></li>
       </ul>
+    </div>
+  </section>
+
+  <section class="closing">
+    <div class="wrap">
+      <h2>Your next good idea is probably already in your notes.</h2>
       <DownloadCta />
     </div>
   </section>

@@ -3,10 +3,11 @@ import CompareLayout from "../components/CompareLayout.astro";
 ---
 
 <CompareLayout
-  title="Noughtpad vs Apple Notes"
+  title="Noughtpad vs Apple Notes: a Markdown alternative"
   h1="Noughtpad vs Apple Notes"
   other="Apple Notes"
-  description="Noughtpad vs Apple Notes compared honestly: Apple Notes is free, built in and syncs through iCloud; Noughtpad keeps Markdown files you own and shows how your notes connect and change."
+  site="apple.com"
+  description="Noughtpad vs Apple Notes compared: Apple Notes is free, built in and syncs through iCloud; Noughtpad keeps Markdown files you own and shows how your notes connect and change."
 >
   <p class="lede">
     Apple Notes is already on your Mac, iPhone and iPad, it's free, and it syncs through iCloud without you thinking about it. For quick lists and reminders, it's hard to beat. Noughtpad is for when your notes become a body of thinking you want to come back to.
@@ -41,7 +42,7 @@ import CompareLayout from "../components/CompareLayout.astro";
       <tbody>
         <tr><th scope="row">Price</th><td>Free</td><td>Free with Apple devices (iCloud storage plans for more space)</td></tr>
         <tr><th scope="row">Devices</th><td>Mac (Apple Silicon), Windows, Linux</td><td>Mac, iPhone, iPad, and iCloud.com</td></tr>
-        <tr><th scope="row">Sync</th><td>Google Drive sync in testing, or any folder sync</td><td>iCloud</td></tr>
+        <tr><th scope="row">Sync</th><td>Google Drive sync (beta), or any folder sync</td><td>iCloud</td></tr>
         <tr><th scope="row">Where notes live</th><td>Markdown files in your folder</td><td>Apple Notes' own library</td></tr>
         <tr><th scope="row">Markdown</th><td>Written and stored as Markdown</td><td>Import and export Markdown (macOS 26 and later)</td></tr>
         <tr><th scope="row">Related notes and ideas over time</th><td>Yes</td><td>No</td></tr>
@@ -51,11 +52,7 @@ import CompareLayout from "../components/CompareLayout.astro";
 
   <h2>Moving notes from Apple Notes</h2>
   <p>
-    On macOS 26 or later, select notes in Apple Notes and choose <strong>File → Export To</strong> to save them as Markdown. Put the files in your Noughtpad folder and Noughtpad reads them straight away.
+    On macOS 26 or later, open a note in Apple Notes and choose <strong>File → Export as → Markdown</strong> (on macOS 27, <strong>File → Export To</strong>). Put the files in your Noughtpad folder and Noughtpad reads them straight away.
   </p>
 
-  <h2 class="small">Sources</h2>
-  <p class="muted small">
-    <a href="https://support.apple.com/guide/notes/import-export-and-print-notes-not201900c07/mac">Apple Support: import, export and print notes on Mac</a> · <a href="https://support.apple.com/en-us/102223">Apple Support: import notes to the Notes app</a>
-  </p>
 </CompareLayout>

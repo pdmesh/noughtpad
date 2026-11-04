@@ -9,8 +9,11 @@ interface Props {
   h1: string;
   /** The other app's name, for structured data. */
   other: string;
+  /** The other app's main domain, named once at the foot of the page, e.g. "obsidian.md". */
+  site: string;
 }
-const { title, description, h1, other } = Astro.props;
+const { title, description, h1, other, site } = Astro.props;
+const checked = COMPARISONS_CHECKED.replace(/^\d+\s+/, "");
 const crumbs = {
   "@context": "https://schema.org",
   "@type": "BreadcrumbList",
@@ -32,10 +35,10 @@ const article = {
 <Base title={title} description={description} section="compare" jsonld={[crumbs, article]}>
   <article class="page">
     <div class="wrap prose">
-      <p class="eyebrow"><a href="/compare/" style="color:inherit;text-decoration:none">Compare</a></p>
+      <p class="crumb"><a href="/compare/">Compare</a></p>
       <h1>{h1}</h1>
-      <p class="dated">Based on {other}'s own website as of {COMPARISONS_CHECKED}. Prices and features change; if something here is out of date, please tell us at <a href="mailto:hello@noughtpad.com">hello@noughtpad.com</a> and we'll fix it.</p>
       <slot />
+      <p class="fine">Prices and features of {other} as listed on <a href={`https://${site}`}>{site}</a>, {checked}.</p>
       <hr />
       <h2>Try Noughtpad</h2>
       <p>It's free, it works without an account, and your notes stay plain Markdown files. If it isn't for you, the files open in any other Markdown app.</p>

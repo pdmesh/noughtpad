@@ -1,0 +1,30 @@
+---
+import Base from "../../layouts/Base.astro";
+---
+
+<Base title="Contact" description="Write to the people who make Noughtpad: questions, problems, sync invitations, or a comparison page that's out of date. We reply by email.">
+  <div class="page">
+    <div class="wrap prose">
+      <h1>Contact</h1>
+      <p class="lede">Questions, problems, a request to test sync, or something on this site that's wrong. We read everything and reply by email.</p>
+      <form class="contact-form" method="post" action="/api/contact">
+        <label for="c-name">Your name <span class="muted">(optional)</span></label>
+        <input id="c-name" name="name" type="text" autocomplete="name" maxlength="100" />
+
+        <label for="c-email">Your email</label>
+        <input id="c-email" name="email" type="email" autocomplete="email" required maxlength="200" />
+
+        <label for="c-message">Message</label>
+        <textarea id="c-message" name="message" rows="8" required minlength="2" maxlength="5000"></textarea>
+
+        <div class="hp" aria-hidden="true">
+          <label for="c-website">Leave this empty</label>
+          <input id="c-website" name="website" type="text" tabindex="-1" autocomplete="off" />
+        </div>
+
+        <button class="btn" type="submit">Send</button>
+      </form>
+      <p class="muted small">If it's about a problem, it helps to say which computer you use, your Noughtpad version (in <strong>Settings → Updates</strong>) and what you were doing. We use your email only to reply. See <a href="/privacy/">privacy</a>.</p>
+    </div>
+  </div>
+</Base>

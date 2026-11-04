@@ -1,0 +1,11 @@
+# Sends contact-form messages from noughtpad.com. Deploy from this folder:
+#   npx wrangler deploy
+#   npx wrangler secret put DESTINATION   # a verified Email Routing destination address
+# The Pages project reaches it through the CONTACT service binding in ../wrangler.toml.
+name = "noughtpad-contact"
+main = "src/index.ts"
+compatibility_date = "2026-11-01"
+workers_dev = false
+
+[[send_email]]
+name = "EMAIL"

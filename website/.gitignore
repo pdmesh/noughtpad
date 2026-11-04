@@ -5,3 +5,4 @@ media/screenshots/out/
 media/screenshots/seed.json
 media/video/.hyperframes/
 media/video/*.mp4
+.wrangler/

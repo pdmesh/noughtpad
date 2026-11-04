@@ -1,13 +1,12 @@
 ---
 import Base from "../layouts/Base.astro";
-import { CONTACT_EMAIL, LEGAL_NAME, LEGAL_UPDATED } from "../config";
+import { LEGAL_NAME, LEGAL_UPDATED } from "../config";
 const who = LEGAL_NAME ?? "Noughtpad";
 ---
 
 <Base title="Privacy" description="How Noughtpad and noughtpad.com handle your data: your notes stay on your computer, and we have no account system or tracking." noindex>
   <div class="page">
     <div class="wrap prose">
-      <p class="eyebrow">Legal</p>
       <h1>Privacy</h1>
       <p class="dated">Last updated {LEGAL_UPDATED}.</p>
 
@@ -63,9 +62,9 @@ const who = LEGAL_NAME ?? "Noughtpad";
         </li>
       </ul>
 
-      <h2>Email</h2>
+      <h2>Contact form and email</h2>
       <p>
-        If you email us at <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>, we use your message and address only to reply and to help you. We don't add you to a mailing list or share your email.
+        If you write to us through the <a href="/contact/">contact form</a>, we receive your message, your email address and the name you give, by email. We use them only to reply and to help you. The form sets no cookies and we don't keep a copy anywhere else. We don't add you to a mailing list or share your email.
       </p>
 
       <h2>Children</h2>
@@ -73,7 +72,7 @@ const who = LEGAL_NAME ?? "Noughtpad";
 
       <h2>Your rights</h2>
       <p>
-        Because we hold almost nothing about you, there's usually nothing to access or delete. If you've emailed us and want that correspondence deleted, or have any privacy question, write to <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
+        Because we hold almost nothing about you, there's usually nothing to access or delete. If you've written to us and want that correspondence deleted, or have any privacy question, use the <a href="/contact/">contact form</a>.
       </p>
 
       <h2>Changes</h2>
