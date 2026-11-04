@@ -19,6 +19,14 @@ Read this first next session, then `ROADMAP.md` (what's next) and
   Both secrets (`RELEASE_TOKEN`,
   `NOUGHTPAD_GOOGLE_CLIENT_SECRET`) are set.
 
+- **v0.1.4 is published** (2026-11-04): the duplicate Drive folders fix (one sync at a time in
+  `noughtpad-sync` 210843a; folders and `notebook.json` created with a second look that keeps the
+  oldest; the sync switch is idempotent), the note centred beside the sidebar and related panel,
+  and note text in the system font and size with Settings → Writing (font and size, in
+  localStorage). Turning sync on in 0.1.3 had made two `Noughtpad` folders in My Drive. Sync
+  is off on the user's Mac until they trash both folders in Drive and update; then turn it on
+  with the log (`open --stdout … /Applications/Noughtpad.app`): expect one `sync worker started`
+  and two `created Drive folder` lines. Not yet seen.
 - **v0.1.3 is published** (2026-11-04; `latest.json` serves 0.1.3). It holds: on the user's first launch 0.1.2 stuck on a blank
   window (the UI waiting for `vault_info`); cause not pinned down. A restart opened in 9.7 s, the
   next in 0.4 s. In response: the one-time `user-state.sqlite` migration is gone (no users to carry
