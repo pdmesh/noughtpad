@@ -1,12 +1,16 @@
 # Noughtpad
 
-A local-first notebook: capture anything on a blank page, and let it gradually reveal the shape of your own ideas.
+A private notebook that remembers for you. Write on a blank page; Noughtpad keeps every note as a plain Markdown file on your computer, then shows you which notes belong together and how your thinking changes over time.
 
-Notes are plain Markdown files you own. AI stays out of the way during capture and works quietly in the background. It shows up through derived views (Journal, Connections, Ideas over time) or when you ask.
+**[noughtpad.com](https://noughtpad.com)** · **[Download](https://noughtpad.com/download/)** (Mac with Apple Silicon, Windows, Linux) · **[User guide](https://noughtpad.com/guide/)**
+
+![Related notes in Noughtpad](website/public/img/related-1280.webp)
+
+Noughtpad is in beta. AI stays out of the way while you write and works quietly in the background, on your own computer unless you choose otherwise. It shows up through derived views (Journal, Related notes, Ideas over time) or when you ask.
 
 - Design: [docs/DESIGN.md](docs/DESIGN.md)
-- Roadmap: [ROADMAP.md](ROADMAP.md) · Next session: [docs/HANDOFF.md](docs/HANDOFF.md)
-- Status: **M1–M4.5 complete** (notebook, quiet retrieval, ideas over time, opt-in models, chat with your notes). M5: v0.1.5 released with auto-update, dogfooding on two Macs. M6: Google Drive sync working between two Macs
+- Roadmap: [ROADMAP.md](ROADMAP.md)
+- Notes for maintainers (releases, sync builds): [docs/HANDOFF.md](docs/HANDOFF.md)
 
 ## What works today
 
@@ -67,4 +71,8 @@ Layout:
 
 You may use, modify and redistribute Noughtpad for any purpose **except** a Competing Use, meaning offering it, or something substantially similar built from it, as a commercial product or service. Each release becomes available under Apache-2.0 two years after it is published.
 
-Contributions are accepted under the terms in [CONTRIBUTING.md](CONTRIBUTING.md).
+## Contributing and security
+
+Bug reports and ideas are welcome in [Issues](https://github.com/pdmesh/noughtpad/issues). Contributions are accepted under the terms in [CONTRIBUTING.md](CONTRIBUTING.md), and everyone taking part follows the [code of conduct](CODE_OF_CONDUCT.md).
+
+Found a security problem? Please report it privately, as described in [SECURITY.md](SECURITY.md).

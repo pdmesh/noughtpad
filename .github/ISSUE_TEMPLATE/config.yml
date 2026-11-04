@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Help using Noughtpad
+    url: https://noughtpad.com/guide/
+    about: The user guide covers installing, sync, search and common problems.
+  - name: Report a security problem
+    url: https://github.com/pdmesh/noughtpad/security/advisories/new
+    about: Please report vulnerabilities privately, not as a public issue.
