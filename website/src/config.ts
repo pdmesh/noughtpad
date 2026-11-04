@@ -5,7 +5,7 @@ export const SITE_NAME = "Noughtpad";
 export const TAGLINE = "A blank page that quietly remembers.";
 
 /** Current release. Bump with each published release. */
-export const VERSION = "0.1.5";
+export const VERSION = "0.1.6";
 
 /** Where installers live: the newest published release on the main repo. */
 export const RELEASES_URL = "https://github.com/pdmesh/noughtpad/releases/latest";
