@@ -11,10 +11,13 @@ Read this first next session, then `ROADMAP.md` (what's next) and
 - **Releases move to the public `pdmesh/noughtpad-releases`** (installers only), and the
   updater asks there. Installed 0.1.1 copies still ask the old address, so the next release is
   installed by hand once.
-- **Waiting on the user:** the GitHub secrets on pdmesh/noughtpad: `NOUGHTPAD_GOOGLE_CLIENT_SECRET`,
-  and `RELEASE_TOKEN` (fine-grained; Contents read and write on `noughtpad-sync` and
-  `noughtpad-releases`). `noughtpad-releases` needs at least one commit (a README), since release
-  tags point at its `main`.
+- **v0.1.2 is built, as a draft on `pdmesh/noughtpad-releases`** (2026-11-04): the first release
+  through the new path, with sync linked in (each job's log shows `noughtpad-sync v0.1.0 (…)`) and
+  the Google client secret compiled in. All three jobs green; `latest.json` says 0.1.2, every URL
+  points at `noughtpad-releases/releases/download/v0.1.2/…`, all nine entries signed, Mac
+  `.dmg` and `Noughtpad_aarch64.app.tar.gz` + `.sig` present. Nothing new on pdmesh/noughtpad.
+  **Waiting on the user to publish it.** Both secrets (`RELEASE_TOKEN`,
+  `NOUGHTPAD_GOOGLE_CLIENT_SECRET`) are set.
 
 Earlier the same day:
 
@@ -109,9 +112,10 @@ The user is living with 0.1.1 on several machines for a few days. Good next piec
   Run the binary from Terminal for the log (`sync failed: …`, Drive error messages). Things
   most likely to need fixing: Drive API responses I couldn't test here (revisions on a new
   file, change-feed edge cases), the browser hand-off, the keychain prompt for the new entry.
-- **Then a release** through the new path once the secrets exist: bump to 0.1.2, tag, wait for
-  the three jobs, check the draft on `noughtpad-releases`, publish, install by hand once, then
-  the two-release updater check (below).
+- **Release 0.1.2** (built, draft checked): once published, install it by hand once (0.1.1 asks
+  the old address), then the two-release updater check (below) with 0.1.3 as release B. The
+  release build has the Google secret compiled in, so it's also the easiest way to try sync
+  (steps above, skipping 2–3).
 - **Before relying on sync:** check on the Mac that a new build moves the real notebook's
   dismissals (`user-state.sqlite.bak` appears, related notes still hide dismissed pairs).
 - **Minor items** from "Parked" below (UX leftovers such as dark mode and the minimum window size,
@@ -119,10 +123,11 @@ The user is living with 0.1.1 on several machines for a few days. Good next piec
 
 Ship fixes as tagged releases (bump `version` in the root `Cargo.toml` and `package.json`, tag
 `v0.1.x`, push, wait, check the draft, ask before publishing). Until updates work, the user
-installs each one by hand: `gh release download v0.1.x --repo pdmesh/noughtpad -p '*.dmg'`, or the
-release page while signed in to GitHub.
+installs each one by hand from https://github.com/pdmesh/noughtpad-releases/releases (public; a
+draft needs `gh release download v0.1.x --repo pdmesh/noughtpad-releases -p '*.dmg'`). Releases up
+to 0.1.1 are on the private pdmesh/noughtpad.
 
-### Auto-update: parked on where releases live
+### Auto-update: releases live on pdmesh/noughtpad-releases (decided 2026-11-04)
 
 Done: `tauri-plugin-updater` (`src-tauri/src/updater.rs`), the public key and endpoint in
 `src-tauri/tauri.conf.json`, Settings → Updates, Noughtpad → Check for Updates…, and `release.yml`
