@@ -195,8 +195,42 @@ pub(crate) fn start_watching(app: &AppHandle, state: &AppState, vault: &Arc<Vaul
     Ok(())
 }
 
+/// The steps of opening a notebook: each is shown under the startup loader
+/// (`startup-step` event) and logged with how long the one before took, so a
+/// slow start says where the time went.
+struct Steps<'a> {
+    app: &'a AppHandle,
+    current: Option<(&'static str, std::time::Instant)>,
+}
+
+impl<'a> Steps<'a> {
+    fn new(app: &'a AppHandle) -> Self {
+        Steps { app, current: None }
+    }
+
+    fn next(&mut self, label: &'static str) {
+        self.finish();
+        let _ = self.app.emit("startup-step", label);
+        self.current = Some((label, std::time::Instant::now()));
+    }
+
+    fn finish(&mut self) {
+        if let Some((label, at)) = self.current.take() {
+            tracing::info!(ms = at.elapsed().as_millis() as u64, "open step: {label}");
+        }
+    }
+}
+
+impl Drop for Steps<'_> {
+    fn drop(&mut self) {
+        self.finish();
+    }
+}
+
 /// Open a vault, index it, and start watching it.
 fn activate(app: &AppHandle, state: &AppState, path: &Path, remember: bool) -> CmdResult<VaultInfo> {
+    let mut step = Steps::new(app);
+    step.next("Opening your notes");
     let vault = Arc::new(Vault::open(path)?);
     // Let the webview load images (attachments) from inside this vault only.
     if let Err(e) = app.asset_protocol_scope().allow_directory(vault.root(), true) {
@@ -206,12 +240,14 @@ fn activate(app: &AppHandle, state: &AppState, path: &Path, remember: bool) -> C
     if let Some(old) = state.semantic.write().unwrap_or_else(|e| e.into_inner()).take() {
         old.shutdown();
     }
+    step.next("Loading your preferences");
     let device = this_device(app)?;
     let user = Arc::new(UserState::open(
         &vault.root().join(noughtpad_core::vault::DATA_DIR),
         &device.id,
     )?);
     *state.user.write().unwrap_or_else(|e| e.into_inner()) = Some(user.clone());
+    step.next("Preparing search");
     let sem = Semantic::new(vault.clone(), user)?;
     let handle = app.clone();
     sem.on_status(move |s| semantic::emit_status(&handle, s));
@@ -245,6 +281,7 @@ fn activate(app: &AppHandle, state: &AppState, path: &Path, remember: bool) -> C
         }
     });
     *state.vault.write().unwrap_or_else(|e| e.into_inner()) = Some(vault.clone());
+    step.next("Almost ready");
     start_watching(app, state, &vault)?;
     if remember {
         let mut cfg = load_config(app);
@@ -418,7 +455,18 @@ pub fn run() {
         .with_env_filter(tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
         .init();
 
-    let mut builder = tauri::Builder::default()
+    let mut builder = tauri::Builder::default();
+    // One copy of the app per user: a second launch shows the running window
+    // and exits, so two copies never open one notebook (its index, user-state
+    // and sync engine). Registered first, as the plugin asks.
+    #[cfg(desktop)]
+    {
+        builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            tracing::info!("second launch: showing the running window");
+            lifecycle::show_main(app);
+        }));
+    }
+    builder = builder
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .manage(AppState::default())

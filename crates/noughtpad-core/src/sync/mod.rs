@@ -179,8 +179,6 @@ mod tests {
         for no in [
             ".noughtpad/index.sqlite",
             ".noughtpad/index.sqlite-wal",
-            ".noughtpad/user-state.sqlite",
-            ".noughtpad/user-state.sqlite.bak",
             ".noughtpad/sync/state.sqlite",
             ".noughtpad/.gitignore",
             ".noughtpad/artifacts/a.md",

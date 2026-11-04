@@ -1,7 +1,7 @@
 import { lazy, Suspense, type ComponentType, useCallback, useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarDays, History, Settings as SettingsIcon, FilePlus2, FolderOpen, MessageSquareText, Notebook, PanelLeft, PenLine, Search, Sprout, Waypoints, X } from "lucide-react";
-import { api, isApiError, pickFolder, type VaultInfo } from "./lib/api";
+import { api, isApiError, onEvent, pickFolder, type VaultInfo } from "./lib/api";
 import { useEvent } from "./lib/useEvent";
 import { NotePane } from "./components/NotePane";
 import { Stream } from "./components/Stream";
@@ -70,13 +70,44 @@ export function App() {
   const [vault, setVault] = useState<VaultInfo | null | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
 
+  const [step, setStep] = useState<string | null>(null);
+
   useEffect(() => {
-    api.vaultInfo().then(setVault, (e) => setError(isApiError(e) ? e.message : String(e)));
+    let off: (() => void) | undefined;
+    let live = true;
+    // Listen before asking, so the first step isn't missed.
+    onEvent<string>("startup-step", (s) => live && setStep(s))
+      .then((unlisten) => (off = unlisten))
+      .catch(() => {})
+      .finally(() => api.vaultInfo().then(setVault, (e) => setError(isApiError(e) ? e.message : String(e))));
+    return () => {
+      live = false;
+      off?.();
+    };
   }, []);
 
-  if (vault === undefined) return <div className="app-loading" />;
+  if (vault === undefined) return <Loading step={step} />;
   if (vault === null) return <Welcome onOpened={setVault} error={error} setError={setError} />;
   return <Workspace vault={vault} onSwitchVault={() => setVault(null)} />;
+}
+
+/** Shown while the notes folder opens; appears only if that takes a moment. */
+function Loading({ step }: { step: string | null }) {
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setShown(true), 250);
+    return () => clearTimeout(t);
+  }, []);
+  return (
+    <div className="app-loading" role="status" aria-live="polite">
+      {shown && (
+        <>
+          <span className="app-loading-ring" aria-hidden />
+          <p className="app-loading-step">{step ?? "Starting"}…</p>
+        </>
+      )}
+    </div>
+  );
 }
 
 function Welcome({ onOpened, error, setError }: { onOpened: (v: VaultInfo) => void; error: string | null; setError: (e: string | null) => void }) {

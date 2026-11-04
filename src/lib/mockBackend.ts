@@ -343,6 +343,13 @@ export async function mock(cmd: string, a: Record<string, any> = {}): Promise<un
   if (llm.handled) return llm.value;
   switch (cmd) {
     case "vault_info":
+      // `?slowstart` walks through the startup steps, to see the loader.
+      if (new URLSearchParams(location.search).has("slowstart")) {
+        for (const s of ["Opening your notes", "Loading your preferences", "Preparing search", "Almost ready"]) {
+          emit("startup-step", s);
+          await new Promise((r) => setTimeout(r, 900));
+        }
+      }
       return { path: "/mock/Noughtpad", noteCount: notes.length, defaultPath: "/mock/Noughtpad" };
     case "mark_ready":
       return Math.round(performance.now());

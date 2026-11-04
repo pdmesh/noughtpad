@@ -104,7 +104,7 @@ pub struct LocalFile {
 }
 
 /// Lines `.noughtpad/.gitignore` must hold: derived or per-device data.
-const GITIGNORE: [&str; 4] = ["index.sqlite*", "trash/", "sync/", "user-state.sqlite*"];
+const GITIGNORE: [&str; 3] = ["index.sqlite*", "trash/", "sync/"];
 
 impl Vault {
     /// Open (creating if needed) a vault at `root`. Call [`Vault::rescan`] afterwards.
@@ -1055,7 +1055,7 @@ mod tests {
         Vault::open(dir.path()).unwrap();
         assert_eq!(
             fs::read_to_string(&gi).unwrap(),
-            "index.sqlite*\ntrash/\nmine/\nsync/\nuser-state.sqlite*\n"
+            "index.sqlite*\ntrash/\nmine/\nsync/\n"
         );
     }
 }

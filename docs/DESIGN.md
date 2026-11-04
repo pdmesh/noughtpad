@@ -190,7 +190,7 @@ meta(key, value)                                  -- embedding model id, schema 
 ```
 
 `.noughtpad/user-state.db` (persistent, small; as built it is `user-state.sqlite`, and for M6 sync
-the truth moves to per-device logs with the SQLite file as a cache, §12.6):
+the truth moves to per-device logs replayed into memory, §12.6):
 
 ```sql
 relation_feedback(src_note, dst_note, kind, verdict, at)   -- confirmed|dismissed
@@ -695,7 +695,7 @@ edits.
   the truth moves to append-only logs, one per device:
   `.noughtpad/user-state/<device-id>.jsonl`, each line an event
   (`{"at":…, "op":"dismiss", "a":…, "b":…}`, `undismiss`, `feedback`, …). A device only ever
-  writes its own log, so sync never sees two writers. `user-state.sqlite` stays as a local cache,
+  writes its own log, so sync never sees two writers. An in-memory database is the cache,
   rebuilt from all the logs (newest event per key wins). This works with no sync too, and with
   folder sync tools such as Dropbox.
 - **Chats** are one JSON file each. If both devices changed one chat and one message list is a
