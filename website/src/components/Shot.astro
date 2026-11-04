@@ -1,0 +1,27 @@
+---
+// A screenshot of the app: WebP at 1280 and 2560 wide, sized so the page never jumps.
+interface Props {
+  name: string;
+  alt: string;
+  caption?: string;
+  eager?: boolean;
+}
+const { name, alt, caption, eager = false } = Astro.props;
+---
+
+<figure>
+  <div class="frame">
+    <img
+      src={`/img/${name}-1280.webp`}
+      srcset={`/img/${name}-1280.webp 1280w, /img/${name}.webp 2560w`}
+      sizes="(min-width: 1100px) 1040px, 100vw"
+      width="1280"
+      height="800"
+      alt={alt}
+      loading={eager ? "eager" : "lazy"}
+      decoding="async"
+      fetchpriority={eager ? "high" : undefined}
+    />
+  </div>
+  {caption && <figcaption>{caption}</figcaption>}
+</figure>

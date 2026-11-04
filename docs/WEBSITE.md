@@ -62,3 +62,20 @@ non-private ones).
   source (the repo is private today).
 - Analytics (none, or a privacy-friendly one such as Cloudflare Web Analytics).
 - A contact or support address.
+
+## Answers (2026-11-04)
+
+- **Domain:** noughtpad.com.
+- **Pricing and sync:** the app is free. Sync is described as "in testing, by invitation", with a
+  paid add-on planned and no prices.
+- **Licence:** say "source available" only (no licence names on marketing pages). Link the source
+  once `pdmesh/noughtpad` is public (`SOURCE_URL` in `website/src/config.ts`); the repo is to be
+  audited first, and releases moved into it.
+- **Analytics:** Cloudflare Web Analytics, turned on in the Pages project (no script in the code).
+- **Contact:** hello@noughtpad.com (needs Email Routing on the domain).
+- **Also asked for:** comparison pages for Notion, Logseq, Bear, Apple Notes and Evernote; privacy
+  and terms pages kept out of search (noindex, not in the sitemap); a short demo video
+  (HyperFrames).
+- **Still open:** the legal name and governing law for the terms (`LEGAL_NAME`, `GOVERNING_LAW`).
+
+Built in `website/`; see `website/README.md` for editing, regenerating media and deploying.

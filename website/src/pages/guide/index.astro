@@ -1,0 +1,51 @@
+---
+import Base from "../../layouts/Base.astro";
+import { GUIDE } from "../../guide";
+
+const blurbs: Record<string, string> = {
+  "install-and-first-note": "Download, open it on a Mac for the first time, choose a folder, and write.",
+  writing: "Formatting, paste and copy, images, diagrams and maths.",
+  "labels-and-sources": "Tag notes and record where an idea came from.",
+  "finding-notes": "All notes, collections, search filters and search by meaning.",
+  "related-notes": "See notes that seem connected, and hide the ones that aren't.",
+  "ideas-over-time": "Threads you keep coming back to, and how they changed.",
+  journal: "Your notes by day, week or month, and a year of writing.",
+  "chat-and-models": "Ask your notes questions with a model on your computer or your own provider.",
+  sync: "Keep two computers in step through Google Drive. In testing.",
+  settings: "Every setting, explained.",
+  "keyboard-shortcuts": "Every shortcut on Mac, Windows and Linux.",
+  "where-files-live": "File names, the hidden .noughtpad folder, backups and moving notes.",
+  updating: "How updates arrive, and how they're checked.",
+  "common-problems": "The Mac warning, a slow first start, signing in again, and more.",
+};
+---
+
+<Base
+  title="User guide"
+  description="The Noughtpad user guide, in plain English: install, write your first note, labels, search, related notes, ideas over time, journal, chat, sync, settings, shortcuts, files and common problems."
+  section="guide"
+>
+  <div class="page">
+    <div class="wrap">
+      <div class="prose">
+        <p class="eyebrow">User guide</p>
+        <h1>How to use Noughtpad</h1>
+        <p class="lede">
+          Everything Noughtpad does, step by step. New here? Start with <a href="/guide/install-and-first-note/">installing and writing your first note</a>.
+        </p>
+      </div>
+      <div class="cards" style="margin-top:2rem">
+        {
+          GUIDE.map((g, i) => (
+            <a class="card" href={`/guide/${g.slug}/`}>
+              <h2 style="font-size:1.08rem;margin:0 0 0.35rem">
+                {i + 1}. {g.title}
+              </h2>
+              <p>{blurbs[g.slug]}</p>
+            </a>
+          ))
+        }
+      </div>
+    </div>
+  </div>
+</Base>

@@ -1,0 +1,13 @@
+---
+import { RELEASES_URL, VERSION } from "../config";
+interface Props { center?: boolean }
+const { center = false } = Astro.props;
+---
+
+<div class="btn-row" style={center ? "justify-content:center" : undefined}>
+  <a class="btn" href="/download/">Download Noughtpad</a>
+  <a class="btn btn-ghost" href="/features/">See what it does</a>
+</div>
+<p class="muted small" style={center ? "text-align:center" : undefined}>
+  Free. Version {VERSION} for Mac (Apple Silicon), Windows and Linux. <a href={RELEASES_URL}>Release notes</a>
+</p>

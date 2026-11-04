@@ -1,0 +1,131 @@
+---
+import Base from "../layouts/Base.astro";
+import Shot from "../components/Shot.astro";
+import DownloadCta from "../components/DownloadCta.astro";
+---
+
+<Base
+  title="Features"
+  description="What Noughtpad does today: blank-page capture, related notes, search by meaning, ideas over time, a journal with an activity map, chat with your notes using your own model, and Google Drive sync in testing."
+  section="features"
+>
+  <div class="page">
+    <div class="wrap prose">
+      <p class="eyebrow">Features</p>
+      <h1>What Noughtpad does</h1>
+      <p class="lede">
+        Noughtpad does two jobs. It gets out of the way while you write, and it helps you find your way back through what you've written. Everything below works today, in version 0.1.5.
+      </p>
+      <p class="muted small">
+        Jump to: <a href="#capture">Capture</a> · <a href="#related">Related notes</a> · <a href="#search">Search by meaning</a> · <a href="#ideas">Ideas over time</a> · <a href="#journal">Journal</a> · <a href="#chat">Chat</a> · <a href="#sync">Sync</a> · <a href="#files">Your files</a>
+      </p>
+
+      <h2 id="capture">Capture</h2>
+      <p>
+        The writing page is only a page. Click anywhere and type. There's no title to fill in, no folder to pick and no button to save; every change is saved as you go.
+      </p>
+      <ul>
+        <li><strong>A quiet editor.</strong> Headings, bold, links, task lists, quotes, code and images look finished as you type. The Markdown symbols only show on the line you're editing.</li>
+        <li><strong>Quick capture from anywhere.</strong> <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>Space</kbd> on a Mac, or <kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>Space</kbd> on Windows and Linux, brings Noughtpad forward on a new note.</li>
+        <li><strong>Labels and sources, out of sight.</strong> Hover over the top of a note to add labels (as many as you like, like Gmail) or a source such as a book or web page. Leave them out and nothing is missing.</li>
+        <li><strong>Paste that behaves.</strong> Copy from a web page, Google Docs or Word and you get clean Markdown. Pasted images are saved in an <code>attachments</code> folder. Copy from Noughtpad and you can paste formatted text into an email.</li>
+        <li><strong>Diagrams and maths.</strong> Mermaid diagrams and LaTeX maths render in place.</li>
+      </ul>
+      <Shot name="write" alt="The writing page with two lines of text and nothing else on screen." caption="The writing page. The sidebar and toolbar appear when you move the pointer to the edge." />
+
+      <h2 id="related">Related notes</h2>
+      <p>
+        Press <kbd>⌘</kbd> <kbd>J</kbd> (<kbd>Ctrl</kbd> <kbd>J</kbd> on Windows and Linux) while reading a note. A panel lists notes that seem connected, with:
+      </p>
+      <ul>
+        <li>the passage in each note that matched, and the passage in yours it matched,</li>
+        <li>labels they share, or a source they share,</li>
+        <li>how far apart in time they were written.</li>
+      </ul>
+      <p>
+        Click "Not related" to hide a suggestion for good (you can undo it). Noughtpad also notices which suggestions you open and which you dismiss, and adjusts what it shows. You can reset that in Settings.
+      </p>
+      <p>Related notes never appear while you type. They only open when you ask.</p>
+      <Shot name="related" alt="The Related panel beside a note, listing earlier notes with the passages that matched." />
+
+      <h2 id="search">Search, by words and by meaning</h2>
+      <p>
+        <kbd>⌘</kbd> <kbd>K</kbd> opens search. It finds words and phrases, and you can narrow it with <code>#label</code>, <code>type:personal</code> or <code>type:source</code>, or <code>"an exact phrase"</code>.
+      </p>
+      <p>
+        Turn on search by meaning and it also finds notes that say the same thing in other words. This uses a small model (about 65 MB, downloaded once) that runs on your computer. Your notes never leave it. The same switch turns on related notes and ideas over time.
+      </p>
+      <Shot name="search" alt="The search box with the word ownership typed, listing five notes with the word highlighted." />
+
+      <h2 id="ideas">Ideas over time</h2>
+      <p>Noughtpad groups your notes into threads by what they're about, then shows:</p>
+      <ul>
+        <li><strong>What you keep returning to:</strong> threads you've written about across several months.</li>
+        <li><strong>Ideas forming:</strong> threads that started in the last few weeks.</li>
+        <li><strong>Dormant ideas:</strong> threads you haven't touched for three months or more.</li>
+        <li><strong>Influences:</strong> something you read that may have shaped a later note of your own.</li>
+        <li><strong>Open questions:</strong> questions you wrote down and never came back to.</li>
+      </ul>
+      <p>
+        Open a thread to read it month by month. Each note is marked when it may build on a source, return to an earlier note, or rethink one. The wording is careful ("may build on") because these are hints, not facts.
+      </p>
+      <p>
+        All of this is worked out on your computer from your notes. No AI writes any of it.
+      </p>
+      <Shot name="ideas" alt="The Ideas over time page, with threads you keep returning to, each with a small bar chart of notes per month." />
+
+      <h2 id="journal">Journal and activity map</h2>
+      <p>
+        The Journal shows your own notes by day, week or month. At the top, a year of writing is laid out as squares, one per day, with how many notes you wrote this year, on how many days, and your current and longest streak.
+      </p>
+      <p>
+        It's there to look at, not to keep up with. There are no goals, reminders or badges.
+      </p>
+      <Shot name="journal" alt="The Journal page with an activity map of the year in shades of amber, and notes listed by day underneath." />
+
+      <h2 id="chat">Chat with your notes</h2>
+      <p>
+        Open Chat (<kbd>⌘</kbd> <kbd>L</kbd>) and ask questions about what you've written. Pick what the chat can read: the whole notebook, one note and its related notes, a thread, a month, a label, or your open questions. Each answer shows the notes it read and points to them by number.
+      </p>
+      <p>Chat is off until you choose a model, on the Models page. You have two kinds of choice:</p>
+      <ul>
+        <li><strong>A model on your computer.</strong> Free and private, and it works offline. The recommended one is a 2.5 GB download; a smaller one is offered for older computers.</li>
+        <li><strong>Your own provider.</strong> Add a key for Anthropic, OpenAI or Gemini, or point it at Ollama or any OpenAI-compatible server. Keys are kept in your system's keychain, never in your notes folder.</li>
+      </ul>
+      <p>
+        Before an online provider sees any note, Noughtpad shows which notes would be sent and where, and asks. You can untick notes. It asks again for each new chat and whenever the destination changes. Chats are saved in your notebook folder so you can come back to them. Your notes are never changed by a chat.
+      </p>
+      <Shot name="chat" alt="A chat with a question about ownership and an answer that cites notes by number." />
+
+      <h2 id="sync">Sync between computers (in testing)</h2>
+      <p>
+        Noughtpad can keep the same notebook on two or more computers through your own Google Drive. It syncs every minute and a few seconds after you stop typing. If you edit different parts of a note on two computers, both edits are kept. Only when the same lines change on both does it save a second copy next to the note so nothing is lost.
+      </p>
+      <div class="callout">
+        <strong>Sync is in testing.</strong>
+        It works between Macs today, with a small group of testers. Google limits sign-in to listed testers while it's in testing, and each sign-in lasts 7 days. Sync is planned as a paid add-on later; there's no price yet. Want to help test? Write to <a href="mailto:hello@noughtpad.com">hello@noughtpad.com</a>.
+      </div>
+      <p>
+        You don't need Noughtpad's sync to use more than one computer. Your notes are plain files, so any folder sync you already use will carry them.
+      </p>
+
+      <h2 id="files">Your files, your folder</h2>
+      <ul>
+        <li>Each note is one Markdown file, filed by year and month: <code>2026/11/2026-11-04-0930-first-line.md</code>.</li>
+        <li>A short header at the top of the file holds the date, labels and source. Noughtpad never rewrites a file behind your back.</li>
+        <li>Edits made in other apps (Obsidian, a text editor, git) show up in Noughtpad straight away.</li>
+        <li>Noughtpad keeps its search index in a hidden <code>.noughtpad</code> folder. It can always be rebuilt from your notes.</li>
+      </ul>
+      <p>
+        <a href="/guide/where-files-live/">More about where your files live</a>
+      </p>
+
+      <h2>Coming later</h2>
+      <p>
+        These are planned, not built: iCloud sync on Apple devices, phone apps, wider testing of sync on Windows and Linux, and a paid plan for sync. We'll say so here when they're ready.
+      </p>
+
+      <DownloadCta />
+    </div>
+  </div>
+</Base>

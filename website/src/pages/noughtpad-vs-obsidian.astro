@@ -1,0 +1,95 @@
+---
+import CompareLayout from "../components/CompareLayout.astro";
+import { SOURCE_URL } from "../config";
+---
+
+<CompareLayout
+  title="Noughtpad vs Obsidian: an honest comparison"
+  h1="Noughtpad vs Obsidian"
+  other="Obsidian"
+  description="An honest comparison of Noughtpad and Obsidian: both keep notes as plain Markdown files in a folder, so you can use them together. What each does better, prices, plugins, mobile and AI."
+>
+  <p class="lede">
+    Both apps keep your notes as plain Markdown files in a folder on your computer. That means you don't have to choose: you can open the same folder in both and use each for what it's good at.
+  </p>
+
+  <h2>The short version</h2>
+  <ul>
+    <li><strong>Choose Obsidian</strong> if you want to build your own system: links between notes, a graph, canvases, databases, thousands of plugins, and apps on your phone.</li>
+    <li><strong>Choose Noughtpad</strong> if you want to write without setting anything up, and have the app show you, later, which notes belong together and how your ideas changed. No plugins needed, and nothing leaves your computer unless you choose.</li>
+  </ul>
+
+  <h2>What Obsidian does better</h2>
+  <p>Obsidian is the more mature, more capable app, and it's fair to say so plainly.</p>
+  <ul>
+    <li><strong>Plugins and themes.</strong> Obsidian's community directory lists thousands of plugins and hundreds of themes. Noughtpad has no plugin system.</li>
+    <li><strong>Links you make yourself.</strong> Obsidian's <code>[[links]]</code>, backlinks and graph view let you connect notes by hand. Noughtpad has none of these yet; it suggests connections instead.</li>
+    <li><strong>Phone and tablet apps.</strong> Obsidian runs on iPhone, iPad and Android. Noughtpad is desktop only for now.</li>
+    <li><strong>Maturity and community.</strong> Obsidian has been around for years, with a large forum, documentation and a lot of tutorials. Noughtpad is at version 0.1.5.</li>
+    <li><strong>More built in.</strong> Canvas for laying notes out visually, Bases for database-like views of your notes, and an official Web Clipper browser extension.</li>
+    <li><strong>Sync and publishing you can buy today.</strong> Obsidian Sync and Obsidian Publish are mature paid services. Noughtpad's sync is still in testing, and it has no publishing.</li>
+    <li><strong>Intel Macs.</strong> Obsidian supports them; Noughtpad doesn't yet.</li>
+  </ul>
+
+  <h2>What Noughtpad does differently</h2>
+  <ul>
+    <li><strong>Nothing to set up.</strong> No folders, templates or plugins to choose. The app opens on a blank page, and labels and sources stay hidden until you want them.</li>
+    <li><strong>Connections without links.</strong> <a href="/guide/related-notes/">Related notes</a> finds notes that seem connected by meaning and shows the passage that matched, even if you never linked them. It learns from what you open and dismiss.</li>
+    <li><strong>Ideas over time.</strong> <a href="/guide/ideas-over-time/">Threads</a> you keep coming back to, ideas that are forming, ones you dropped, what you read that may have shaped your thinking, and questions you never answered.</li>
+    <li><strong>Search by meaning, on your computer.</strong> Built in, with a small local model. No plugin and no account.</li>
+    <li><strong>Chat with your notes, with your choice of model.</strong> Run a model on your computer for free, or bring your own Anthropic, OpenAI, Gemini or Ollama setup. Noughtpad shows which notes would be sent and asks before anything goes online.</li>
+    <li><strong>A journal and activity map</strong> built in, with no goals or streak pressure.</li>
+  </ul>
+
+  <h2>Side by side</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th scope="col"></th><th scope="col">Noughtpad</th><th scope="col">Obsidian</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Notes stored as</th><td>Markdown files in your folder</td><td>Markdown files in your folder</td></tr>
+        <tr><th scope="row">Price</th><td>Free</td><td>Free, including for work. An optional commercial licence is $50 per user per year.</td></tr>
+        <tr><th scope="row">Sync</th><td>Google Drive sync in testing; planned as a paid add-on. Or use any folder sync.</td><td>Obsidian Sync from $4 a month (billed yearly). Or use any folder sync.</td></tr>
+        <tr><th scope="row">Publishing to the web</th><td>No</td><td>Obsidian Publish, $8 a month per site (billed yearly)</td></tr>
+        <tr><th scope="row">Desktop</th><td>Mac (Apple Silicon), Windows, Linux</td><td>Mac, Windows, Linux</td></tr>
+        <tr><th scope="row">Phone and tablet</th><td>No (planned)</td><td>iPhone, iPad, Android</td></tr>
+        <tr><th scope="row">Links between notes</th><td>Suggested by meaning (related notes)</td><td>Made by hand ([[links]]), backlinks, graph view</td></tr>
+        <tr><th scope="row">Search by meaning</th><td>Built in, runs on your computer</td><td>Through community plugins</td></tr>
+        <tr><th scope="row">How ideas change over time</th><td>Built in (Ideas over time)</td><td>No built-in view</td></tr>
+        <tr><th scope="row">Chat with your notes</th><td>Built in: local model or your own provider</td><td>Through community plugins</td></tr>
+        <tr><th scope="row">Plugins</th><td>None</td><td>Thousands of community plugins</td></tr>
+        {SOURCE_URL && <tr><th scope="row">Source code</th><td><a href={SOURCE_URL}>Source available</a></td><td>Closed source</td></tr>}
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Using both on the same folder</h2>
+  <p>This works today, and it's an easy way to try Noughtpad without moving anything.</p>
+  <ol>
+    <li>In Noughtpad, open <strong>Settings → Notes folder → Switch…</strong> and choose your Obsidian vault. Or open your Noughtpad folder as a vault in Obsidian.</li>
+    <li>Write in either app. Changes made in one show up in the other straight away.</li>
+  </ol>
+  <p>A few things to know:</p>
+  <ul>
+    <li>Noughtpad reads every Markdown file in the folder, including ones with no header.</li>
+    <li>New notes from Noughtpad go into year and month folders, like <code>2026/11/</code>, with a short header holding the date and labels. Obsidian shows Noughtpad's labels as a property called <code>labels</code>, not as Obsidian tags.</li>
+    <li>Noughtpad doesn't turn <code>[[links]]</code> into clickable links. They stay as text.</li>
+    <li>Noughtpad keeps its index in a hidden <code>.noughtpad</code> folder, which Obsidian ignores.</li>
+  </ul>
+
+  <h2>Questions people ask</h2>
+  <h3>Is Noughtpad a replacement for Obsidian?</h3>
+  <p>
+    For some people. If you mostly write and want the app to find connections for you, Noughtpad may be all you need. If you rely on plugins, hand-made links or a phone app, keep Obsidian, and try Noughtpad alongside it on the same folder.
+  </p>
+  <h3>Can I move from Obsidian to Noughtpad?</h3>
+  <p>There's nothing to move. Point Noughtpad at your vault and it reads your notes where they are.</p>
+  <h3>Does Noughtpad send my notes to an AI service?</h3>
+  <p>
+    No, not unless you add an online provider for chat yourself, and even then it shows you which notes would be sent and asks first. Search by meaning, related notes and ideas over time all run on your computer.
+  </p>
+
+  <h2 class="small">Sources</h2>
+  <p class="muted small">
+    <a href="https://obsidian.md/pricing">Obsidian pricing</a> · <a href="https://obsidian.md/blog/free-for-work/">Obsidian is now free for work</a> · <a href="https://obsidian.md/sync">Obsidian Sync</a> · <a href="https://obsidian.md/plugins">Obsidian community plugins</a> · <a href="https://obsidian.md/help/plugins">Obsidian core plugins</a>
+  </p>
+</CompareLayout>
