@@ -3,12 +3,20 @@
 Read this first next session, then `ROADMAP.md` (what's next) and
 `docs/DESIGN.md` (why things are the way they are).
 
-## Where things stand (2026-11-03, late night)
+## Where things stand (2026-11-04)
 
-- **M6 sync is designed** (`docs/DESIGN.md` §12), no code yet. Settled with the user: eager merge
-  rules, edit beats delete, notes + images/other files + user-state + chats + trash sync, Google
-  Drive first in Testing mode (it's only the user dogfooding), iCloud after the signing decision,
-  sync code in a separate private repo `pdmesh/noughtpad-sync` (not created yet).
+- **M6 sync: slices 1 and 2 are done** (`docs/DESIGN.md` §12.13–12.14). The design was settled
+  with the user: eager merge rules, edit beats delete, notes + images/other files + user-state +
+  chats + trash sync, Google Drive first in Testing mode, iCloud after the signing decision, the
+  smaller points as recommended (§12.12).
+  - Open core (this repo): device id, user-state as per-device logs (the old
+    `user-state.sqlite` is moved over on first open and kept as `.bak`), `noughtpad_core::sync`
+    (`SyncBackend`, `FolderBackend`, `Journal`, `is_synced`), `Vault::apply_synced` and friends.
+  - Private repo `pdmesh/noughtpad-sync` (check it out next to this one; `cargo test` there):
+    the engine and merge rules, 39 tests including a random three-device test.
+  - **Not in the app yet:** the app doesn't run the engine. The one change you'll notice in the
+    app: on first launch of a build from now on, dismissals and feedback move into
+    `.noughtpad/user-state/<device-id>.jsonl`.
 
 - **M1–M4.5 are done**, and CI is green.
 - **Verified on this Mac (Apple M4, 16 GB):** a `--features local-llm-metal` build; startup and the
@@ -75,14 +83,18 @@ Ollama provider (`qwen3.5:4b`) saved. "Open at login" is off.
 ### 1. Pick the next piece of work (the user chooses)
 
 The user is living with 0.1.1 on several machines for a few days. Good next pieces, none blocked:
-- **M6 slice 1** (open core, this repo, no Google needed; DESIGN.md §12.13): device id;
-  user-state as per-device logs `.noughtpad/user-state/<device-id>.jsonl` with
-  `user-state.sqlite` rebuilt from them (copy existing rows once); `SyncBackend` trait and types
-  in `noughtpad-core::sync` plus a folder backend for tests; `Vault::apply_synced` and the change
-  journal; `sync/` in `.noughtpad/.gitignore`. Works in a cloud session too.
-  Before slice 2: the user creates the private repo `pdmesh/noughtpad-sync`. Before slice 3: a
-  Google Cloud project with the Drive API, OAuth consent screen in Testing with the user's
-  accounts as test users, and a desktop OAuth client id. Still open: §12.12.
+- **M6 slice 3** (Google Drive and the app wiring; §12.10, §12.14 "Next"). **Needs from the
+  user first:** a Google Cloud project with the Drive API on, the OAuth consent screen in Testing
+  with their Google accounts as test users, and a "Desktop app" OAuth client id (it ships in the
+  app; desktop client ids aren't secret). Then: a Drive backend in `noughtpad-sync` (`drive.file`,
+  PKCE + loopback sign-in, refresh token in the keychain, `changes.list`, upload-then-check
+  revisions for "only if still at"); the app depends on `noughtpad-sync` behind a `sync` cargo
+  feature (git dependency plus a `[patch]` so both use this repo's `noughtpad-core`); Settings →
+  Sync, the status dot, `UserState::reload` after a sync, the journal through
+  `watch_journaled`, sync on start / after typing stops / on focus / every minute. Then
+  dogfood on two Macs. Release builds will need a read token for the private repo.
+- **Before relying on sync:** check on the Mac that a new build moves the real notebook's
+  dismissals (`user-state.sqlite.bak` appears, related notes still hide dismissed pairs).
 - **Minor items** from "Parked" below (UX leftovers such as dark mode and the minimum window size,
   chat history delete, related-notes dismiss/undo), or anything the user hit while dogfooding.
 
@@ -146,6 +158,11 @@ Noughtpad's signature".
 - Startup: under 1 s is fine. Optimise when there's an easy win; the ~550 ms seen late on
   2026-11-03 (vs ~350 ms earlier) needs no chase.
 
+### Done on 2026-11-04
+- M6 sync slice 1 (open core) and slice 2 (engine in `pdmesh/noughtpad-sync`); the smaller
+  design points settled as recommended. `Note::extra`/`set_extra` added for the merge, and a
+  frontmatter change to hand-written keys alone is now written out (it was kept verbatim).
+
 ### Done on 2026-11-03
 - Late night (cloud session): M6 sync design written in `docs/DESIGN.md` §12 after the user's
   answers (decisions log entry 2026-11-03); ROADMAP M6 split into slices.
@@ -162,6 +179,10 @@ Noughtpad's signature".
   private repo blocks the updater (404). Fixed CI formatting (`cargo fmt`).
 
 ## Known limits and gotchas
+
+- **Sync repo:** `noughtpad-sync` uses `../noughtpad/crates/noughtpad-core` as a path dependency,
+  so it only builds with both repos side by side. It has no CI yet.
+- **Folder backend** is for tests: its lock file isn't safe across machines (e.g. over Dropbox).
 
 - **GPU memory is shared with Ollama/LM Studio:** with Ollama holding a model (7.5 GB for
   `qwen3.5:4b`, since Ollama gives it a 131k context), the local 4B model can't load on a 16 GB Mac.

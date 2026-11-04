@@ -24,7 +24,7 @@
 
 use chrono::{DateTime, FixedOffset};
 use serde::{Deserialize, Serialize};
-use yaml_serde::{Mapping, Value};
+pub use yaml_serde::{Mapping, Value};
 
 use crate::{Error, Result};
 
@@ -138,9 +138,9 @@ pub struct Note {
     pub meta: NoteMeta,
     /// The Markdown body, exactly as written.
     pub body: String,
-    /// Original frontmatter block (including both fences) and the meta it
-    /// parsed to; used to write it back untouched when meta is unchanged.
-    original: Option<(String, NoteMeta)>,
+    /// Original frontmatter block (including both fences) and what it parsed
+    /// to; used to write it back untouched when nothing in it changed.
+    original: Option<(String, NoteMeta, Mapping)>,
     /// Frontmatter keys Noughtpad does not manage, preserved on rewrite.
     extra: Mapping,
 }
@@ -161,7 +161,7 @@ impl Note {
         match split_frontmatter(text) {
             Some((fm, body)) => match parse_meta(fm) {
                 Ok((meta, extra)) => Note {
-                    original: Some((text[..text.len() - body.len()].to_string(), meta.clone())),
+                    original: Some((text[..text.len() - body.len()].to_string(), meta.clone(), extra.clone())),
                     meta,
                     body: body.to_string(),
                     extra,
@@ -177,8 +177,8 @@ impl Note {
 
     /// Serialise to file text.
     pub fn render(&self) -> String {
-        if let Some((raw, meta)) = &self.original {
-            if *meta == self.meta {
+        if let Some((raw, meta, extra)) = &self.original {
+            if *meta == self.meta && *extra == self.extra {
                 return format!("{raw}{}", self.body);
             }
         }
@@ -194,6 +194,16 @@ impl Note {
             ""
         };
         format!("---\n{yaml}---\n{sep}{}", self.body)
+    }
+
+    /// Frontmatter keys Noughtpad doesn't manage (hand-written ones), in file order.
+    pub fn extra(&self) -> &Mapping {
+        &self.extra
+    }
+
+    /// Replace the unmanaged frontmatter keys (used by sync's field-by-field merge).
+    pub fn set_extra(&mut self, extra: Mapping) {
+        self.extra = extra;
     }
 
     /// Body without the leading blank line conventionally placed after frontmatter.
@@ -559,5 +569,15 @@ mod tests {
         assert_eq!(derive_title("\n\n## Heading here\nmore"), "Heading here");
         assert_eq!(derive_title("- [ ] buy milk"), "buy milk");
         assert_eq!(derive_title("> quoted"), "quoted");
+    }
+
+    #[test]
+    fn changing_only_unmanaged_keys_rewrites_the_frontmatter() {
+        let mut n = Note::parse("---\nid: A\nmood: calm\n---\n\nBody");
+        assert_eq!(n.extra().get("mood").and_then(|v| v.as_str()), Some("calm"));
+        let mut extra = n.extra().clone();
+        extra.insert("mood".into(), "busy".into());
+        n.set_extra(extra);
+        assert_eq!(n.render(), "---\nid: A\nmood: busy\n---\n\nBody");
     }
 }

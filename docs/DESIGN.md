@@ -673,8 +673,10 @@ Line endings and a missing final newline are kept as they are; a file is never r
 
 - The note keeps **this device's** version, untouched.
 - The other device's whole version is saved next to it as
-  `2026-09-12-2310-ownership-vc (conflict, MacBook Air, 3 Nov).md`, with a **new id** (two files
-  must never share one) and `conflict_of: <original id>` in its frontmatter. It is an ordinary
+  `2026-09-12-2310-ownership-vc (conflict 2026-11-03 1405).md`, with a **new id** (two files
+  must never share one) and `conflict_of: <original id>` in its frontmatter. (The device's name
+  isn't in it yet: the remote doesn't say which device wrote a version. Drive can carry it in
+  `appProperties` in slice 3.) It is an ordinary
   note: search finds it, and you delete it once you've copied over what you need.
 - The app shows a quiet notice ("1 note had edits on two devices") linking to both.
 - The copy syncs like any other note, so every device sees the same pair.
@@ -853,5 +855,30 @@ apply_synced, remove_synced}`, with a write lock shared with the editor's saves;
 folder, so the engine treats it as a prefix). The app uses the device id for user-state; the
 journal isn't switched on until the engine arrives.
 
-Then, in the private repo: slice 2 is the engine and the merge rules against the folder backend;
-slice 3 is Google Drive in Testing mode, dogfooded on your machines.
+### 12.14 Second slice (done 2026-11-04, private repo `pdmesh/noughtpad-sync`)
+
+The engine and the merge rules, tested against the folder backend:
+- `merge/text.rs`: the line merge (§12.5) on `similar`'s Myers diff. Rule 3 also keeps a block
+  that already holds the other side's addition as is, so re-merging after a crash never
+  duplicates text. Joining without a base uses the lines both sides share as the base.
+- `merge/note.rs`: frontmatter field by field (labels as sets, other fields newest-wins by file
+  time, hand-written keys too, through `Note::extra`/`set_extra` added to the core), body by
+  lines; different ids at one path count as a failed merge. `merge/mod.rs`: chats and logs.
+- `state.rs`: `.noughtpad/sync/state.sqlite` (files, pending remote changes, meta) and
+  `base/<hash>` for notes and chats; unused bases are removed after each sync.
+- `engine.rs`: §12.8 as written. Remote changes are first stored as pending, so the cursor can
+  move on at once and nothing pulled is lost if the sync stops. Up to 5 rounds per sync pick up
+  what a round leaves (a remote that moved on mid-upload, this device's new tombstones).
+  Tombstones are only consulted when joining. Files over 50 MB are listed, not synced.
+- Tests: 18 engine tests with two or three simulated devices (new, edit, both appended, labels,
+  same line → copy, delete → trash, edit beats delete both ways, joining, a copied folder
+  rejoining, lost sync state, images, chats, dismissals, a dropped connection mid-sync), and a
+  random-edit test: three devices, random edits, deletes and syncs; afterwards all devices hold
+  the same files, no written line is lost, and another sync does nothing. 300 seeds passed
+  (`NOUGHTPAD_SYNC_SEEDS=300`; 2,075 merges, 575 conflict copies, 472 edit-beats-delete).
+
+Not yet: the app doesn't run the engine (it comes in with slice 3, behind a `sync` cargo
+feature), and the private repo has no CI (it would need a token to check out this repo).
+
+Next: slice 3 is Google Drive in Testing mode and the app wiring (Settings → Sync, the status
+dot, `UserState::reload` after a sync, the journal switched on), dogfooded on your machines.

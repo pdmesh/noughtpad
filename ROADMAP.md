@@ -43,8 +43,8 @@ stays FSL; sync lives in a private repo (`pdmesh/noughtpad-sync`) that plugs int
 - [x] Design (§12): what syncs, merge rules, tombstones, the interface, Drive vs iCloud
 - [x] Slice 1, open core (2026-11-04): device id, user-state as per-device logs, `SyncBackend` and a folder backend for tests, `Vault::apply_synced` and the change journal
 
-- [ ] Slice 2, sync engine (private repo): per-file change journal, three-way merge for Markdown against a base copy in `.noughtpad/sync/`, conflict copies only when a merge fails, tombstones, edit beats delete; tested against the folder backend
-- [ ] Slice 3, Google Drive backend: `drive.file` access, OAuth (PKCE, desktop loopback), Drive changes feed, works on every platform. Testing mode while dogfooding (sign in again every 7 days); production needs Google's basic project checks
+- [x] Slice 2, sync engine (private repo, 2026-11-04): per-file change journal, three-way merge for Markdown against a base copy in `.noughtpad/sync/`, conflict copies only when a merge fails, tombstones, edit beats delete; tested against the folder backend
+- [ ] Slice 3, Google Drive backend and the app wiring (Settings → Sync, status dot, behind a `sync` cargo feature): `drive.file` access, OAuth (PKCE, desktop loopback), Drive changes feed, works on every platform. Testing mode while dogfooding (sign in again every 7 days); production needs Google's basic project checks
 - [ ] iCloud backend: the app's iCloud container, using CloudKit or `NSFileCoordinator`. Needs the Apple Developer Program (signed app). **Only works on Apple devices**, because iCloud has no official API for Windows, Linux or Android. Non-Apple devices use Google Drive (or a future Noughtpad server)
 - [ ] Licensing and billing: account, licence key check, subscription (e.g. Paddle or Lemon Squeezy, which handle VAT)
 - [ ] The index stays local and disposable on every device; notes, other files, user-state, chats and trash sync
