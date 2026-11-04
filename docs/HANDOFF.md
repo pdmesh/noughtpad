@@ -19,14 +19,15 @@ Read this first next session, then `ROADMAP.md` (what's next) and
   Both secrets (`RELEASE_TOKEN`,
   `NOUGHTPAD_GOOGLE_CLIENT_SECRET`) are set.
 
-- **After 0.1.2 (in main, not released yet):** on the user's first launch 0.1.2 stuck on a blank
+- **v0.1.3 is published** (2026-11-04; `latest.json` serves 0.1.3). It holds: on the user's first launch 0.1.2 stuck on a blank
   window (the UI waiting for `vault_info`); cause not pinned down. A restart opened in 9.7 s, the
   next in 0.4 s. In response: the one-time `user-state.sqlite` migration is gone (no users to carry
   over); a single-instance guard (`tauri-plugin-single-instance`; a second launch shows the
   running window and exits); a startup loader with the current step ("Opening your notes"…,
   `startup-step` event, shown after 250 ms; `pnpm dev` with `?slowstart` to see it) and each step's
   time in the log (`open step: … ms=`), so the next slow start says where it went; and the app
-  icon without the amber dot. Release as 0.1.3, which is also release B of the updater check.
+  icon without the amber dot. Next: the updater check from the installed 0.1.2 (Check for Updates… →
+  Install and restart), recorded in DESIGN § Auto-update.
 
 Earlier the same day:
 
