@@ -1,0 +1,15 @@
+# The open stand-in for Noughtpad Sync. Builds with sync replace it with the
+# private crate (pdmesh/noughtpad-sync) through a Cargo patch: see
+# `scripts/sync-build.mjs` and DESIGN.md §12.3. Not a workspace member, so the
+# patch can replace it.
+[package]
+name = "noughtpad-sync"
+description = "Stand-in for Noughtpad Sync: this build doesn't include sync"
+version = "0.1.0"
+edition = "2021"
+license-file = "../../LICENSE.md"
+publish = false
+
+[dependencies]
+noughtpad-core = { path = "../noughtpad-core" }
+serde = { version = "1", features = ["derive"] }

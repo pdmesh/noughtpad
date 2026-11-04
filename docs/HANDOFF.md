@@ -3,7 +3,20 @@
 Read this first next session, then `ROADMAP.md` (what's next) and
 `docs/DESIGN.md` (why things are the way they are).
 
-## Where things stand (2026-11-04)
+## Where things stand (2026-11-04, later)
+
+- **M6 slice 3 code is done, untried against real Drive** (DESIGN §12.15): the Google Drive
+  backend and sign-in, the `Service` the app calls, Settings → Sync and the top-bar dot. The
+  app links an open stub by default; `pnpm sync <command>` builds with the real crate.
+- **Releases move to the public `pdmesh/noughtpad-releases`** (installers only), and the
+  updater asks there. Installed 0.1.1 copies still ask the old address, so the next release is
+  installed by hand once.
+- **Waiting on the user:** the GitHub secrets on pdmesh/noughtpad: `NOUGHTPAD_GOOGLE_CLIENT_SECRET`,
+  and `RELEASE_TOKEN` (fine-grained; Contents read and write on `noughtpad-sync` and
+  `noughtpad-releases`). `noughtpad-releases` needs at least one commit (a README), since release
+  tags point at its `main`.
+
+Earlier the same day:
 
 - **M6 sync: slices 1 and 2 are done** (`docs/DESIGN.md` §12.13–12.14). The design was settled
   with the user: eager merge rules, edit beats delete, notes + images/other files + user-state +
@@ -83,16 +96,22 @@ Ollama provider (`qwen3.5:4b`) saved. "Open at login" is off.
 ### 1. Pick the next piece of work (the user chooses)
 
 The user is living with 0.1.1 on several machines for a few days. Good next pieces, none blocked:
-- **M6 slice 3** (Google Drive and the app wiring; §12.10, §12.14 "Next"). **Needs from the
-  user first:** a Google Cloud project with the Drive API on, the OAuth consent screen in Testing
-  with their Google accounts as test users, and a "Desktop app" OAuth client id (it ships in the
-  app; desktop client ids aren't secret). Then: a Drive backend in `noughtpad-sync` (`drive.file`,
-  PKCE + loopback sign-in, refresh token in the keychain, `changes.list`, upload-then-check
-  revisions for "only if still at"); the app depends on `noughtpad-sync` behind a `sync` cargo
-  feature (git dependency plus a `[patch]` so both use this repo's `noughtpad-core`); Settings →
-  Sync, the status dot, `UserState::reload` after a sync, the journal through
-  `watch_journaled`, sync on start / after typing stops / on focus / every minute. Then
-  dogfood on two Macs. Release builds will need a read token for the private repo.
+- **Try sync on the Mac** (the Google Cloud project `noughtpad-app` is set up: Desktop client,
+  `drive.file` scope, the user as test user; check the Drive API is enabled):
+  1. `git clone https://github.com/pdmesh/noughtpad-sync` next to this repo.
+  2. `export NOUGHTPAD_GOOGLE_CLIENT_SECRET=…` (from the Google Cloud console).
+  3. `pnpm sync pnpm tauri build --features local-llm-metal --bundles app`, then open it on a
+     copy of the sample notebook: `open --env NOUGHTPAD_VAULT="$HOME/Noughtpad Sample" …`.
+  4. Settings → Sync → Sign in with Google… (Google warns the app is unverified while in
+     Testing: Continue), then "Sync this notebook". Check `My Drive/Noughtpad/Noughtpad Sample`.
+  5. Second Mac (or a second notebook folder with the same name on this Mac): same build, same
+     folder name, sign in; edit on both, delete on one, watch the dot and the notices.
+  Run the binary from Terminal for the log (`sync failed: …`, Drive error messages). Things
+  most likely to need fixing: Drive API responses I couldn't test here (revisions on a new
+  file, change-feed edge cases), the browser hand-off, the keychain prompt for the new entry.
+- **Then a release** through the new path once the secrets exist: bump to 0.1.2, tag, wait for
+  the three jobs, check the draft on `noughtpad-releases`, publish, install by hand once, then
+  the two-release updater check (below).
 - **Before relying on sync:** check on the Mac that a new build moves the real notebook's
   dismissals (`user-state.sqlite.bak` appears, related notes still hide dismissed pairs).
 - **Minor items** from "Parked" below (UX leftovers such as dark mode and the minimum window size,
@@ -180,6 +199,13 @@ Noughtpad's signature".
 
 ## Known limits and gotchas
 
+- **Building with sync:** always through `pnpm sync …` (it patches the stub and puts
+  `Cargo.lock` back). A plain `pnpm tauri build` has no sync and Settings shows no Sync section.
+  If a run is killed, delete `.cargo/config.toml` and `Cargo.lock.sync-build` (restore the lock).
+- **Drive in Testing mode:** sign-ins expire after 7 days (Settings shows "Signed out…"; sign in
+  again), and only the listed test users can sign in.
+- **Renaming files in Drive by hand** isn't supported: they read as new files, and the old
+  path as deleted.
 - **Sync repo:** `noughtpad-sync` uses `../noughtpad/crates/noughtpad-core` as a path dependency,
   so it only builds with both repos side by side. It has no CI yet.
 - **Folder backend** is for tests: its lock file isn't safe across machines (e.g. over Dropbox).

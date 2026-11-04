@@ -369,6 +369,12 @@ export const api = {
   rebuildIndex: () => call<{ indexed: number; unchanged: number; removed: number }>("rebuild_index"),
   autostartEnabled: () => call<boolean>("autostart_enabled"),
   setAutostart: (on: boolean) => call<boolean>("set_autostart", { on }),
+  syncStatus: () => call<import("./sync").SyncInfo>("sync_status"),
+  /** Opens the browser and waits for Google; returns the account's email. */
+  syncSignIn: () => call<string>("sync_sign_in"),
+  syncSignOut: () => call<void>("sync_sign_out"),
+  syncSetEnabled: (on: boolean) => call<void>("sync_set_enabled", { on }),
+  syncNow: () => call<void>("sync_now"),
   appVersion: () => call<string>("app_version"),
   updateCheck: () => call<UpdateCheck>("update_check"),
   /** Restarts the app on success. */

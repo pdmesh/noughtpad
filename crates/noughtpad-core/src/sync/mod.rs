@@ -54,6 +54,35 @@ pub fn is_synced(rel: &str) -> bool {
     !rest.iter().any(|p| p.starts_with('.') || *p == "node_modules")
 }
 
+/// Where a backend keeps its sign-in (e.g. a refresh token): the OS keychain
+/// in the app, memory in tests.
+pub trait SecretStore: Send + Sync {
+    fn get(&self, key: &str) -> Result<Option<String>>;
+    fn set(&self, key: &str, value: &str) -> Result<()>;
+    fn delete(&self, key: &str) -> Result<()>;
+}
+
+/// Secrets held in memory only (tests).
+#[derive(Default)]
+pub struct MemorySecrets(std::sync::Mutex<std::collections::HashMap<String, String>>);
+
+impl SecretStore for MemorySecrets {
+    fn get(&self, key: &str) -> Result<Option<String>> {
+        Ok(self.0.lock().unwrap_or_else(|e| e.into_inner()).get(key).cloned())
+    }
+    fn set(&self, key: &str, value: &str) -> Result<()> {
+        self.0
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .insert(key.into(), value.into());
+        Ok(())
+    }
+    fn delete(&self, key: &str) -> Result<()> {
+        self.0.lock().unwrap_or_else(|e| e.into_inner()).remove(key);
+        Ok(())
+    }
+}
+
 /// A backend's revision of one file. Opaque to the engine; compare for equality only.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Rev(pub String);

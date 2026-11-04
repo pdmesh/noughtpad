@@ -1,6 +1,9 @@
 [workspace]
 resolver = "2"
 members = ["crates/noughtpad-core", "crates/noughtpad-llm", "src-tauri"]
+# Replaced by the private sync crate in builds with sync (a Cargo patch can't
+# replace a workspace member).
+exclude = ["crates/noughtpad-sync-stub"]
 
 [workspace.package]
 version = "0.1.1"

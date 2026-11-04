@@ -2180,3 +2180,32 @@ button.cue:hover {
   margin: 0;
   color: var(--fg);
 }
+
+/* Sync status in the top bar: quiet when synced, accent while syncing, red when it needs you. */
+.sync-dot span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--fg-faint);
+}
+.sync-dot.is-syncing span {
+  background: var(--accent);
+  animation: sync-pulse 1.2s ease-in-out infinite;
+}
+.sync-dot.is-error span,
+.sync-dot.is-signedOut span {
+  background: var(--danger);
+}
+@keyframes sync-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sync-dot.is-syncing span {
+    animation: none;
+  }
+}
+.settings-error {
+  color: var(--danger);
+}

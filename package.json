@@ -12,7 +12,8 @@
     "tauri": "tauri",
     "sample": "node scripts/sample-vault.mjs",
     "dev:sample": "node scripts/sample-vault.mjs --run",
-    "perf": "node tests/perf/capture.mjs"
+    "perf": "node tests/perf/capture.mjs",
+    "sync": "node scripts/sync-build.mjs"
   },
   "dependencies": {
     "@codemirror/commands": "^6.11.1",

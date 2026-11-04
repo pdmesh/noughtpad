@@ -415,7 +415,9 @@ fire once). Edit → Undo/Cut/Copy/Paste are the standard items: paste of Markdo
 renders, and copy puts Markdown text and HTML on the clipboard.
 
 **Auto-update:** the app asks
-`https://github.com/pdmesh/noughtpad/releases/latest/download/latest.json`, which GitHub serves
+`https://github.com/pdmesh/noughtpad-releases/releases/latest/download/latest.json` (a public repo
+that holds only installers, since this one is private; moved there 2026-11-04, so 0.1.1 installs
+can't follow and need one manual install), which GitHub serves
 from the newest published (not draft, not pre-release) release. `latest.json` lists, per platform,
 the version, the bundle's URL and its signature. The Release workflow makes these only when the
 `TAURI_SIGNING_PRIVATE_KEY` secret is set (it passes `--config src-tauri/tauri.updater.conf.json`,
@@ -880,5 +882,34 @@ The engine and the merge rules, tested against the folder backend:
 Not yet: the app doesn't run the engine (it comes in with slice 3, behind a `sync` cargo
 feature), and the private repo has no CI (it would need a token to check out this repo).
 
-Next: slice 3 is Google Drive in Testing mode and the app wiring (Settings → Sync, the status
-dot, `UserState::reload` after a sync, the journal switched on), dogfooded on your machines.
+### 12.15 Third slice (code done 2026-11-04; not yet tried against real Drive)
+
+- **Drive backend** (`noughtpad-sync/src/drive/`): §12.10 as written. Sign-in is PKCE through
+  the system browser and a one-time listener on `127.0.0.1:<random port>` (desktop OAuth clients
+  register no redirect address). The refresh token and email are kept in the keychain under
+  `sync:google-drive`. An expired sign-in (7 days in Testing mode) shows as "signed out". Paths
+  come from parent folders, not from `appProperties`, which can't hold long paths; `np_nb` tags
+  every file and folder, and `np_hash` carries the vault hash. Downloads fetch the exact head
+  revision.
+- **The client:** id `1065938497859-norka….apps.googleusercontent.com` (project
+  `noughtpad-app`) is in the code. The secret is compiled in from
+  `NOUGHTPAD_GOOGLE_CLIENT_SECRET` (a GitHub secret for releases, an environment variable
+  locally). It ships inside every copy; Google treats desktop client secrets as not
+  confidential, and PKCE protects the sign-in.
+- **`Service`** (`noughtpad-sync/src/service.rs`): what the app calls (sign in/out, start/stop,
+  nudge, sync now, status). A background thread syncs on start, ~5 s after changes stop, on
+  window focus and every minute.
+- **Linking without the private repo:** the app depends on an open stand-in,
+  `crates/noughtpad-sync-stub` (same `Service` shape, "not in this build"; kept out of the
+  workspace members, since Cargo can't patch a member). `pnpm sync <command>`
+  (`scripts/sync-build.mjs`) writes a git-ignored `.cargo/config.toml` that patches the stub to
+  `../noughtpad-sync` (or `$NOUGHTPAD_SYNC_DIR`), runs the command and restores `Cargo.lock`. CI
+  and open builds never need the private repo. The Release workflow does the same when the
+  `RELEASE_TOKEN` secret exists.
+- **App:** `src-tauri/src/sync.rs` (commands, keychain adapter, `UserState::reload` and a list
+  refresh after a sync that changed things, focus nudges); `start_watching` in `lib.rs` turns on
+  the change journal while sync is on. UI: Settings → Sync (sign in, "Sync this notebook" to
+  `Noughtpad/<folder name>` in Drive, Sync now, notices for conflict copies, restores and files
+  over 50 MB), and a dot in the top bar (accent while syncing, red when it needs you). The mock
+  backend shows it with `?sync=on`.
+- **Not checked yet:** a real sign-in and sync against Drive (needs the Mac and the secret).

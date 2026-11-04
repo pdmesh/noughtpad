@@ -7,6 +7,7 @@ mod lifecycle;
 #[cfg(target_os = "macos")]
 mod menu;
 mod semantic;
+mod sync;
 mod think;
 #[cfg(desktop)]
 mod updater;
@@ -19,7 +20,7 @@ use noughtpad_core::index::{DaySummary, LabelCount, ListQuery, MonthLog, NoteSum
 use noughtpad_core::semantic::Semantic;
 use noughtpad_core::userstate::UserState;
 use noughtpad_core::vault::{Change, NewNote, NoteDoc, NoteUpdate, ScanReport};
-use noughtpad_core::watch::{watch, VaultWatcher};
+use noughtpad_core::watch::{watch_journaled, VaultWatcher};
 use noughtpad_core::Vault;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager, State};
@@ -29,6 +30,8 @@ pub(crate) struct AppState {
     vault: RwLock<Option<Arc<Vault>>>,
     watcher: Mutex<Option<VaultWatcher>>,
     semantic: RwLock<Option<Arc<Semantic>>>,
+    /// The open notebook's user-state, reloaded when sync brings in another device's.
+    pub(crate) user: RwLock<Option<Arc<UserState>>>,
 }
 
 impl AppState {
@@ -89,6 +92,9 @@ struct Config {
     /// Language models the user opted into (M4). Keys live in the keychain.
     #[serde(default)]
     llm: noughtpad_llm::settings::LlmSettings,
+    /// Noughtpad Sync (builds that include it).
+    #[serde(default)]
+    sync: sync::SyncSettings,
 }
 
 fn config_path(app: &AppHandle) -> Option<PathBuf> {
@@ -160,6 +166,35 @@ fn computer_name() -> String {
     name.unwrap_or_default()
 }
 
+/// (Re)start the watcher for the open notebook, with a change journal while
+/// sync is on, and start or stop sync to match the settings.
+pub(crate) fn start_watching(app: &AppHandle, state: &AppState, vault: &Arc<Vault>) -> CmdResult<()> {
+    // Drop the old watcher first, so its journal is closed before a new one opens.
+    state.watcher.lock().unwrap_or_else(|e| e.into_inner()).take();
+    let journal = if sync::wants_journal(app) {
+        match noughtpad_core::sync::Journal::open(&noughtpad_sync::journal_path(vault)) {
+            Ok(j) => Some(Arc::new(j)),
+            Err(e) => {
+                tracing::warn!("no change journal for sync: {e}");
+                None
+            }
+        }
+    } else {
+        None
+    };
+    let sem = state.semantic()?;
+    let svc = app.state::<sync::SyncState>().0.clone();
+    let handle = app.clone();
+    let watcher = watch_journaled(vault.clone(), journal.clone(), move |changes: Vec<Change>| {
+        sem.nudge();
+        svc.nudge();
+        let _ = handle.emit("vault-changed", changes);
+    })?;
+    *state.watcher.lock().unwrap_or_else(|e| e.into_inner()) = Some(watcher);
+    sync::follow_settings(app, vault, journal);
+    Ok(())
+}
+
 /// Open a vault, index it, and start watching it.
 fn activate(app: &AppHandle, state: &AppState, path: &Path, remember: bool) -> CmdResult<VaultInfo> {
     let vault = Arc::new(Vault::open(path)?);
@@ -176,6 +211,7 @@ fn activate(app: &AppHandle, state: &AppState, path: &Path, remember: bool) -> C
         &vault.root().join(noughtpad_core::vault::DATA_DIR),
         &device.id,
     )?);
+    *state.user.write().unwrap_or_else(|e| e.into_inner()) = Some(user.clone());
     let sem = Semantic::new(vault.clone(), user)?;
     let handle = app.clone();
     sem.on_status(move |s| semantic::emit_status(&handle, s));
@@ -188,12 +224,6 @@ fn activate(app: &AppHandle, state: &AppState, path: &Path, remember: bool) -> C
         semantic::start(app, sem.clone());
     }
     *state.semantic.write().unwrap_or_else(|e| e.into_inner()) = Some(sem.clone());
-
-    let handle = app.clone();
-    let watcher = watch(vault.clone(), move |changes: Vec<Change>| {
-        sem.nudge();
-        let _ = handle.emit("vault-changed", changes);
-    })?;
     // Catch up with edits made while Noughtpad was closed, without blocking the
     // editor: capture must be available immediately, even on a large vault.
     let (bg, handle) = (vault.clone(), app.clone());
@@ -214,8 +244,8 @@ fn activate(app: &AppHandle, state: &AppState, path: &Path, remember: bool) -> C
             Err(e) => tracing::error!("vault scan failed: {e}"),
         }
     });
-    *state.watcher.lock().unwrap_or_else(|e| e.into_inner()) = Some(watcher);
     *state.vault.write().unwrap_or_else(|e| e.into_inner()) = Some(vault.clone());
+    start_watching(app, state, &vault)?;
     if remember {
         let mut cfg = load_config(app);
         cfg.vault_path = Some(vault.root().to_path_buf());
@@ -414,13 +444,17 @@ pub fn run() {
             .plugin(lifecycle::autostart_plugin())
             .plugin(tauri_plugin_updater::Builder::new().build())
             .manage(updater::PendingUpdate::default())
-            .on_window_event(lifecycle::on_window_event);
+            .on_window_event(|window, event| {
+                lifecycle::on_window_event(window, event);
+                sync::on_window_event(window, event);
+            });
         #[cfg(target_os = "macos")]
         {
             builder = builder.menu(menu::build).on_menu_event(menu::on_menu_event);
         }
         builder = builder.setup(move |app| {
             tracing::info!(ms = since_start(), "setup");
+            app.manage(sync::init(app.handle()));
             lifecycle::show_at_startup(app.handle());
             let shortcut = if cfg!(target_os = "macos") {
                 capture
@@ -455,6 +489,11 @@ pub fn run() {
             day_counts,
             rebuild_index,
             save_attachment,
+            sync::sync_status,
+            sync::sync_sign_in,
+            sync::sync_sign_out,
+            sync::sync_set_enabled,
+            sync::sync_now,
             semantic::semantic_status,
             semantic::enable_semantic,
             semantic::disable_semantic,

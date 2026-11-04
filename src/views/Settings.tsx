@@ -1,8 +1,10 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronRight, FolderOpen } from "lucide-react";
-import { api, type VaultInfo } from "../lib/api";
+import { api, isApiError, type VaultInfo } from "../lib/api";
 import { describeStatus, useSemanticStatus } from "../lib/useSemantic";
 import { checkForUpdates, describeUpdate, installUpdate, useUpdateState } from "../lib/updates";
+import { describeSync, syncNotices, useSync } from "../lib/sync";
+import { useState } from "react";
 import { useLlm } from "./Models";
 
 const isMac = typeof navigator !== "undefined" && /Mac/i.test(navigator.platform);
@@ -64,6 +66,8 @@ export function SettingsView({
           </button>
         </Row>
       </section>
+
+      <Sync />
 
       <section className="settings-section">
         <h3 className="ideas-section-title">Finding connections</h3>
@@ -141,6 +145,77 @@ export function SettingsView({
         </dl>
       </section>
     </div>
+  );
+}
+
+/** Noughtpad Sync, in builds that include it. */
+function Sync() {
+  const qc = useQueryClient();
+  const sync = useSync();
+  const [signingIn, setSigningIn] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  if (!sync.available) return null;
+  const refresh = () => qc.invalidateQueries({ queryKey: ["sync"] });
+  const fail = (e: unknown) => setError(isApiError(e) ? e.message : String(e));
+  const signIn = () => {
+    setSigningIn(true);
+    setError(null);
+    api
+      .syncSignIn()
+      .then(refresh, fail)
+      .finally(() => setSigningIn(false));
+  };
+  const folder = `Noughtpad/${sync.notebookName ?? "Notes"}`;
+  const notices = sync.enabled ? syncNotices(sync.last) : [];
+  return (
+    <section className="settings-section">
+      <h3 className="ideas-section-title">Sync</h3>
+      {!sync.configured ? (
+        <Row label="Google Drive" hint="This build can't sign in to Google (it was built without Noughtpad's Google client secret)." >
+          <span />
+        </Row>
+      ) : !sync.signedIn ? (
+        <Row
+          label="Google Drive"
+          hint="Keep this notebook the same on your other devices through your own Google Drive. Noughtpad can only see the files it creates there."
+        >
+          <button className="btn btn-small" disabled={signingIn} onClick={signIn}>
+            {signingIn ? "Waiting for the browser…" : "Sign in with Google…"}
+          </button>
+        </Row>
+      ) : (
+        <>
+          <Row label={`Google Drive${sync.account ? ` · ${sync.account}` : ""}`} hint="Signed in. The sign-in is kept in this computer's keychain.">
+            <button className="btn btn-small" onClick={() => void api.syncSignOut().then(refresh, fail)}>
+              Sign out
+            </button>
+          </Row>
+          <Row
+            label="Sync this notebook"
+            hint={
+              sync.enabled
+                ? `${describeSync(sync)}. In Drive: ${folder}.`
+                : `Copies your notes to ${folder} in Drive and keeps every device that syncs it up to date. The search index stays on each computer.`
+            }
+          >
+            <Toggle on={sync.enabled} label="Sync this notebook" onChange={() => void api.syncSetEnabled(!sync.enabled).then(refresh, fail)} />
+          </Row>
+          {sync.enabled && (
+            <Row label="Sync now" hint="Noughtpad syncs on its own every minute and a few seconds after you stop typing.">
+              <button className="btn btn-small" disabled={sync.state === "syncing"} onClick={() => void api.syncNow()}>
+                Sync now
+              </button>
+            </Row>
+          )}
+        </>
+      )}
+      {notices.map((n) => (
+        <p key={n} className="settings-hint faint settings-notes">
+          {n}
+        </p>
+      ))}
+      {error && <p className="settings-hint settings-notes settings-error">{error}</p>}
+    </section>
   );
 }
 

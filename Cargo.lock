@@ -4885,6 +4885,7 @@ dependencies = [
  "dirs 6.0.0",
  "noughtpad-core",
  "noughtpad-llm",
+ "noughtpad-sync",
  "serde",
  "serde_json",
  "tauri",
@@ -4936,6 +4937,14 @@ dependencies = [
  "tokio",
  "tracing",
  "ureq 3.5.0",
+]
+
+[[package]]
+name = "noughtpad-sync"
+version = "0.1.0"
+dependencies = [
+ "noughtpad-core",
+ "serde",
 ]
 
 [[package]]

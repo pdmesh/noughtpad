@@ -13,6 +13,7 @@ import { useChatLive, type ScopeChoice } from "./lib/chat";
 import type { EditorHandle } from "./editor/Editor";
 import { loadMarkdownPipeline } from "./editor/clipboard";
 import { checkForUpdates } from "./lib/updates";
+import { describeSync, useSync } from "./lib/sync";
 
 // Pages other than writing load after the editor is ready, keeping them out of
 // the startup bundle (G1: capture in < 300 ms).
@@ -118,6 +119,7 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
   // "Explore this note": the related-notes panel, opened on demand only.
   const [relatedOpen, setRelatedOpen] = useState(false);
   const semantic = useSemanticStatus();
+  const sync = useSync();
   const semanticLine = describeStatus(semantic);
   const editorRef = useRef<EditorHandle | null>(null);
   const newSeq = useRef(0);
@@ -381,6 +383,16 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
           <PanelLeft size={16} />
         </button>
         <div className="topbar-spacer" />
+        {sync.available && sync.enabled && (
+          <button
+            className={`icon-btn sync-dot is-${sync.state}`}
+            onClick={() => setView({ kind: "settings" })}
+            title={describeSync(sync)}
+            aria-label={`Sync: ${describeSync(sync)}`}
+          >
+            <span aria-hidden />
+          </button>
+        )}
         <button className="icon-btn" onClick={() => setPaletteOpen(true)} title="Search (⌘K)" aria-label="Search">
           <Search size={16} />
         </button>

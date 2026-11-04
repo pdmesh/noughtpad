@@ -146,6 +146,30 @@ const get = (id: string) => {
 // ---- semantic features (simulated with word overlap) ----------------------
 
 type Listener = (payload: unknown) => void;
+const syncOn = typeof location !== "undefined" && new URLSearchParams(location.search).get("sync") === "on";
+const sync = {
+  signedIn: false,
+  account: null as string | null,
+  enabled: false,
+  state: "off" as "off" | "idle" | "syncing",
+  lastSync: null as number | null,
+};
+function syncMock() {
+  return {
+    available: syncOn,
+    configured: syncOn,
+    state: sync.enabled ? sync.state : "off",
+    account: sync.account,
+    signedIn: sync.signedIn,
+    notebook: sync.enabled ? "Noughtpad" : null,
+    lastSync: sync.lastSync,
+    lastError: null,
+    last: null,
+    enabled: sync.enabled,
+    notebookName: "Noughtpad",
+  };
+}
+
 const listeners = new Map<string, Set<Listener>>();
 
 export function mockOn(name: string, handler: Listener): () => void {
@@ -328,6 +352,34 @@ export async function mock(cmd: string, a: Record<string, any> = {}): Promise<un
       return autostart;
     case "set_autostart":
       return (autostart = Boolean(a.on));
+    // ?sync=on pretends this build includes sync (signed out at first).
+    case "sync_status":
+      return syncMock();
+    case "sync_sign_in":
+      await new Promise((r) => setTimeout(r, 600));
+      sync.signedIn = true;
+      sync.account = "you@example.com";
+      emit("sync-status", syncMock());
+      return sync.account;
+    case "sync_sign_out":
+      Object.assign(sync, { signedIn: false, account: null, enabled: false, state: "off" });
+      emit("sync-status", syncMock());
+      return;
+    case "sync_set_enabled":
+      sync.enabled = Boolean(a.on);
+      sync.state = sync.enabled ? "idle" : "off";
+      sync.lastSync = sync.enabled ? Date.now() : null;
+      emit("sync-status", syncMock());
+      return;
+    case "sync_now":
+      sync.state = "syncing";
+      emit("sync-status", syncMock());
+      setTimeout(() => {
+        sync.state = "idle";
+        sync.lastSync = Date.now();
+        emit("sync-status", syncMock());
+      }, 800);
+      return;
     // ?update=available pretends a newer release exists; ?update=offline that GitHub can't be reached.
     case "app_version":
       return "0.1.0";

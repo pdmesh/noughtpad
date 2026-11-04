@@ -7,3 +7,6 @@ src-tauri/gen/
 
 # Updater signing key (`pnpm tauri signer generate`): never commit the private key
 *.key
+
+# Written by scripts/sync-build.mjs for builds with Noughtpad Sync
+.cargo/config.toml

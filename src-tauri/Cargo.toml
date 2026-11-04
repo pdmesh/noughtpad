@@ -27,6 +27,9 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 noughtpad-core.workspace = true
 noughtpad-llm = { workspace = true, features = ["remote", "keychain"] }
+# The open stand-in; builds with sync patch in pdmesh/noughtpad-sync instead
+# (scripts/sync-build.mjs, DESIGN §12.3).
+noughtpad-sync = { path = "../crates/noughtpad-sync-stub" }
 serde.workspace = true
 serde_json.workspace = true
 tracing.workspace = true

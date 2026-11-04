@@ -11,11 +11,21 @@ name: Release
 #            APPLE_ID, APPLE_PASSWORD, APPLE_TEAM_ID  (needs the $99/yr Apple Developer Program)
 #   Updater: TAURI_SIGNING_PRIVATE_KEY, TAURI_SIGNING_PRIVATE_KEY_PASSWORD (free; `pnpm tauri signer generate`)
 #
+# Noughtpad Sync and public releases:
+#   RELEASE_TOKEN  A fine-grained token with Contents read and write on
+#                  pdmesh/noughtpad-sync and pdmesh/noughtpad-releases. With it,
+#                  builds include sync (the private crate is checked out next to
+#                  this repo and patched in by scripts/sync-build.mjs) and tag
+#                  pushes make the draft release on the public
+#                  pdmesh/noughtpad-releases, where the updater and the website
+#                  download from. Without it: no sync, and the draft is made here.
+#   NOUGHTPAD_GOOGLE_CLIENT_SECRET  Google sign-in for sync (compiled in).
+#
 # Auto-update: with the updater secrets set, each build also makes a signed
 # update bundle (macOS .app.tar.gz, Windows NSIS .exe, Linux .AppImage, each
 # with a .sig) and a tag push adds them and `latest.json` to the draft release.
-# The app reads releases/latest/download/latest.json, which GitHub serves from
-# the newest *published* release: updates reach people when you press
+# The app reads pdmesh/noughtpad-releases' releases/latest/download/latest.json,
+# which GitHub serves from the newest *published* release: updates reach people when you press
 # Publish on the draft, not before.
 
 on:
@@ -43,8 +53,22 @@ jobs:
             name: linux-x64
     runs-on: ${{ matrix.platform }}
     timeout-minutes: 120
+    env:
+      WITH_SYNC: ${{ secrets.RELEASE_TOKEN != '' }}
+    defaults:
+      run:
+        working-directory: noughtpad
     steps:
+      # Side by side, as the sync crate expects: ./noughtpad and ./noughtpad-sync.
       - uses: actions/checkout@v4
+        with:
+          path: noughtpad
+      - uses: actions/checkout@v4
+        if: env.WITH_SYNC == 'true'
+        with:
+          repository: pdmesh/noughtpad-sync
+          token: ${{ secrets.RELEASE_TOKEN }}
+          path: noughtpad-sync
       - name: Linux system dependencies
         if: matrix.platform == 'ubuntu-24.04'
         run: |
@@ -52,17 +76,20 @@ jobs:
           sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libsoup-3.0-dev \
             libjavascriptcoregtk-4.1-dev librsvg2-dev libayatana-appindicator3-dev libxdo-dev patchelf
       - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: noughtpad/package.json
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
+          cache-dependency-path: noughtpad/pnpm-lock.yaml
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin' || '' }}
       - uses: Swatinem/rust-cache@v2
         with:
           key: release-${{ matrix.name }}
-          workspaces: ". -> target"
+          workspaces: "noughtpad -> target"
       - run: pnpm install --frozen-lockfile
       # Export only the signing secrets that exist: empty values would make the
       # bundler attempt (and fail) to sign.
@@ -93,9 +120,16 @@ jobs:
           fi
       - uses: tauri-apps/tauri-action@v0
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+          NOUGHTPAD_GOOGLE_CLIENT_SECRET: ${{ secrets.NOUGHTPAD_GOOGLE_CLIENT_SECRET }}
         with:
+          projectPath: noughtpad
+          tauriScript: ${{ env.WITH_SYNC == 'true' && 'node scripts/sync-build.mjs pnpm tauri' || 'pnpm tauri' }}
           args: ${{ matrix.args }} ${{ steps.signing.outputs.updater_args }}
+          # Releases go to the public releases repo (installers only, no source).
+          owner: pdmesh
+          repo: ${{ env.WITH_SYNC == 'true' && 'noughtpad-releases' || 'noughtpad' }}
+          releaseCommitish: ${{ env.WITH_SYNC == 'true' && 'main' || github.sha }}
           # Windows: point latest.json at the per-user NSIS installer (no admin prompt).
           updaterJsonPreferNsis: true
           # A tag push creates a draft release; a manual run only uploads artifacts.
@@ -106,11 +140,11 @@ jobs:
         with:
           name: noughtpad-${{ matrix.name }}
           path: |
-            target/*/release/bundle/dmg/*.dmg
-            target/*/release/bundle/macos/*.app
-            target/*/release/bundle/macos/*.app.tar.gz*
-            target/release/bundle/msi/*.msi
-            target/release/bundle/nsis/*.exe
-            target/release/bundle/appimage/*.AppImage
-            target/release/bundle/deb/*.deb
+            noughtpad/target/*/release/bundle/dmg/*.dmg
+            noughtpad/target/*/release/bundle/macos/*.app
+            noughtpad/target/*/release/bundle/macos/*.app.tar.gz*
+            noughtpad/target/release/bundle/msi/*.msi
+            noughtpad/target/release/bundle/nsis/*.exe
+            noughtpad/target/release/bundle/appimage/*.AppImage
+            noughtpad/target/release/bundle/deb/*.deb
           if-no-files-found: warn
