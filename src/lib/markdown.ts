@@ -25,6 +25,45 @@ const toHtml = unified()
   .use(rehypeKatex)
   .use(rehypeStringify);
 
+// Model answers are untrusted: a note clipped from the web can steer a model into writing
+// anything. Images are replaced by their alt text, so nothing loads from the network on its
+// own (an image URL could carry note text out). Links keep only http(s) and mailto targets,
+// and are opened by the caller in the system browser.
+type HastNode = { type: string; tagName?: string; properties?: Record<string, unknown>; children?: HastNode[]; value?: string };
+const SAFE_HREF = /^(https?:|mailto:)/i;
+function untrustedContent() {
+  const walk = (node: HastNode) => {
+    node.children = node.children?.map((c) => {
+      if (c.type === "element" && c.tagName === "img") {
+        const alt = String(c.properties?.alt ?? "");
+        return { type: "text", value: alt };
+      }
+      if (c.type === "element" && c.tagName === "a") {
+        const href = String(c.properties?.href ?? "");
+        if (!SAFE_HREF.test(href)) return { type: "element", tagName: "span", properties: {}, children: c.children ?? [] };
+        c.properties = { href, rel: "noopener noreferrer" };
+      }
+      walk(c);
+      return c;
+    });
+  };
+  return (tree: HastNode) => walk(tree);
+}
+
+const toUntrustedHtml = unified()
+  .use(remarkParse)
+  .use(remarkGfm)
+  .use(remarkMath)
+  .use(remarkRehype)
+  .use(untrustedContent)
+  .use(rehypeKatex)
+  .use(rehypeStringify);
+
+/** Like markdownToHtml, for text we didn't write (model answers): no images, safe links only. */
+export function untrustedMarkdownToHtml(md: string): string {
+  return String(toUntrustedHtml.processSync(md));
+}
+
 const toMarkdown = unified()
   .use(rehypeParse, { fragment: true })
   .use(rehypeRemark)

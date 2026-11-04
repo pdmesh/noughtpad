@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowUp, ChevronRight, Cloud, HardDrive, Search, Square } from "lucide-react";
-import { api, isApiError, type ChatNote, type ChatStep } from "../lib/api";
+import { api, isApiError, openExternal, type ChatNote, type ChatStep } from "../lib/api";
 import { answerHtml } from "../lib/cite";
 import { formatDay } from "../lib/format";
 import type { Live, ScopeChoice } from "../lib/chat";
@@ -304,6 +304,13 @@ function Answer({
         <div
           className="answer"
           onClick={(e) => {
+            // Links open in the system browser, never inside the app window.
+            const a = (e.target as HTMLElement).closest<HTMLAnchorElement>("a[href]");
+            if (a) {
+              e.preventDefault();
+              void openExternal(a.href);
+              return;
+            }
             const t = (e.target as HTMLElement).closest<HTMLElement>("[data-cite]");
             const note = t && noteOf(Number(t.dataset.cite));
             if (note) onOpenNote(note.id);
