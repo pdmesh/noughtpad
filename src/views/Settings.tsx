@@ -154,6 +154,7 @@ function Sync() {
   const sync = useSync();
   const [signingIn, setSigningIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [toggling, setToggling] = useState(false);
   if (!sync.available) return null;
   const refresh = () => qc.invalidateQueries({ queryKey: ["sync"] });
   const fail = (e: unknown) => setError(isApiError(e) ? e.message : String(e));
@@ -198,7 +199,18 @@ function Sync() {
                 : `Copies your notes to ${folder} in Drive and keeps every device that syncs it up to date. The search index stays on each computer.`
             }
           >
-            <Toggle on={sync.enabled} label="Sync this notebook" onChange={() => void api.syncSetEnabled(!sync.enabled).then(refresh, fail)} />
+            <Toggle
+              on={sync.enabled}
+              label="Sync this notebook"
+              disabled={toggling}
+              onChange={() => {
+                setToggling(true);
+                void api
+                  .syncSetEnabled(!sync.enabled)
+                  .then(refresh, fail)
+                  .finally(() => setToggling(false));
+              }}
+            />
           </Row>
           {sync.enabled && (
             <Row label="Sync now" hint="Noughtpad syncs on its own every minute and a few seconds after you stop typing.">
@@ -259,9 +271,9 @@ function Row({ label, hint, children }: { label: string; hint?: string; children
   );
 }
 
-function Toggle({ on, label, onChange }: { on: boolean; label: string; onChange: () => void }) {
+function Toggle({ on, label, onChange, disabled }: { on: boolean; label: string; onChange: () => void; disabled?: boolean }) {
   return (
-    <button role="switch" aria-checked={on} aria-label={label} className={`switch ${on ? "is-on" : ""}`} onClick={onChange}>
+    <button role="switch" aria-checked={on} aria-label={label} className={`switch ${on ? "is-on" : ""}`} onClick={onChange} disabled={disabled}>
       <span />
     </button>
   );

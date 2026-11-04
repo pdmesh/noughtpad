@@ -185,6 +185,10 @@ pub(crate) fn sync_sign_out(app: AppHandle, sync: State<'_, SyncState>) -> CmdRe
 #[tauri::command]
 pub(crate) fn sync_set_enabled(app: AppHandle, state: State<'_, AppState>, on: bool) -> CmdResult<()> {
     let mut cfg = load_config(&app);
+    // Already so (a double click, a stale page): don't start a second worker.
+    if cfg.sync.enabled == on {
+        return Ok(());
+    }
     cfg.sync.enabled = on;
     save_config(&app, &cfg);
     // The watcher records changes for sync only while it's on.
