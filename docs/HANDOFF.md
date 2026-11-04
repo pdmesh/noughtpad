@@ -19,6 +19,11 @@ Read this first next session, then `ROADMAP.md` (what's next) and
   Both secrets (`RELEASE_TOKEN`,
   `NOUGHTPAD_GOOGLE_CLIENT_SECRET`) are set.
 
+- **v0.1.5 is published** (2026-11-04): the open note reloads after a sync brings a change from
+  another device (an empty `vault-changed` now means "may have changed"; `pnpm dev ?remoteedit`
+  to see it), and the sidebar "Update to x.y.z" button with quiet checks 10 s after start-up and
+  every 4 hours. Not yet seen on the Macs: the two-Mac edit showing up in an open note, and the
+  sidebar button (first chance: the next release after 0.1.5).
 - **v0.1.4 is published** (2026-11-04): the duplicate Drive folders fix (one sync at a time in
   `noughtpad-sync` 210843a; folders and `notebook.json` created with a second look that keeps the
   oldest; the sync switch is idempotent), the note centred beside the sidebar and related panel,
