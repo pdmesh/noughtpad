@@ -89,7 +89,22 @@ pub enum Change {
 pub struct Vault {
     root: PathBuf,
     index: Mutex<Index>,
+    /// Held across read-check-write of a file (editor saves, sync writes), so
+    /// a sync can't slip in between the editor's hash check and its write.
+    writes: Mutex<()>,
 }
+
+/// A file that syncs, as found on disk (see [`Vault::synced_files`]).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LocalFile {
+    pub path: String,
+    pub size: u64,
+    /// Modification time, ms since the epoch.
+    pub modified: i64,
+}
+
+/// Lines `.noughtpad/.gitignore` must hold: derived or per-device data.
+const GITIGNORE: [&str; 4] = ["index.sqlite*", "trash/", "sync/", "user-state.sqlite*"];
 
 impl Vault {
     /// Open (creating if needed) a vault at `root`. Call [`Vault::rescan`] afterwards.
@@ -99,15 +114,12 @@ impl Vault {
         let root = root.canonicalize().at(root)?;
         let data = root.join(DATA_DIR);
         fs::create_dir_all(&data).at(&data)?;
-        let ignore = data.join(".gitignore");
-        if !ignore.exists() {
-            // The index is derived; keep it out of git by default.
-            fs::write(&ignore, "index.sqlite*\ntrash/\n").at(&ignore)?;
-        }
+        ensure_gitignore(&data.join(".gitignore"))?;
         let index = Index::open(&data.join(INDEX_FILE))?;
         Ok(Vault {
             root,
             index: Mutex::new(index),
+            writes: Mutex::new(()),
         })
     }
 
@@ -117,6 +129,7 @@ impl Vault {
         Ok(Vault {
             root,
             index: Mutex::new(Index::open_in_memory()?),
+            writes: Mutex::new(()),
         })
     }
 
@@ -131,6 +144,10 @@ impl Vault {
 
     pub fn summary(&self, id: &str) -> Result<Option<NoteSummary>> {
         self.ix().get(id)
+    }
+
+    fn write_guard(&self) -> MutexGuard<'_, ()> {
+        self.writes.lock().unwrap_or_else(|e| e.into_inner())
     }
 
     fn ix(&self) -> MutexGuard<'_, Index> {
@@ -202,6 +219,7 @@ impl Vault {
     /// Update content and/or metadata. The body is replaced verbatim; the
     /// frontmatter is rewritten only if metadata actually changed.
     pub fn update(&self, id: &str, upd: NoteUpdate) -> Result<NoteDoc> {
+        let _w = self.write_guard();
         let rel = self.ix().path_of(id)?.ok_or_else(|| Error::NotFound(id.to_string()))?;
         let abs = self.abs(&rel)?;
         let current = fs::read_to_string(&abs).at(&abs)?;
@@ -235,18 +253,142 @@ impl Vault {
 
     /// Move a note to `.noughtpad/trash/` (recoverable), and drop it from the index.
     pub fn trash(&self, id: &str) -> Result<()> {
+        let _w = self.write_guard();
         let rel = self.ix().path_of(id)?.ok_or_else(|| Error::NotFound(id.to_string()))?;
-        let from = self.abs(&rel)?;
-        let stamp = Local::now().format("%Y%m%d-%H%M%S");
-        let to = self
-            .root
-            .join(DATA_DIR)
-            .join(TRASH_DIR)
-            .join(format!("{stamp}-{}", rel.replace('/', "__")));
-        fs::create_dir_all(to.parent().unwrap()).at(&to)?;
-        fs::rename(&from, &to).at(&from)?;
+        self.move_to_trash(&rel)?;
         self.ix().remove_path(&rel)?;
         Ok(())
+    }
+
+    fn move_to_trash(&self, rel: &str) -> Result<()> {
+        let from = self.abs(rel)?;
+        let stamp = Local::now().format("%Y%m%d-%H%M%S");
+        let trash = self.root.join(DATA_DIR).join(TRASH_DIR);
+        let name = rel.replace('/', "__");
+        let mut to = trash.join(format!("{stamp}-{name}"));
+        for n in 2.. {
+            if !to.exists() {
+                break;
+            }
+            to = trash.join(format!("{stamp}-{n}-{name}"));
+        }
+        fs::create_dir_all(&trash).at(&trash)?;
+        fs::rename(&from, &to).at(&from)?;
+        Ok(())
+    }
+
+    // ---- for sync --------------------------------------------------------
+
+    /// Every file in the notebook that syncs (`sync::is_synced`): notes,
+    /// other files, chats, trash, user-state logs, tombstones.
+    pub fn synced_files(&self) -> Result<Vec<LocalFile>> {
+        let mut out = Vec::new();
+        let walker = walkdir::WalkDir::new(&self.root)
+            .sort_by_file_name()
+            .into_iter()
+            .filter_entry(|e| {
+                let name = e.file_name().to_string_lossy();
+                match e.depth() {
+                    0 => true,
+                    1 if name == DATA_DIR => true,
+                    2 if e
+                        .path()
+                        .parent()
+                        .and_then(|p| p.file_name())
+                        .is_some_and(|p| p == DATA_DIR) =>
+                    {
+                        crate::sync::SYNCED_DATA_DIRS.contains(&name.as_ref())
+                    }
+                    _ => !is_ignored_name(&name),
+                }
+            });
+        for entry in walker {
+            let entry = match entry {
+                Ok(e) => e,
+                Err(e) => {
+                    tracing::warn!("skipping unreadable entry: {e}");
+                    continue;
+                }
+            };
+            if !entry.file_type().is_file() {
+                continue;
+            }
+            let rel = self.rel(entry.path())?;
+            if !crate::sync::is_synced(&rel) {
+                continue;
+            }
+            let meta = entry.metadata().map_err(|e| Error::Sync(e.to_string()))?;
+            out.push(LocalFile {
+                path: rel,
+                size: meta.len(),
+                modified: mtime_ms(entry.path()),
+            });
+        }
+        Ok(out)
+    }
+
+    /// The bytes of a synced file, or `None` if it doesn't exist.
+    pub fn read_synced(&self, rel: &str) -> Result<Option<Vec<u8>>> {
+        let abs = self.abs(rel)?;
+        match fs::read(&abs) {
+            Ok(b) => Ok(Some(b)),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
+            Err(e) => Err(Error::Io { path: abs, source: e }),
+        }
+    }
+
+    /// Write a file that sync downloaded or merged. Refused with
+    /// [`Error::Conflict`] unless the file on disk still has the hash the
+    /// engine planned against (`expected`, from [`hash_bytes`]; `None`: it
+    /// must not exist), so an edit made meanwhile is never overwritten; the
+    /// engine plans that path again next round. Notes are re-indexed at once.
+    pub fn apply_synced(&self, rel: &str, bytes: &[u8], expected: Option<&str>) -> Result<Change> {
+        if !crate::sync::is_synced(rel) {
+            return Err(Error::OutsideVault(PathBuf::from(rel)));
+        }
+        let _w = self.write_guard();
+        self.check_synced(rel, expected)?;
+        self.write_atomic_bytes(rel, bytes)?;
+        self.after_synced(rel)
+    }
+
+    /// Remove a file because it was deleted on another device. Notebook files
+    /// go to `.noughtpad/trash/` (sync never deletes outright); files already
+    /// inside `.noughtpad/` (e.g. a trash entry) are removed. Same `expected`
+    /// rule as [`Vault::apply_synced`].
+    pub fn remove_synced(&self, rel: &str, expected: &str) -> Result<Change> {
+        if !crate::sync::is_synced(rel) {
+            return Err(Error::OutsideVault(PathBuf::from(rel)));
+        }
+        let _w = self.write_guard();
+        self.check_synced(rel, Some(expected))?;
+        if rel.starts_with(&format!("{DATA_DIR}/")) {
+            let abs = self.abs(rel)?;
+            fs::remove_file(&abs).at(&abs)?;
+        } else {
+            self.move_to_trash(rel)?;
+        }
+        self.after_synced(rel)
+    }
+
+    fn check_synced(&self, rel: &str, expected: Option<&str>) -> Result<()> {
+        let current = self.read_synced(rel)?.map(|b| hash_bytes(&b));
+        if current.as_deref() != expected {
+            return Err(Error::Conflict(rel.to_string()));
+        }
+        Ok(())
+    }
+
+    fn after_synced(&self, rel: &str) -> Result<Change> {
+        if rel.split('/').any(is_ignored_name) || !is_markdown(Path::new(rel)) {
+            return Ok(Change::Unchanged);
+        }
+        self.sync_rel(rel)
+    }
+
+    /// The vault-relative path of `abs`, if it is inside the vault.
+    pub fn relative(&self, abs: &Path) -> Option<String> {
+        self.rel(abs).ok()
     }
 
     // ---- syncing with disk -----------------------------------------------
@@ -422,6 +564,10 @@ impl Vault {
     }
 
     fn write_atomic(&self, rel: &str, text: &str) -> Result<()> {
+        self.write_atomic_bytes(rel, text.as_bytes())
+    }
+
+    fn write_atomic_bytes(&self, rel: &str, bytes: &[u8]) -> Result<()> {
         let abs = self.abs(rel)?;
         let dir = abs.parent().expect("note path has a parent");
         fs::create_dir_all(dir).at(dir)?;
@@ -429,7 +575,7 @@ impl Vault {
             .prefix(".noughtpad-tmp-")
             .tempfile_in(dir)
             .at(dir)?;
-        std::io::Write::write_all(&mut tmp, text.as_bytes()).at(tmp.path())?;
+        std::io::Write::write_all(&mut tmp, bytes).at(tmp.path())?;
         tmp.as_file().sync_all().at(&abs)?;
         tmp.persist(&abs).map_err(|e| Error::Io {
             path: abs.clone(),
@@ -480,7 +626,38 @@ fn trim_subsec(t: DateTime<FixedOffset>) -> DateTime<FixedOffset> {
 }
 
 pub fn hash(text: &str) -> String {
-    blake3::hash(text.as_bytes()).to_hex()[..32].to_string()
+    hash_bytes(text.as_bytes())
+}
+
+/// The vault's content hash, for any file (notes hash the same as [`hash`]).
+pub fn hash_bytes(bytes: &[u8]) -> String {
+    blake3::hash(bytes).to_hex()[..32].to_string()
+}
+
+/// Add any missing [`GITIGNORE`] lines, keeping what the user wrote.
+fn ensure_gitignore(path: &Path) -> Result<()> {
+    let current = match fs::read_to_string(path) {
+        Ok(s) => s,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => String::new(),
+        Err(e) => {
+            tracing::warn!("could not read {}: {e}", path.display());
+            return Ok(());
+        }
+    };
+    let have: std::collections::HashSet<&str> = current.lines().map(str::trim).collect();
+    let missing: Vec<&str> = GITIGNORE.iter().copied().filter(|l| !have.contains(l)).collect();
+    if missing.is_empty() {
+        return Ok(());
+    }
+    let mut text = current.clone();
+    if !text.is_empty() && !text.ends_with('\n') {
+        text.push('\n');
+    }
+    for l in missing {
+        text.push_str(l);
+        text.push('\n');
+    }
+    fs::write(path, text).at(path)
 }
 
 /// Stable id for files without an `id` in frontmatter, derived from the path.
@@ -497,7 +674,7 @@ fn is_markdown(p: &Path) -> bool {
         .is_some_and(|e| e.eq_ignore_ascii_case("md") || e.eq_ignore_ascii_case("markdown"))
 }
 
-fn mtime_ms(p: &Path) -> i64 {
+pub(crate) fn mtime_ms(p: &Path) -> i64 {
     fs::metadata(p)
         .and_then(|m| m.modified())
         .ok()
@@ -748,5 +925,137 @@ mod tests {
         let (_d, v) = vault();
         assert!(matches!(v.abs("../etc/passwd"), Err(Error::OutsideVault(_))));
         assert!(matches!(v.sync_path(Path::new("/etc/passwd")), Ok(Change::Unchanged)));
+    }
+
+    // ---- sync ------------------------------------------------------------
+
+    #[test]
+    fn apply_synced_writes_only_over_the_planned_version() {
+        let dir = tempfile::tempdir().unwrap();
+        let v = Vault::open(dir.path()).unwrap();
+        // A new note from another device.
+        let c = v
+            .apply_synced("2026/09/a.md", b"---\nid: AAA\n---\n\nFrom the Mac", None)
+            .unwrap();
+        assert!(matches!(c, Change::Upserted { ref id, .. } if id == "AAA"));
+        assert_eq!(v.search("Mac", 5).unwrap().len(), 1);
+        // Creating it again is refused: it exists now.
+        assert!(matches!(
+            v.apply_synced("2026/09/a.md", b"x", None),
+            Err(Error::Conflict(_))
+        ));
+        // The user edits it before the next sync writes: refused, edit kept.
+        let planned = hash_bytes(&v.read_synced("2026/09/a.md").unwrap().unwrap());
+        let doc = v.get("AAA").unwrap();
+        v.update(
+            "AAA",
+            NoteUpdate {
+                content: Some("Typed here".into()),
+                base_hash: Some(doc.hash),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        assert!(matches!(
+            v.apply_synced("2026/09/a.md", b"merged", Some(&planned)),
+            Err(Error::Conflict(_))
+        ));
+        assert_eq!(v.get("AAA").unwrap().content, "Typed here");
+        // With the right hash it goes through.
+        let now = hash_bytes(&v.read_synced("2026/09/a.md").unwrap().unwrap());
+        v.apply_synced("2026/09/a.md", b"---\nid: AAA\n---\n\nMerged", Some(&now))
+            .unwrap();
+        assert_eq!(v.get("AAA").unwrap().content, "Merged");
+    }
+
+    #[test]
+    fn apply_synced_handles_other_files_and_refuses_unsynced_paths() {
+        let dir = tempfile::tempdir().unwrap();
+        let v = Vault::open(dir.path()).unwrap();
+        assert_eq!(
+            v.apply_synced("img/p.png", b"\x89PNG", None).unwrap(),
+            Change::Unchanged
+        );
+        assert_eq!(v.read_synced("img/p.png").unwrap().unwrap(), b"\x89PNG");
+        v.apply_synced(".noughtpad/chats/C1.json", b"{}", None).unwrap();
+        for bad in [".noughtpad/index.sqlite", ".git/config", "../x.md"] {
+            assert!(v.apply_synced(bad, b"x", None).is_err(), "{bad}");
+        }
+    }
+
+    #[test]
+    fn remove_synced_moves_notes_to_the_trash() {
+        let dir = tempfile::tempdir().unwrap();
+        let v = Vault::open(dir.path()).unwrap();
+        let doc = v
+            .create(NewNote {
+                content: "Deleted on the other Mac".into(),
+                ..Default::default()
+            })
+            .unwrap();
+        let h = hash_bytes(&v.read_synced(&doc.path).unwrap().unwrap());
+        assert!(matches!(v.remove_synced(&doc.path, "stale"), Err(Error::Conflict(_))));
+        assert!(matches!(
+            v.remove_synced(&doc.path, &h).unwrap(),
+            Change::Removed { .. }
+        ));
+        assert!(v.read_synced(&doc.path).unwrap().is_none());
+        assert_eq!(v.count().unwrap(), 0);
+        let trashed: Vec<_> = v
+            .synced_files()
+            .unwrap()
+            .into_iter()
+            .filter(|f| f.path.starts_with(".noughtpad/trash/"))
+            .collect();
+        assert_eq!(trashed.len(), 1);
+        // A trash entry removed elsewhere is just removed.
+        let t = &trashed[0].path;
+        let th = hash_bytes(&v.read_synced(t).unwrap().unwrap());
+        v.remove_synced(t, &th).unwrap();
+        assert!(v.read_synced(t).unwrap().is_none());
+    }
+
+    #[test]
+    fn synced_files_lists_what_syncs() {
+        let dir = tempfile::tempdir().unwrap();
+        let v = Vault::open(dir.path()).unwrap();
+        let r = v.root().to_path_buf();
+        for (p, body) in [
+            ("a.md", "a"),
+            ("img/p.png", "p"),
+            (".noughtpad/chats/C1.json", "{}"),
+            (".noughtpad/user-state/D1.jsonl", ""),
+            (".noughtpad/sync/state.sqlite", "x"),
+            (".noughtpad/artifacts/k.md", "x"),
+            (".git/HEAD", "x"),
+            (".DS_Store", "x"),
+        ] {
+            fs::create_dir_all(r.join(p).parent().unwrap()).unwrap();
+            fs::write(r.join(p), body).unwrap();
+        }
+        let files: Vec<_> = v.synced_files().unwrap().into_iter().map(|f| f.path).collect();
+        assert_eq!(
+            files,
+            vec![
+                ".noughtpad/chats/C1.json",
+                ".noughtpad/user-state/D1.jsonl",
+                "a.md",
+                "img/p.png"
+            ]
+        );
+    }
+
+    #[test]
+    fn gitignore_gains_missing_lines_and_keeps_the_users() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::create_dir_all(dir.path().join(DATA_DIR)).unwrap();
+        let gi = dir.path().join(DATA_DIR).join(".gitignore");
+        fs::write(&gi, "index.sqlite*\ntrash/\nmine/").unwrap();
+        Vault::open(dir.path()).unwrap();
+        Vault::open(dir.path()).unwrap();
+        assert_eq!(
+            fs::read_to_string(&gi).unwrap(),
+            "index.sqlite*\ntrash/\nmine/\nsync/\nuser-state.sqlite*\n"
+        );
     }
 }

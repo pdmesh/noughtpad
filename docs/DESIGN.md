@@ -451,7 +451,7 @@ What was seen with release v0.1.1 (2026-11-03, published):
 - Vectors are cached by `(model, chunk-text hash)`, so index rebuilds, renames and unchanged saves never re-run the model.
 - Related notes score each note against all others with `0.5·mean-vector similarity + 0.5·best passage-pair similarity`. A note is kept only above the model's `min_related` and at least 1σ above that note's own similarity distribution, which filters "everything looks alike" notes. Small boosts apply for shared labels and the same source.
 - Each related note shows the matching passage, the passage it matched in your note, shared labels, same source and time apart. Wording is cautious: "These ideas appear connected" / "Possibly related".
-- Dismissals live in `.noughtpad/user-state.sqlite`. They are not disposable and apply in both directions.
+- Dismissals live in `.noughtpad/user-state/` (per-device logs since M6 slice 1, §12.6). They are not disposable and apply in both directions.
 - Hybrid search fuses FTS5 and vector ranks (reciprocal rank fusion, k = 60). Meaning-only hits are marked "similar meaning", and label/type filters apply to them too.
 - The CI `model` job downloads the real model and checks that the thresholds separate related from unrelated sentences. Measured: related pairs 0.66–0.88, unrelated pairs up to 0.57, so `min_related` was 0.60; raised to 0.63 in M5 after the Mac UX pass, where short notes on different topics (a run log next to a bread note) scored 0.60–0.63 on the sample notebook and no same-topic suggestion fell below 0.63 (tuned on those same 37 notes, so check it on real notes). This favours precision: two short sourdough notes with no shared vocabulary are missed rather than letting false links in. `examples/semantic.rs` reproduces the quality and speed check. The app logs `editor ready ms=…` on every launch.
 
@@ -494,7 +494,7 @@ What was seen with release v0.1.1 (2026-11-03, published):
 
 **Feedback learning (2026-11-03): built.** Related notes learn what *this* user considers related, with no new model and no approval queue.
 - **Signals:** opening a suggestion from the Related panel counts as useful; "Not related" counts as not useful.
-- **Storage:** both are stored in `.noughtpad/user-state.sqlite` with the pair's features at that moment.
+- **Storage:** both are stored in the user-state (`.noughtpad/user-state/`, §12.6) with the pair's features at that moment.
 - **Features:** note similarity, best-passage similarity, shared labels, same source, time apart, both personal, and labels that don't overlap.
 - **Model:** a class-balanced logistic regression, regularised towards a prior that *is* today's hand-tuned rule.
   - It switches on only after 3 or more opens and 3 or more dismissals.
@@ -746,29 +746,27 @@ plus the editor's `base_hash` check), so no keystroke is lost.
 
 Blocking calls, like the rest of the core; the engine runs them on a background thread.
 
+As built in slice 1 (`crates/noughtpad-core/src/sync/mod.rs`):
+
 ```rust
-/// Where a notebook's files live remotely. A backend stores files by notebook-relative
-/// path and reports changes; it knows nothing about Markdown or merging.
 pub trait SyncBackend: Send + Sync {
-    /// "gdrive", "icloud", "folder".
-    fn kind(&self) -> &'static str;
-    /// Find or create the remote notebook (`notebook.json` holds its id and format version).
-    fn open_notebook(&self, name: &str) -> Result<RemoteNotebook>;
-    /// Every file, for joining and periodic checks.
-    fn list(&self, nb: &RemoteNotebook) -> Result<Vec<RemoteEntry>>;
-    /// Changes since `cursor` (None = from now). Pages until `more` is false.
+    fn kind(&self) -> &'static str;                                  // "gdrive", "icloud", "folder"
+    fn open_notebook(&self, name: &str) -> Result<RemoteNotebook>;   // find or create
+    fn list(&self, nb: &RemoteNotebook) -> Result<Vec<RemoteEntry>>; // every file
+    /// Changes since `cursor`; `None` = from now (no entries, just a cursor).
     fn changes(&self, nb: &RemoteNotebook, cursor: Option<&Cursor>) -> Result<ChangePage>;
     fn get(&self, nb: &RemoteNotebook, path: &str) -> Result<(Vec<u8>, Rev)>;
     /// Write only if the remote is still at `expected` (None = must not exist yet).
-    fn put(&self, nb: &RemoteNotebook, path: &str, bytes: &[u8], expected: Option<&Rev>) -> Result<Put>;
-    /// Remove (to the backend's own trash where it has one), same rule as `put`.
+    fn put(&self, nb: &RemoteNotebook, path: &str, bytes: &[u8], modified: i64, expected: Option<&Rev>)
+        -> Result<Put>;
+    /// Remove (to the backend's own trash where it has one), same rule.
     fn remove(&self, nb: &RemoteNotebook, path: &str, expected: &Rev) -> Result<Put>;
 }
 
 pub struct RemoteEntry { pub path: String, pub rev: Rev, pub hash: Option<String>,
                          pub size: u64, pub modified: i64, pub removed: bool }
 pub struct ChangePage  { pub entries: Vec<RemoteEntry>, pub cursor: Cursor, pub more: bool }
-pub enum   Put         { Written(Rev), Moved(Rev) /* someone else wrote first */ }
+pub enum   Put         { Written(Rev), Moved(Option<Rev>) /* someone else got there first */ }
 pub struct Rev(pub String);      // opaque to the engine
 pub struct Cursor(pub String);   // opaque to the engine
 ```
@@ -822,16 +820,18 @@ over a USB drive or a NAS) later.
 - Drive against a real test account, by hand, before dogfooding.
 - Exit (ROADMAP M6): two Macs and one non-Apple device on one notebook for a week, no lost edits.
 
-### 12.12 Still open
+### 12.12 Smaller points (settled 2026-11-04, the recommended defaults)
 
-- **Notebook name on Drive** when two different notebooks share a name (likely: ask once and add
-  a suffix).
-- **Big files:** a size limit for images and PDFs (e.g. warn above 50 MB).
-- **Sync status in the UI:** a quiet dot in the top bar and a Settings → Sync section is the
-  default; a sync log viewer only if it's needed.
+- **Notebook name on Drive:** the remote notebook is matched by its id in `notebook.json`, not its
+  name. If a different notebook already has the name, the app asks once and adds a suffix
+  ("Notes 2").
+- **Big files:** files over 50 MB don't sync; the sync status lists them so nothing is skipped
+  silently.
+- **Sync status in the UI:** a quiet dot in the top bar and a Settings → Sync section. A sync log
+  viewer only if it turns out to be needed.
 - **Licensing and billing** (ROADMAP M6) come after the engine works.
 
-### 12.13 First slice (proposed)
+### 12.13 First slice (done 2026-11-04)
 
 All in the open core, in this repo, testable without Google:
 1. **Device id** in the app data dir, with a name the user can change.
@@ -842,6 +842,16 @@ All in the open core, in this repo, testable without Google:
    its tests (including the "only if still at `expected`" rule).
 4. **`Vault::apply_synced`** (atomic, refuses if the file changed) and the **change journal**
    hooks, with tests; `sync/` added to `.noughtpad/.gitignore`.
+
+As built: `device.rs` (`device.json` in the app data folder, named from the computer's name);
+`userstate.rs` (logs replayed into an in-memory database; `reload()` after sync brings in other
+devices' logs; a torn last line is skipped; the old file is renamed `user-state.sqlite.bak`);
+`sync/` (`is_synced`, the trait, `FolderBackend` with a lock file and a `changes.jsonl` feed,
+`Journal` in `.noughtpad/sync/journal.sqlite`); `Vault::{synced_files, read_synced,
+apply_synced, remove_synced}`, with a write lock shared with the editor's saves;
+`watch_journaled` (a folder event records the files inside it; a path that's gone may have been a
+folder, so the engine treats it as a prefix). The app uses the device id for user-state; the
+journal isn't switched on until the engine arrives.
 
 Then, in the private repo: slice 2 is the engine and the merge rules against the folder backend;
 slice 3 is Google Drive in Testing mode, dogfooded on your machines.

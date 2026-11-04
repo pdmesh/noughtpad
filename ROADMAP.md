@@ -41,7 +41,7 @@ stays FSL; sync lives in a private repo (`pdmesh/noughtpad-sync`) that plugs int
 `SyncBackend` interface in `noughtpad-core`. Design: `docs/DESIGN.md` §12 (written 2026-11-03).
 
 - [x] Design (§12): what syncs, merge rules, tombstones, the interface, Drive vs iCloud
-- [ ] Slice 1, open core: device id, user-state as per-device logs, `SyncBackend` and a folder backend for tests, `Vault::apply_synced` and the change journal
+- [x] Slice 1, open core (2026-11-04): device id, user-state as per-device logs, `SyncBackend` and a folder backend for tests, `Vault::apply_synced` and the change journal
 
 - [ ] Slice 2, sync engine (private repo): per-file change journal, three-way merge for Markdown against a base copy in `.noughtpad/sync/`, conflict copies only when a merge fails, tombstones, edit beats delete; tested against the folder backend
 - [ ] Slice 3, Google Drive backend: `drive.file` access, OAuth (PKCE, desktop loopback), Drive changes feed, works on every platform. Testing mode while dogfooding (sign in again every 7 days); production needs Google's basic project checks

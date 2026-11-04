@@ -14,9 +14,10 @@ mod updater;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, RwLock};
 
+use noughtpad_core::device::Device;
 use noughtpad_core::index::{DaySummary, LabelCount, ListQuery, MonthLog, NoteSummary, SearchHit};
 use noughtpad_core::semantic::Semantic;
-use noughtpad_core::userstate::{UserState, USER_STATE_FILE};
+use noughtpad_core::userstate::UserState;
 use noughtpad_core::vault::{Change, NewNote, NoteDoc, NoteUpdate, ScanReport};
 use noughtpad_core::watch::{watch, VaultWatcher};
 use noughtpad_core::Vault;
@@ -125,6 +126,40 @@ fn default_vault_path() -> PathBuf {
         .join("Noughtpad")
 }
 
+/// This device's id and name (`device.json` in the app data folder), created
+/// on first use. The id names this device's user-state log in every notebook.
+pub(crate) fn this_device(app: &AppHandle) -> CmdResult<Device> {
+    static DEVICE: std::sync::OnceLock<Device> = std::sync::OnceLock::new();
+    if let Some(d) = DEVICE.get() {
+        return Ok(d.clone());
+    }
+    let dir = app.path().app_data_dir().map_err(|e| CmdError {
+        kind: "io",
+        message: e.to_string(),
+    })?;
+    let d = Device::load_or_create(&dir, computer_name)?;
+    Ok(DEVICE.get_or_init(|| d).clone())
+}
+
+/// The name the OS gives this computer ("MacBook Air"), for the device name.
+fn computer_name() -> String {
+    let run = |cmd: &str, args: &[&str]| {
+        std::process::Command::new(cmd)
+            .args(args)
+            .output()
+            .ok()
+            .filter(|o| o.status.success())
+            .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+            .filter(|s| !s.is_empty())
+    };
+    let name = if cfg!(target_os = "macos") {
+        run("scutil", &["--get", "ComputerName"])
+    } else {
+        std::env::var("COMPUTERNAME").ok().or_else(|| run("hostname", &[]))
+    };
+    name.unwrap_or_default()
+}
+
 /// Open a vault, index it, and start watching it.
 fn activate(app: &AppHandle, state: &AppState, path: &Path, remember: bool) -> CmdResult<VaultInfo> {
     let vault = Arc::new(Vault::open(path)?);
@@ -136,8 +171,10 @@ fn activate(app: &AppHandle, state: &AppState, path: &Path, remember: bool) -> C
     if let Some(old) = state.semantic.write().unwrap_or_else(|e| e.into_inner()).take() {
         old.shutdown();
     }
+    let device = this_device(app)?;
     let user = Arc::new(UserState::open(
-        &vault.root().join(noughtpad_core::vault::DATA_DIR).join(USER_STATE_FILE),
+        &vault.root().join(noughtpad_core::vault::DATA_DIR),
+        &device.id,
     )?);
     let sem = Semantic::new(vault.clone(), user)?;
     let handle = app.clone();

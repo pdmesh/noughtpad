@@ -5,12 +5,16 @@
 //! * [`vault`] — file operations on a vault folder, kept in sync with the index.
 //! * [`semantic`] — local embeddings, related notes and hybrid search (M2).
 //! * [`userstate`] — the user's judgements about derived data (not disposable).
+//! * [`device`] — this device's id and name.
+//! * [`sync`] — what syncs, the `SyncBackend` interface, the change journal (M6).
 //! * [`watch`] — filesystem watcher so edits made outside Noughtpad are picked up.
 
+pub mod device;
 pub mod error;
 pub mod index;
 pub mod note;
 pub mod semantic;
+pub mod sync;
 pub mod userstate;
 pub mod vault;
 pub mod watch;

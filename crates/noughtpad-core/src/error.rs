@@ -20,6 +20,8 @@ pub enum Error {
     Conflict(String),
     #[error("embedding error: {0}")]
     Embedding(String),
+    #[error("sync error: {0}")]
+    Sync(String),
     #[error("watcher error: {0}")]
     Watch(#[from] notify_debouncer_full::notify::Error),
 }
