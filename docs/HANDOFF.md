@@ -18,13 +18,22 @@ they are). For the website, read `docs/WEBSITE.md`.
     drawer, tap alternatives for hover tools and the right-click menu) done for the write page,
     sidebar and editor, with screenshots in PR #11. Desktop `cargo fmt`/clippy/tests and `pnpm
     typecheck`/`test`/`perf` checked green throughout.
-  - **Android, proven:** initially blocked (this cloud session's network policy refused
+  - **Android, done:** initially blocked (this cloud session's network policy refused
     `dl.google.com`); the user widened it to `*.google.com` the same day, and a debug APK then
     built successfully end to end (SDK platform 34, build-tools 34.0.0, NDK 27.0.12077973; see
     `docs/MOBILE.md` for the exact recipe and a Gradle/Maven-Central rate-limit snag that needed
-    retrying). That proof ran against this repo's own `src-tauri` and was **not** committed here;
-    `pdmesh/noughtpad-mobile` is where the real, ongoing Android build now lives, using the same
-    SDK/NDK — check that repo directly for its current build status.
+    retrying). That first proof ran against this repo's own `src-tauri` and was **not** committed
+    here. `pdmesh/noughtpad-mobile` now has its own working `src-tauri` (ported from this repo's,
+    ~2,000 lines, pulled in as a copy rather than a shared crate — see that repo's README "Known
+    gaps") and its own verified debug APK (`app.noughtpad.mobile`, minSdk 24, targetSdk 37,
+    independently re-checked with `aapt dump badging`). Not run on an actual device/emulator yet
+    (none available in this cloud session).
+  - **A real bug found and fixed along the way:** porting `lib.rs` surfaced that
+    `app.manage(sync::init(...))` was nested inside the desktop-only part of `run()`'s setup,
+    while the sync commands it backs are registered unconditionally — a mobile build of this
+    code would have panicked on the first sync call. Fixed in both repos (commit `dc75538` here);
+    full check suite (fmt, clippy, tests, both feature sets) stayed green, no desktop behaviour
+    change.
   - **One process note, disclosed plainly:** while chasing the Android build, a background agent
     committed and pushed an unreviewed change to this repo (dropping `local-llm` from the desktop
     app's default Cargo features — commit `5680cf7`) without being asked to. It was caught and
@@ -33,8 +42,8 @@ they are). For the website, read `docs/WEBSITE.md`.
     not because anything is currently wrong.
   - **iOS: continues in a local Claude Code session on the user's Mac**, against
     `pdmesh/noughtpad-mobile` (not this repo) — this environment is Linux and can't run Xcode at
-    all, so there was nothing to attempt here beyond writing the steps (`docs/MOBILE.md`). Start
-    that session once `noughtpad-mobile`'s Android side is settled.
+    all, so there was nothing to attempt here beyond writing the steps (`docs/MOBILE.md`). That
+    repo's Android side is now settled, so this is ready to start.
 - **Released: v0.1.6**, the first release on this repo. 0.1.5 installs reach it through the bridge
   release on `pdmesh/noughtpad-releases`.
 - **v0.1.8 (2026-11-05, published, Latest):** fixes images on the Mac and tidies tables (see
@@ -151,13 +160,14 @@ capitalise the first word typed in a table cell (system text correction); left a
    /Applications/Noughtpad.app`): delete on one Mac, edit the same paragraph on both, a long
    offline gap, and a Windows or Linux machine (ROADMAP M6 exit).
 3. **Dogfood** (ROADMAP M5 exit), then the parked UX items below.
-4. **Mobile (M7), in progress, now split across repos**: the app project is
-   `pdmesh/noughtpad-mobile` (private) — check that repo directly for its Android build status.
+4. **Mobile (M7), in progress, now split across repos**: Android debug build done in
+   `pdmesh/noughtpad-mobile` (private) — not yet run on a device/emulator, that's next there.
    **iOS is a local Mac session**: check out `pdmesh/noughtpad` and `pdmesh/noughtpad-mobile` as
    siblings, `pnpm install && pnpm build` here first, then from `noughtpad-mobile`,
-   `tauri ios init` + `tauri ios dev` (Xcode required). Also worth doing in this repo: check the
-   phone layout on the Journal, Ideas, Chat and Settings pages at 375px (only write/sidebar/editor
-   were checked). Details: `docs/MOBILE.md`.
+   `tauri ios init` + `tauri ios dev` (Xcode required). Also worth doing: wiring in the real
+   Noughtpad Sync engine there (currently the open stub, see that repo's README), and in this
+   repo, checking the phone layout on the Journal, Ideas, Chat and Settings pages at 375px (only
+   write/sidebar/editor were checked). Details: `docs/MOBILE.md`.
 
 ## How to release
 

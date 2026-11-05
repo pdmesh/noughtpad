@@ -69,9 +69,9 @@ identity) lives in the private `pdmesh/noughtpad-mobile` repo, not here — see
 - [x] Slice 2, phone layout: sidebar as a drawer, 375px note page, tap alternatives for hover
       tools and the right-click menu. Done for the write page, sidebar and editor, checked with
       screenshots; not yet checked on Journal/Ideas/Chat/Settings
-- [ ] Slice 3, runs on a real device: Android proven (debug APK built and verified, see
-      `docs/MOBILE.md`); `pdmesh/noughtpad-mobile`'s own build is in progress there. iOS picks up
-      in a local Mac session (see `docs/HANDOFF.md`)
+- [ ] Slice 3, runs on a real device: Android done — `pdmesh/noughtpad-mobile` builds a verified
+      debug APK from its own `src-tauri` (see `docs/MOBILE.md`); not yet run on an actual device
+      or emulator. iOS picks up in a local Mac session (see `docs/HANDOFF.md`)
 - [ ] Slice 4, capture from outside the app (share sheet/intent), same shape as desktop's
       ⌘⇧Space
 - [ ] Slice 5, Sync checked on a real phone alongside the two Macs

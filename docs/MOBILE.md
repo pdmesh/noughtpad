@@ -281,9 +281,27 @@ summary, this stays the detail.
 - **Slice 2 (phone layout):** done for the write page, sidebar and editor, checked with
   screenshots at 375×812 against the mock backend (attached to PR #11). Not yet checked on the
   Journal, Ideas, Chat or Settings pages at that width (Backlog item below).
-- **Slice 3 (runs on a device):** Android proven (a debug APK built and verified, see below); iOS
-  picks up in a local Mac session per the user's direction (see HANDOFF).
+- **Slice 3 (runs on a device):** **Android done** — `pdmesh/noughtpad-mobile` builds a verified
+  debug APK (`app.noughtpad.mobile`, minSdk 24, targetSdk 37) from its own `src-tauri`, not just
+  the one-off proof against this repo described below. Not yet run on an actual device or
+  emulator (none available in the cloud session that built it) — only confirmed to compile, link
+  and produce a valid APK. iOS picks up in a local Mac session per the user's direction (see
+  HANDOFF).
 - Slices 4–7: not started.
+
+### A bug this work found: `sync::init` was desktop-only, silently
+
+Porting `lib.rs` to `noughtpad-mobile` surfaced a real latent bug in *this* repo, not just the
+port: `app.manage(sync::init(app.handle()))` was nested inside the `#[cfg(desktop)]`-only part of
+`run()`'s setup, even though the sync commands it backs (`sync_status`, `sync_sign_in`, …) are
+registered unconditionally in `invoke_handler`. A mobile build of this exact code would have
+panicked the first time any sync command ran, since `SyncState` was never managed. Fixed here
+(and independently in `noughtpad-mobile`'s ported copy): `sync::init` now runs in a setup step
+that executes on every platform, with the desktop-only extras (showing the window, registering
+the quick-capture shortcut) nested inside a `#[cfg(desktop)]` block within that same step, instead
+of the whole setup call being desktop-only. No behaviour change on desktop — verified with the
+full check suite (fmt, clippy, tests, both the CI feature set and the default build including
+mistral.rs).
 
 ### Android: the build recipe is now proven
 
