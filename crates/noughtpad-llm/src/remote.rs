@@ -76,7 +76,12 @@ mod imp {
         }
     }
 
-    pub(super) fn client(kind: RemoteKind, base_url: Option<String>, key: Option<String>, model: String) -> Result<Client> {
+    pub(super) fn client(
+        kind: RemoteKind,
+        base_url: Option<String>,
+        key: Option<String>,
+        model: String,
+    ) -> Result<Client> {
         if kind.needs_key() && key.as_deref().is_none_or(|k| k.trim().is_empty()) {
             return Err(Error::Provider(format!("{} needs an API key", kind.label())));
         }
