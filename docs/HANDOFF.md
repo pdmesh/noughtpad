@@ -7,8 +7,10 @@ they are). For the website, read `docs/WEBSITE.md`.
 
 - **Released: v0.1.6**, the first release on this repo. 0.1.5 installs reach it through the bridge
   release on `pdmesh/noughtpad-releases`.
-- **v0.1.7 (2026-11-05, tagged; draft until the user publishes it):** everything below. After
-  publishing, set `VERSION` in `website/src/config.ts` to 0.1.7 (the download links use it).
+- **v0.1.8 (2026-11-05, tagged; draft until the user publishes it):** fixes images on the Mac
+  and tidies tables (see "Now" below). After publishing, set `VERSION` in
+  `website/src/config.ts` to 0.1.8 (the download links use it).
+- **v0.1.7 (2026-11-05, published):** everything below. Images were broken on the Mac in it.
 - **New in 0.1.7:**
   - Pasting images works in the Mac app. The editor reads image files from the paste's `files` or
     `items`; when the webview hands over a paste with nothing in it (some screenshots and images
@@ -51,10 +53,8 @@ they are). For the website, read `docs/WEBSITE.md`.
       button; Mermaid and maths blocks have copy and </> on hover (`src/editor/widgetTools.ts`).
     - Text selected inside code blocks and inline code now shows (their background was opaque and
       covered the selection, which is drawn behind the text).
-  - **Check on the Mac:** the table right-click menu and typing in cells (WebKit, not tried there),
-    the right-click menu (only the browser version was tried here), Insert →
-    Image… (file picker), Open link; paste a screenshot (⌘⌃⇧4), an image copied from Safari and from Preview,
-    and drop a PNG from Finder; the source URL's open icon; the Journal on the bigger Mac.
+  - Checked on the Mac for 0.1.8 (see "Now"); still unchecked: the source URL's open icon and the
+    Journal on the bigger Mac.
 
 - **This repo is public** (2026-11-04), and releases live here from 0.1.6. Up to 0.1.5 they were
   on `pdmesh/noughtpad-releases` (see "Releases" under Gotchas).
@@ -84,37 +84,34 @@ they are). For the website, read `docs/WEBSITE.md`.
   Apple signing would fix it. Once, the webview's page load itself started 5.9 s late; not chased.
 - **Apple signing is still deferred** (no Developer Program yet).
 
-## Now: fix for image drop and paste in 0.1.7, to test on the Mac, then release 0.1.8
+## Now: 0.1.8 is tagged, waiting for the user to publish
 
-0.1.7 broke images on the Mac in two ways (both were tested only in the browser with the mock backend):
+Checked on the Mac (2026-11-05, debug build of `claude/eager-darwin-ghc7tw` on `~/Noughtpad
+Sample`, driven with computer use), files landing in `~/Noughtpad Sample/attachments/2026-11/`:
 
-- **"Couldn't save the image: expected the attachment's bytes"** on every paste or drop. 0.1.7 sent the
-  bytes as a raw IPC body, which arrives differently in the macOS webview, so the command refused
-  it. Fixed: base64 in ordinary JSON arguments (`save_attachment { data, extension }`), like every
-  other command's arguments.
-- **A dropped image replaced the whole window** when dropped outside the note text (sidebar,
-  margins). With `dragDropEnabled: false` the webview opens a dropped file it isn't told to keep.
-  Fixed: `main.tsx` swallows file drops nothing handled, and the note page inserts images dropped
-  beside the text (title, margins, empty page) at the cursor.
+- Drops from Finder onto the text, the title and the empty page insert the image; onto the
+  sidebar and the Journal nothing happens (no takeover, nothing saved).
+- Paste: a ⌘⌃⇧4 screenshot, an image copied in Preview, and a Safari-style clipboard (TIFF + HTML +
+  URL, made with a script: computer use can't drive Safari) all save and insert.
+- Insert → Image… (right-click) and `/image` open the picker and insert; image zoom and </>; code
+  block Copy; right-click Open link opens the browser.
+- Tables: typing in cells, Row/Column right-click menus, the + buttons, ⌘Z.
 
-**Test in a local Mac session with computer use** (branch `claude/eager-darwin-ghc7tw`):
+Fixed while testing (in 0.1.8):
 
-1. Quit the installed Noughtpad (the single-instance guard would hand the launch to it).
-2. `git fetch && git checkout claude/eager-darwin-ghc7tw && git pull`, then `pnpm install` and
-   `pnpm dev:sample` (the sample notebook, `~/Noughtpad Sample`; attachments need no Google secret).
-3. In a new note, check each of these, then look in `~/Noughtpad Sample/attachments/<YYYY-MM>/`
-   for the files:
-   - drag a PNG/JPG from Finder onto the text, onto the title, onto the empty page below the
-     text: each inserts the image at the cursor;
-   - drag one onto the sidebar and onto the Journal page: nothing happens (no takeover, no error);
-   - paste a screenshot (⌘⌃⇧4, then ⌘V), an image copied in Safari (right-click → Copy Image), and
-     one copied from Preview (⌘C);
-   - Insert → Image… (right-click menu) and `/image`: the file picker inserts the chosen image;
-   - a table: type in cells, right-click for Row/Column menus, the + buttons, ⌘Z;
-   - an image's hover tools (zoom, </>), a code block's Copy, right-click Open link on a link.
-4. If all pass: bump to 0.1.8 (root `Cargo.toml`, `package.json`, `cargo check -p noughtpad-app`),
-   merge, tag `v0.1.8` from `main`, and publish once the draft has its 14 files (see How to release).
-   Cloud sessions can't push tags; tag from the Mac.
+- `save_attachment` takes base64 in JSON (0.1.7 sent a raw body the macOS webview mangled), and
+  unhandled file drops are swallowed so they can't replace the window.
+- Images go in a paragraph of their own (`imageBlock` in `clipboard.ts`): an image in the middle of
+  a line was drawn over its text, and pasted images sat side by side. A drop on the text goes
+  below the line it lands on, a drop below the text at the end of the note; images re-measure
+  the editor when they load.
+- Clicking below a table (or a closed code or maths block) at the end of a note opens a fresh
+  paragraph (`cursorToEnd`); before, the next line typed became a table row.
+- `/table` puts the cursor in the first heading with its text selected; Tab selects the next
+  cell's text, as in Word.
+
+Not covered: a real drag from Safari, and a release build (the release jobs build it). macOS may
+capitalise the first word typed in a table cell (system text correction); left as is.
 
 ## Next (the user chooses)
 
@@ -157,8 +154,7 @@ while uploading, see "Release upload race" below. Sync changes must be pushed to
 
 - UX leftovers: dark mode, minimum window size, keyboard-only use, related-notes dismiss/undo,
   chat history delete/hide, leaving a chat while it streams, the user's real notes (and whether
-  `min_related` 0.63 holds there). Mermaid is checked on the Mac; images are fixed but unchecked
-  there (see above). Code fences still show their ``` lines when the cursor is elsewhere.
+  `min_related` 0.63 holds there). Mermaid and images are checked on the Mac. Code fences still show their ``` lines when the cursor is elsewhere.
 - Turn on "Sync this notebook" automatically after signing in (the user missed the switch once;
   asked, not answered).
 - Providers: Anthropic, OpenAI, LM Studio, the no-tools fallback, reading a key back after a rebuild.
