@@ -696,7 +696,7 @@ button {
   z-index: 2;
 }
 .cm-widget-tools.is-boxed {
-  top: 8px;
+  top: 14px;
   right: 8px;
   gap: 0;
   padding: 2px;
