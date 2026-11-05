@@ -5,7 +5,9 @@ import { useEvent } from "../lib/useEvent";
 import { api, assetUrl, isApiError, isTauri, mayHaveChanged, openExternal, type Change, type EditableMeta, type NoteDoc } from "../lib/api";
 import { Editor, type EditorHandle } from "../editor/Editor";
 import { MetaStrip } from "./MetaStrip";
+import { FormatToolbar } from "./FormatToolbar";
 import { formatDateTime } from "../lib/format";
+import { isCoarsePointer } from "../lib/platform";
 
 const SAVE_DELAY_MS = 500;
 const emptyMeta: EditableMeta = { title: null, labels: [], source: null, kindOverride: null };
@@ -235,6 +237,7 @@ export function NotePane({ noteId, vaultRoot, presetLabels, onCreated, onTrashed
         pasteClipboardImage={isTauri ? api.pasteClipboardImage : undefined}
         onError={onNotice}
       />
+      {isCoarsePointer && <FormatToolbar editorRef={editor} />}
     </article>
   );
 }

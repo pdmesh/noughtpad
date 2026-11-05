@@ -246,6 +246,50 @@ button {
   transform: translateX(-100%) !important;
 }
 
+/* ---------- phone layout: sidebar as a drawer, below 680px ---------------
+   Hover can't reveal anything on a touch device, so under this width the
+   sidebar is always a hidden-by-default overlay (opened by the same button
+   that pins/unpins it on desktop) instead of the hover-reveal panel above,
+   and chrome that only showed on hover is always shown instead. */
+@media (max-width: 680px) {
+  .sidebar-hotzone {
+    display: none;
+  }
+  .sidebar {
+    top: 0;
+    width: min(86vw, 320px);
+    transform: translateX(-100%);
+    box-shadow: none;
+    z-index: 30;
+    transition: transform 0.2s ease;
+  }
+  .chrome-pinned .main {
+    margin-left: 0;
+  }
+  .sidebar-drawer-open .sidebar {
+    transform: none;
+    box-shadow: 4px 0 24px rgb(0 0 0 / 0.18);
+  }
+  .chrome-auto .topbar,
+  .chrome-auto .note-header-right,
+  /* There's no mouse move to bring chrome back after typing on a touch
+     keyboard, so don't hide it in the first place. */
+  .chrome-auto.is-typing .topbar,
+  .chrome-auto.is-typing .note-header-right {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+  .meta-strip.meta-empty {
+    opacity: 0.55;
+  }
+}
+.sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 25;
+  background: rgb(0 0 0 / 0.35);
+}
+
 .sidebar-section {
   display: flex;
   flex-direction: column;
@@ -357,6 +401,36 @@ button {
 /* ---------- note pane --------------------------------------------------- */
 .note-pane {
   min-height: 30vh;
+}
+/* The format toolbar: a tap alternative to the right-click menu, docked
+   above the on-screen keyboard (see docs/MOBILE.md § Phone layout). */
+.format-toolbar {
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  gap: 2px;
+  overflow-x: auto;
+  margin: 12px -4px -4px;
+  padding: 6px 4px;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+}
+.format-toolbar-btn {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--fg-muted);
+}
+.format-toolbar-btn:active {
+  background: var(--border);
+  color: var(--fg);
 }
 .note-header {
   display: flex;
@@ -877,6 +951,19 @@ button {
 .cm-table-add-col:hover {
   color: var(--fg);
   background: var(--bg-sunk);
+}
+/* Tap alternative for every hover-only widget tool above: a touchscreen has
+   no hover, so show them all the time instead of waiting for one that never
+   comes (see docs/MOBILE.md § Phone layout). */
+@media (pointer: coarse) {
+  .cm-md-image-wrap .cm-widget-tools,
+  .cm-table-widget .cm-widget-tools,
+  .cm-block-widget .cm-widget-tools,
+  .cm-md-codeblock-start .cm-code-header .cm-widget-tools,
+  .cm-table-widget .cm-table-add-row,
+  .cm-table-widget .cm-table-add-col {
+    opacity: 1;
+  }
 }
 .cm-block-widget {
   position: relative;

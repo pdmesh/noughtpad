@@ -350,7 +350,13 @@ export async function mock(cmd: string, a: Record<string, any> = {}): Promise<un
           await new Promise((r) => setTimeout(r, 900));
         }
       }
-      return { path: "/mock/Noughtpad", noteCount: notes.length, defaultPath: "/mock/Noughtpad" };
+      // `?mobile` pretends this is a mobile build with no folder picker, to check that layout.
+      return {
+        path: "/mock/Noughtpad",
+        noteCount: notes.length,
+        defaultPath: "/mock/Noughtpad",
+        canSwitchVault: !new URLSearchParams(location.search).has("mobile"),
+      };
     case "mark_ready":
       return Math.round(performance.now());
     case "default_vault":
@@ -415,7 +421,7 @@ export async function mock(cmd: string, a: Record<string, any> = {}): Promise<un
       throw { kind: "update", message: "This is the browser preview, so there's nothing to restart." };
     }
     case "open_vault":
-      return { path: a.path, noteCount: notes.length, defaultPath: "/mock/Noughtpad" };
+      return { path: a.path, noteCount: notes.length, defaultPath: "/mock/Noughtpad", canSwitchVault: true };
     case "list_notes":
       return list(a.query);
     case "list_days":

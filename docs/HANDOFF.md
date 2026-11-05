@@ -5,6 +5,17 @@ they are). For the website, read `docs/WEBSITE.md`.
 
 ## Where things stand (2026-11-05)
 
+- **M7 (mobile) started**, on branch `claude/mobile-m7-scaffold`, PR not yet merged. Plan and
+  full status: `docs/MOBILE.md`. In short: the mobile entry point and desktop-only `#[cfg]`
+  gating are done in `src-tauri` (most of the gating was already there before this slice); the
+  notes-folder default now goes through Tauri's own path resolver instead of the `dirs` crate, so
+  it resolves on mobile too; the phone layout (sidebar drawer, tap alternatives for hover tools
+  and the right-click menu) is done for the write page, sidebar and editor. **Not done:**
+  `src-tauri/gen/android` and `gen/apple` aren't generated/committed — `tauri android init`
+  needs the Android SDK, and the cloud session doing this work has a network policy that blocks
+  `dl.google.com`, so the SDK couldn't be installed; `tauri ios init` needs Xcode, which only
+  runs on a Mac. No debug APK was built. See `docs/MOBILE.md` for exact commands to pick this up
+  with a normal network, or on your Mac for iOS.
 - **Released: v0.1.6**, the first release on this repo. 0.1.5 installs reach it through the bridge
   release on `pdmesh/noughtpad-releases`.
 - **v0.1.8 (2026-11-05, published, Latest):** fixes images on the Mac and tidies tables (see
@@ -121,7 +132,11 @@ capitalise the first word typed in a table cell (system text correction); left a
    /Applications/Noughtpad.app`): delete on one Mac, edit the same paragraph on both, a long
    offline gap, and a Windows or Linux machine (ROADMAP M6 exit).
 3. **Dogfood** (ROADMAP M5 exit), then the parked UX items below.
-4. **Mobile (M7) stays parked** until the user picks it up.
+4. **Mobile (M7), in progress**: get a real Android SDK/NDK in front of this (either widen the
+   cloud session's network access, or do it locally) and run `tauri android init` +
+   `tauri android build --debug --no-default-features --features embedding-static`; on a Mac,
+   `tauri ios init` + `tauri ios dev`. Then check the phone layout on the Journal, Ideas, Chat and
+   Settings pages at 375px (only write/sidebar/editor were checked). Details: `docs/MOBILE.md`.
 
 ## How to release
 
