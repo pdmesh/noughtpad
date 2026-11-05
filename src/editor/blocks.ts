@@ -8,6 +8,7 @@ import { type EditorState, type Range, StateField } from "@codemirror/state";
 import { Decoration, type DecorationSet, EditorView, WidgetType } from "@codemirror/view";
 import { TableWidget, tableSource } from "./table";
 import { linkOpener } from "./livePreview";
+import { caretRect, copyButton, ICONS, toolBar, toolButton } from "./widgetTools";
 
 export interface BlockRenderer {
   /** Fence info strings this renderer handles, e.g. ["mermaid"]. */
@@ -63,7 +64,16 @@ class BlockWidget extends WidgetType {
     el.className = `cm-block-widget cm-block-${this.lang}`;
     el.title = "Click to edit";
     const renderer = registry.get(this.lang);
-    void renderer?.render(this.code, el);
+    const body = document.createElement("div");
+    body.className = "cm-block-body";
+    el.append(body);
+    void renderer?.render(this.code, body);
+    const edit = () => {
+      const line = view.state.doc.lineAt(this.from);
+      view.dispatch({ selection: { anchor: Math.min(line.to + 1, view.state.doc.length) } });
+      view.focus();
+    };
+    el.append(toolBar([copyButton(() => this.code, "Copy source"), toolButton("Edit as Markdown", ICONS.code, edit)]));
     el.addEventListener("mousedown", (e) => {
       e.preventDefault();
       // Cmd/Ctrl-click on a link opens it, as in the rest of the note.
@@ -74,15 +84,15 @@ class BlockWidget extends WidgetType {
         return;
       }
       // Put the cursor on the first content line so the source shows.
-      const line = view.state.doc.lineAt(this.from);
-      const target = Math.min(line.to + 1, view.state.doc.length);
-      view.dispatch({ selection: { anchor: target } });
-      view.focus();
+      edit();
     });
     return el;
   }
   ignoreEvent() {
     return true;
+  }
+  coordsAt(dom: HTMLElement, pos: number) {
+    return caretRect(dom, pos);
   }
 }
 

@@ -11,6 +11,7 @@ import { type EditorView, WidgetType } from "@codemirror/view";
 import { loadMarkdownPipeline } from "./clipboard";
 import { linkOpener } from "./livePreview";
 import { isTauri } from "../lib/api";
+import { caretRect, ICONS, toolBar, toolButton } from "./widgetTools";
 
 // ---------- model ------------------------------------------------------------
 
@@ -235,13 +236,21 @@ export class TableWidget extends WidgetType {
     };
     const leave = (after: boolean) => {
       const { from, to } = range();
-      let pos = after ? to + 1 : from - 1;
-      pos = Math.max(0, Math.min(pos, view.state.doc.length));
-      if (after && to >= view.state.doc.length) {
-        // No line after the table: make one.
-        view.dispatch({ changes: { from: to, insert: "\n" }, selection: { anchor: to + 1 } });
+      const doc = view.state.doc;
+      if (!after) {
+        view.dispatch({ selection: { anchor: Math.max(0, from - 1) } });
       } else {
-        view.dispatch({ selection: { anchor: pos } });
+        // A line typed right under a table joins it as a row, so land below a blank line.
+        const tableEnd = doc.lineAt(to);
+        const next = tableEnd.number < doc.lines ? doc.line(tableEnd.number + 1) : null;
+        const afterNext = next && next.number < doc.lines ? doc.line(next.number + 1) : null;
+        if (next && next.text.trim() === "" && afterNext && afterNext.text.trim() === "") {
+          view.dispatch({ selection: { anchor: afterNext.from } });
+        } else if (next && next.text.trim() === "") {
+          view.dispatch({ changes: { from: next.to, insert: "\n" }, selection: { anchor: next.to + 1 } });
+        } else {
+          view.dispatch({ changes: { from: to, insert: "\n\n" }, selection: { anchor: to + 2 } });
+        }
       }
       view.focus();
     };
@@ -338,7 +347,11 @@ export class TableWidget extends WidgetType {
       if (e.key === "Enter" && !mod) {
         stop();
         if (r < lastRow) focusCell(r + 1, c);
-        else commit(ops.insertRow(t, r + 1), [r + 1, c]);
+        else if (r > 1 && t.rows[r].every((x) => x.trim() === "")) {
+          // Enter on an empty last row ends the table, like an empty list item.
+          commit(ops.deleteRow(t, r));
+          leave(true);
+        } else commit(ops.insertRow(t, r + 1), [r + 1, c]);
       } else if (e.key === "Tab") {
         stop();
         if (e.shiftKey) {
@@ -376,15 +389,13 @@ export class TableWidget extends WidgetType {
       const n = live.table.aligns.length;
       commit(ops.insertCol(live.table, n), [0, n]);
     });
-    const tools = document.createElement("div");
-    tools.className = "cm-widget-tools";
-    tools.append(
-      button("", "</>", "Edit as Markdown", () => {
+    const tools = toolBar([
+      toolButton("Edit as Markdown", ICONS.code, () => {
         const { from } = range();
         view.dispatch({ effects: showTableSource.of(from), selection: { anchor: from } });
         view.focus();
       }),
-    );
+    ]);
     dom.append(addRow, addCol, tools);
 
     // Right-click: Row and Column menus (in the app; the browser keeps its own).
@@ -421,6 +432,10 @@ export class TableWidget extends WidgetType {
 
   ignoreEvent() {
     return true;
+  }
+
+  coordsAt(dom: HTMLElement, pos: number) {
+    return caretRect(dom, pos);
   }
 }
 

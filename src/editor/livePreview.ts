@@ -17,6 +17,35 @@ import {
   WidgetType,
 } from "@codemirror/view";
 import type { SyntaxNodeRef } from "@lezer/common";
+import { caretRect, copyButton, ICONS, toolBar, toolButton } from "./widgetTools";
+
+// Fences that blocks.ts renders as a diagram or formula; they get no code header.
+const RENDERED_FENCES = new Set(["mermaid", "math", "latex", "katex"]);
+
+/** Stands in for a code block's opening fence: the language, and a copy button on hover. */
+class CodeHeaderWidget extends WidgetType {
+  constructor(
+    readonly lang: string,
+    readonly code: string,
+  ) {
+    super();
+  }
+  eq(other: CodeHeaderWidget) {
+    return other.lang === this.lang && other.code === this.code;
+  }
+  toDOM() {
+    const el = document.createElement("span");
+    el.className = "cm-code-header";
+    const label = document.createElement("span");
+    label.className = "cm-code-lang";
+    label.textContent = this.lang;
+    el.append(label, toolBar([copyButton(() => this.code, "Copy code")]));
+    return el;
+  }
+  ignoreEvent() {
+    return true;
+  }
+}
 
 // KaTeX is large and most notes have no maths, so it loads on first use.
 type Katex = typeof import("katex").default;
@@ -128,16 +157,17 @@ class ImageWidget extends WidgetType {
     img.className = "cm-md-image";
     img.loading = "lazy";
     img.draggable = false;
-    const tools = document.createElement("span");
-    tools.className = "cm-widget-tools";
-    tools.append(
-      toolButton("Zoom", ZOOM_ICON, () => showLightbox(this.src, this.alt)),
-      toolButton("Edit as Markdown", "</>", () => {
-        // Put the cursor inside the image's Markdown, which shows it.
-        const from = view.posAtDOM(wrap);
-        view.dispatch({ selection: { anchor: from + 2 } });
-        view.focus();
-      }),
+    const tools = toolBar(
+      [
+        toolButton("Zoom", ICONS.zoom, () => showLightbox(this.src, this.alt)),
+        toolButton("Edit as Markdown", ICONS.code, () => {
+          // Put the cursor inside the image's Markdown, which shows it.
+          const from = view.posAtDOM(wrap);
+          view.dispatch({ selection: { anchor: from + 2 } });
+          view.focus();
+        }),
+      ],
+      true,
     );
     wrap.append(img, tools);
     // Clicking the image selects nothing and keeps it rendered, like a picture in a document.
@@ -148,25 +178,9 @@ class ImageWidget extends WidgetType {
   ignoreEvent() {
     return true;
   }
-}
-
-const ZOOM_ICON =
-  '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5M11 8v6M8 11h6"/></svg>';
-
-function toolButton(title: string, content: string, onClick: () => void) {
-  const b = document.createElement("button");
-  b.title = title;
-  b.setAttribute("aria-label", title);
-  b.tabIndex = -1;
-  if (content.startsWith("<svg")) b.innerHTML = content;
-  else b.textContent = content;
-  b.addEventListener("mousedown", (e) => e.preventDefault());
-  b.addEventListener("click", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    onClick();
-  });
-  return b;
+  coordsAt(dom: HTMLElement, pos: number) {
+    return caretRect(dom, pos);
+  }
 }
 
 /** The image at full size over the page; click or Escape closes it. */
@@ -336,13 +350,30 @@ function build(view: EditorView): { decorations: DecorationSet; atoms: Decoratio
             }
             return;
           case "FencedCode":
-          case "CodeBlock":
+          case "CodeBlock": {
+            const first = state.doc.lineAt(node.from);
+            const last = state.doc.lineAt(node.to);
             for (let pos = node.from; pos <= node.to; ) {
               const line = state.doc.lineAt(pos);
               lineClass(line.from, "cm-md-codeblock");
               pos = line.to + 1;
             }
+            if (name !== "FencedCode") return;
+            const info = node.node.getChild("CodeInfo");
+            const lang = info ? state.doc.sliceString(info.from, info.to).trim().split(/\s+/)[0] : "";
+            const inside = view.hasFocus && state.selection.ranges.some((r) => r.from <= node.to && r.to >= node.from);
+            if (inside || RENDERED_FENCES.has(lang.toLowerCase())) return;
+            // Hide the ``` lines; the opening one shows the language and a copy button.
+            const text = node.node.getChild("CodeText");
+            const code = text ? state.doc.sliceString(text.from, text.to) : "";
+            lineClass(first.from, "cm-md-codeblock-start");
+            deco.push(Decoration.replace({ widget: new CodeHeaderWidget(lang, code) }).range(first.from, first.to));
+            if (last.number > first.number && /^\s*(`{3,}|~{3,})\s*$/.test(last.text)) {
+              lineClass(last.from, "cm-md-codeblock-end");
+              if (last.to > last.from) deco.push(hide.range(last.from, last.to));
+            }
             return;
+          }
         }
       },
     });

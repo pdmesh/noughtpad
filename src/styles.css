@@ -684,42 +684,75 @@ button {
   cursor: default;
 }
 
-/* Hover tools on rich blocks (images, tables): zoom, edit as Markdown. */
+/* Hover tools on rich blocks: plain icon buttons like the sidebar's; boxed over pictures. */
 .cm-widget-tools {
   position: absolute;
-  top: 12px;
-  right: 8px;
+  top: 6px;
+  right: 6px;
   display: flex;
-  gap: 2px;
-  padding: 3px;
-  border-radius: 9px;
-  background: color-mix(in srgb, var(--bg-elev) 88%, transparent);
-  border: 1px solid var(--border);
-  box-shadow: 0 2px 10px rgb(0 0 0 / 0.12);
+  gap: 1px;
   opacity: 0;
   transition: opacity 0.12s ease;
   z-index: 2;
 }
+.cm-widget-tools.is-boxed {
+  padding: 2px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--bg-elev) 90%, transparent);
+  box-shadow: 0 1px 6px rgb(0 0 0 / 0.14);
+}
 .cm-md-image-wrap:hover .cm-widget-tools,
-.cm-table-widget:hover .cm-widget-tools {
+.cm-table-widget:hover .cm-widget-tools,
+.cm-block-widget:hover .cm-widget-tools {
   opacity: 1;
 }
-.cm-widget-tools button {
+.cm-widget-tool {
   display: inline-grid;
   place-items: center;
-  min-width: 26px;
-  height: 24px;
-  padding: 0 5px;
+  width: 24px;
+  height: 22px;
+  padding: 0;
   border: 0;
-  border-radius: 6px;
+  border-radius: 5px;
   background: transparent;
-  color: var(--fg-muted);
-  font: 600 0.72rem var(--font-mono);
+  color: var(--fg-faint);
   cursor: pointer;
 }
-.cm-widget-tools button:hover {
+.cm-widget-tool:hover {
   background: var(--bg-sunk);
   color: var(--fg);
+}
+.cm-widget-tool.is-done {
+  color: var(--accent);
+}
+
+/* Code blocks: the ``` lines hide while the cursor is elsewhere; the first shows the language and Copy. */
+.cm-code-header {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 100%;
+  min-height: 1.2em;
+  vertical-align: top;
+}
+.cm-code-lang {
+  font-size: 0.78em;
+  color: var(--fg-faint);
+}
+.cm-code-header .cm-widget-tools {
+  top: 50%;
+  right: -8px;
+  transform: translateY(-50%);
+  opacity: 0.5;
+}
+.cm-md-codeblock-start:hover .cm-code-header .cm-widget-tools {
+  opacity: 1;
+}
+.cm-md-codeblock-start {
+  padding-top: 4px !important;
+}
+.cm-md-codeblock-end {
+  line-height: 0.6;
 }
 
 .np-lightbox {
@@ -784,8 +817,9 @@ button {
   border-radius: 4px;
   padding: 0.1em 0.25em;
 }
+/* Above the table's top-right corner, clear of the cells. */
 .cm-table-widget .cm-widget-tools {
-  top: -14px;
+  top: -18px;
   right: 22px;
 }
 .cm-table-add-row,
@@ -823,6 +857,7 @@ button {
   background: var(--bg-sunk);
 }
 .cm-block-widget {
+  position: relative;
   padding: 12px 0;
   cursor: text;
   overflow-x: auto;

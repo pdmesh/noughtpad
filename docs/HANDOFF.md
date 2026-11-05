@@ -42,6 +42,11 @@ they are). For the website, read `docs/WEBSITE.md`.
     - Images stay rendered with the cursor next to them; their Markdown shows only when the cursor
       is inside it (</> on hover). Backspace deletes the whole image; zoom or double-click opens it
       full size.
+    - Leaving a table (Esc, arrow past the last row, Enter on an empty last row) lands below a
+      blank line: a line typed straight under a table is a new row in Markdown.
+    - Beside tall widgets (tables, images, diagrams) the cursor is one line high (`coordsAt`).
+    - Code blocks hide their ``` lines while the cursor is elsewhere, showing the language and a copy
+      button; Mermaid and maths blocks have copy and </> on hover (`src/editor/widgetTools.ts`).
     - Text selected inside code blocks and inline code now shows (their background was opaque and
       covered the selection, which is drawn behind the text).
   - **Check on the Mac:** the table right-click menu and typing in cells (WebKit, not tried there),
