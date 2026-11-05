@@ -7,9 +7,8 @@ they are). For the website, read `docs/WEBSITE.md`.
 
 - **Released: v0.1.6**, the first release on this repo. 0.1.5 installs reach it through the bridge
   release on `pdmesh/noughtpad-releases`.
-- **v0.1.8 (2026-11-05, tagged; draft until the user publishes it):** fixes images on the Mac
-  and tidies tables (see "Now" below). After publishing, set `VERSION` in
-  `website/src/config.ts` to 0.1.8 (the download links use it).
+- **v0.1.8 (2026-11-05, published, Latest):** fixes images on the Mac and tidies tables (see
+  "Now" below). The website shows 0.1.8 (`VERSION` in `website/src/config.ts`).
 - **v0.1.7 (2026-11-05, published):** everything below. Images were broken on the Mac in it.
 - **New in 0.1.7:**
   - Pasting images works in the Mac app. The editor reads image files from the paste's `files` or
@@ -84,7 +83,7 @@ they are). For the website, read `docs/WEBSITE.md`.
   Apple signing would fix it. Once, the webview's page load itself started 5.9 s late; not chased.
 - **Apple signing is still deferred** (no Developer Program yet).
 
-## Now: 0.1.8 is tagged, waiting for the user to publish
+## Done: 0.1.8, images on the Mac (published 2026-11-05)
 
 Checked on the Mac (2026-11-05, debug build of `claude/eager-darwin-ghc7tw` on `~/Noughtpad
 Sample`, driven with computer use), files landing in `~/Noughtpad Sample/attachments/2026-11/`:
@@ -111,7 +110,7 @@ Fixed while testing (in 0.1.8):
 - `/table` puts the cursor in the first heading with its text selected; Tab selects the next
   cell's text, as in Word.
 
-Not covered: a real Safari Copy Image (computer use can't drive Safari; simulated), and a release build (the release jobs build it). macOS may
+Not covered: a real Safari Copy Image (computer use can't drive Safari; simulated), and the published 0.1.8 build on a real Mac (an update from 0.1.7 not yet seen). macOS may
 capitalise the first word typed in a table cell (system text correction); left as is.
 
 ## Next (the user chooses)
