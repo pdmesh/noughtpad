@@ -4914,7 +4914,7 @@ dependencies = [
 
 [[package]]
 name = "noughtpad-app"
-version = "0.1.8"
+version = "0.1.9"
 dependencies = [
  "arboard",
  "base64 0.22.1",
@@ -4941,7 +4941,7 @@ dependencies = [
 
 [[package]]
 name = "noughtpad-core"
-version = "0.1.8"
+version = "0.1.9"
 dependencies = [
  "blake3",
  "chrono",
@@ -4962,7 +4962,7 @@ dependencies = [
 
 [[package]]
 name = "noughtpad-llm"
-version = "0.1.8"
+version = "0.1.9"
 dependencies = [
  "futures",
  "genai",
@@ -9028,6 +9028,7 @@ dependencies = [
  "percent-encoding",
  "rustls",
  "rustls-pki-types",
+ "rustls-platform-verifier",
  "ureq-proto",
  "utf8-zero",
  "webpki-roots 1.0.11",

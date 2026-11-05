@@ -130,8 +130,17 @@ mod download {
         progress: &mut impl FnMut(u64, u64),
     ) -> Result<()> {
         std::fs::create_dir_all(dir).at(dir)?;
+        // Verify against the OS trust store rather than the bundled Mozilla
+        // root list: a corporate TLS-inspecting proxy (Zscaler and similar)
+        // presents a certificate signed by a locally-installed root CA that
+        // webpki-roots has never heard of, which otherwise fails as
+        // "invalid peer certificate: UnknownIssuer".
+        let tls = ureq::tls::TlsConfig::builder()
+            .root_certs(ureq::tls::RootCerts::PlatformVerifier)
+            .build();
         let agent: ureq::Agent = ureq::Agent::config_builder()
             .proxy(ureq::Proxy::try_from_env())
+            .tls_config(tls)
             .build()
             .into();
         for file in src.remote_files() {
