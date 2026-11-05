@@ -84,6 +84,38 @@ they are). For the website, read `docs/WEBSITE.md`.
   Apple signing would fix it. Once, the webview's page load itself started 5.9 s late; not chased.
 - **Apple signing is still deferred** (no Developer Program yet).
 
+## Now: fix for image drop and paste in 0.1.7, to test on the Mac, then release 0.1.8
+
+0.1.7 broke images on the Mac in two ways (both were tested only in the browser with the mock backend):
+
+- **"Couldn't save the image: expected the attachment's bytes"** on every paste or drop. 0.1.7 sent the
+  bytes as a raw IPC body, which arrives differently in the macOS webview, so the command refused
+  it. Fixed: base64 in ordinary JSON arguments (`save_attachment { data, extension }`), like every
+  other command's arguments.
+- **A dropped image replaced the whole window** when dropped outside the note text (sidebar,
+  margins). With `dragDropEnabled: false` the webview opens a dropped file it isn't told to keep.
+  Fixed: `main.tsx` swallows file drops nothing handled, and the note page inserts images dropped
+  beside the text (title, margins, empty page) at the cursor.
+
+**Test in a local Mac session with computer use** (branch `claude/eager-darwin-ghc7tw`):
+
+1. Quit the installed Noughtpad (the single-instance guard would hand the launch to it).
+2. `git fetch && git checkout claude/eager-darwin-ghc7tw && git pull`, then `pnpm install` and
+   `pnpm dev:sample` (the sample notebook, `~/Noughtpad Sample`; attachments need no Google secret).
+3. In a new note, check each of these, then look in `~/Noughtpad Sample/attachments/<YYYY-MM>/`
+   for the files:
+   - drag a PNG/JPG from Finder onto the text, onto the title, onto the empty page below the
+     text: each inserts the image at the cursor;
+   - drag one onto the sidebar and onto the Journal page: nothing happens (no takeover, no error);
+   - paste a screenshot (⌘⌃⇧4, then ⌘V), an image copied in Safari (right-click → Copy Image), and
+     one copied from Preview (⌘C);
+   - Insert → Image… (right-click menu) and `/image`: the file picker inserts the chosen image;
+   - a table: type in cells, right-click for Row/Column menus, the + buttons, ⌘Z;
+   - an image's hover tools (zoom, </>), a code block's Copy, right-click Open link on a link.
+4. If all pass: bump to 0.1.8 (root `Cargo.toml`, `package.json`, `cargo check -p noughtpad-app`),
+   merge, tag `v0.1.8` from `main`, and publish once the draft has its 14 files (see How to release).
+   Cloud sessions can't push tags; tag from the Mac.
+
 ## Next (the user chooses)
 
 1. **Website, in its own sessions** (the user starts them): marketing and SEO pages, an Obsidian

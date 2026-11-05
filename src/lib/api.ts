@@ -418,13 +418,21 @@ export const api = {
     call<{ chatId: string }>("chat_send", input),
   chatCancel: (id: string) => call<void>("chat_cancel", { id }),
   /** Save pasted or dropped bytes into the notebook; returns the vault-relative path. */
-  saveAttachment: (bytes: Uint8Array, extension: string): Promise<string> =>
-    isTauri
-      ? invoke<string>("save_attachment", bytes, { headers: { "x-extension": extension } })
-      : (mock("save_attachment", { extension }) as Promise<string>),
+  saveAttachment: async (bytes: Uint8Array, extension: string): Promise<string> =>
+    call<string>("save_attachment", { data: await toBase64(bytes), extension }),
   /** Save the image on the system clipboard, if any (for pastes the webview hands over empty). */
   pasteClipboardImage: () => call<string | null>("paste_clipboard_image"),
 };
+
+/** Base64 of `bytes`, via the browser's encoder (fast for large images). */
+export function toBase64(bytes: Uint8Array): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).slice(String(reader.result).indexOf(",") + 1));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(new Blob([bytes as BlobPart]));
+  });
+}
 
 /** Subscribe to a backend event. Returns an unsubscribe function. */
 export async function onEvent<T>(name: string, handler: (payload: T) => void): Promise<() => void> {

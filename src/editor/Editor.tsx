@@ -8,7 +8,7 @@ import { drawSelection, EditorView, keymap, placeholder as placeholderExt } from
 import { tags as t } from "@lezer/highlight";
 import { assetResolver, linkOpener, livePreview } from "./livePreview";
 import { blockWidgets } from "./blocks";
-import { markdownClipboard, pickImages, type ClipboardOptions } from "./clipboard";
+import { markdownClipboard, pickImages, saveImages, type ClipboardOptions } from "./clipboard";
 import { COMMANDS, imagePicker } from "./commands";
 import { slashMenu } from "./slash";
 import { nativeContextMenu } from "./contextMenu";
@@ -22,6 +22,8 @@ export interface EditorHandle {
   focusEnd(): void;
   setContent(text: string): void;
   getContent(): string;
+  /** Save image files and insert them at the cursor (a drop beside the text). */
+  insertImages(files: File[]): void;
 }
 
 interface Props extends ClipboardOptions {
@@ -79,6 +81,10 @@ export function Editor({ initial, onChange, placeholder, autoFocus, resolveAsset
       v.focus();
     },
     getContent: () => view.current?.state.doc.toString() ?? "",
+    insertImages: (files: File[]) => {
+      const v = view.current;
+      if (v && files.length) void saveImages(v, files, { saveAttachment, onError: (m) => onErrorRef.current?.(m) }, null);
+    },
     setContent: (text: string) => {
       const v = view.current;
       if (!v || v.state.doc.toString() === text) return;
