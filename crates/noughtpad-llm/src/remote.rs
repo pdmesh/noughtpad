@@ -205,9 +205,13 @@ mod imp {
         on_text: &mut (dyn FnMut(&str) + Send),
     ) -> Result<Usage> {
         let client = client(remote.kind, endpoint(remote), key, remote.model.clone())?;
+        // No temperature, top_p, etc.: providers vary in which values each
+        // model accepts (e.g. OpenAI's reasoning models reject anything but
+        // the default), and that set changes with every new model release.
+        // Leaving these at the provider's own default is what stays
+        // compatible without us tracking per-model support.
         let opts = ChatOptions::default()
             .with_max_tokens(req.max_tokens)
-            .with_temperature(req.temperature as f64)
             .with_capture_usage(true);
         let start = std::time::Instant::now();
         let mut usage = Usage::default();
@@ -251,7 +255,6 @@ mod imp {
             .collect();
         let opts = ChatOptions::default()
             .with_max_tokens(req.max_tokens)
-            .with_temperature(req.temperature as f64)
             .with_capture_usage(true)
             .with_capture_tool_calls(true);
         let start = std::time::Instant::now();
