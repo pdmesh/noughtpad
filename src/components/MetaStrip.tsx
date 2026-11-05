@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { BookOpen, ExternalLink, Link2, Tag, X } from "lucide-react";
-import { api, openExternal, type EditableMeta } from "../lib/api";
+import { api, type EditableMeta } from "../lib/api";
 import { LabelInput } from "./LabelInput";
 
 interface Props {
   meta: EditableMeta;
   onChange: (m: EditableMeta) => void;
+  onOpenUrl: (url: string) => void;
 }
 
 /**
@@ -15,7 +16,7 @@ interface Props {
  * note header: the labels row beside the date, and the source row on a line
  * of its own beneath, so a long URL can use the note's full width.
  */
-export function MetaStrip({ meta, onChange }: Props) {
+export function MetaStrip({ meta, onChange, onOpenUrl }: Props) {
   const [showSource, setShowSource] = useState(false);
   const { data: allLabels = [] } = useQuery({ queryKey: ["notes", "labels"], queryFn: api.labels });
 
@@ -88,7 +89,7 @@ export function MetaStrip({ meta, onChange }: Props) {
                 className="icon-btn meta-open"
                 title={`Open in your browser: ${href}`}
                 aria-label="Open the source URL in your browser"
-                onClick={() => void openExternal(href)}
+                onClick={() => onOpenUrl(href)}
               >
                 <ExternalLink size={13} />
               </button>

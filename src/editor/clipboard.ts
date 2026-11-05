@@ -90,7 +90,7 @@ function insertAt(view: EditorView, from: number, to: number, text: string) {
 }
 
 /** Save images and insert their links at `pos`, or over the selection when null. */
-async function saveImages(view: EditorView, images: File[], opts: ClipboardOptions, pos: number | null) {
+export async function saveImages(view: EditorView, images: File[], opts: ClipboardOptions, pos: number | null) {
   const sel = view.state.selection.main;
   const [from, to] = pos === null ? [sel.from, sel.to] : [pos, pos];
   const links: string[] = [];
@@ -102,6 +102,20 @@ async function saveImages(view: EditorView, images: File[], opts: ClipboardOptio
     }
   }
   if (links.length) insertAt(view, from, to, links.join("\n"));
+}
+
+/** Ask for image files and insert them at the cursor (Insert → Image…). */
+export function pickImages(view: EditorView, opts: ClipboardOptions) {
+  if (!opts.saveAttachment) return;
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "image/*";
+  input.multiple = true;
+  input.addEventListener("change", () => {
+    const files = Array.from(input.files ?? []);
+    if (files.length) void saveImages(view, files, opts, null);
+  });
+  input.click();
 }
 
 function insert(view: EditorView, text: string) {

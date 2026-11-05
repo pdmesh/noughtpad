@@ -2341,3 +2341,54 @@ button.cue:hover {
 .settings-error {
   color: var(--danger);
 }
+
+/* ---------- slash menu ---------------------------------------------------- */
+.cm-editor .cm-tooltip.cm-tooltip-autocomplete.np-slash {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 8px 28px rgb(0 0 0 / 0.14);
+  padding: 4px;
+  font-family: var(--font-ui);
+  overflow: hidden;
+}
+.cm-editor .cm-tooltip.cm-tooltip-autocomplete.np-slash > ul {
+  font-family: var(--font-ui);
+  max-height: min(340px, 50vh);
+  min-width: 230px;
+}
+.cm-editor .cm-tooltip.cm-tooltip-autocomplete.np-slash > ul > completion-section {
+  display: list-item;
+  border: 0;
+  padding: 8px 10px 3px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+}
+.cm-editor .cm-tooltip.cm-tooltip-autocomplete.np-slash > ul > li {
+  display: flex;
+  align-items: center;
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 0.88rem;
+  color: var(--fg);
+}
+.cm-editor .cm-tooltip.cm-tooltip-autocomplete.np-slash > ul > li[aria-selected] {
+  background: var(--accent-soft);
+  color: var(--fg);
+}
+.cm-editor .cm-tooltip.cm-tooltip-autocomplete.np-slash .cm-completionLabel {
+  flex: 1;
+}
+.cm-editor .cm-tooltip.cm-tooltip-autocomplete.np-slash .cm-completionDetail {
+  margin-left: 16px;
+  font-style: normal;
+  font-size: 0.78rem;
+  color: var(--fg-faint);
+}
+.cm-editor .cm-tooltip.cm-tooltip-autocomplete.np-slash .cm-completionMatchedText {
+  text-decoration: none;
+  font-weight: inherit;
+}

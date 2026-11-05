@@ -192,10 +192,13 @@ export function NotePane({ noteId, vaultRoot, presetLabels, onCreated, onTrashed
 
   if (!loaded) return <div className="note-pane" aria-busy="true" />;
 
+  const openLink = (url: string) =>
+    void openExternal(url).catch((e) => onNotice?.(`Couldn't open the link: ${isApiError(e) ? e.message : String(e)}`));
+
   return (
     <article className="note-pane">
       <header className="note-header">
-        <MetaStrip meta={meta} onChange={onMeta} />
+        <MetaStrip meta={meta} onChange={onMeta} onOpenUrl={openLink} />
         <div className="note-header-right chrome">
           {doc && <span className="note-date" title={doc.path}>{formatDateTime(doc.created)}</span>}
           <span className={`save-dot save-${status}`} title={statusLabel(status)} aria-label={statusLabel(status)} />
@@ -225,9 +228,9 @@ export function NotePane({ noteId, vaultRoot, presetLabels, onCreated, onTrashed
         initial={doc?.content ?? ""}
         onChange={onContent}
         autoFocus
-        placeholder={noteId ? "" : "Write anything…"}
+        placeholder={noteId ? "" : "Write anything… Type / to insert a heading, list, table…"}
         resolveAsset={(src) => assetUrl(vaultRoot, src)}
-        openLink={(url) => void openExternal(url)}
+        openLink={openLink}
         saveAttachment={api.saveAttachment}
         pasteClipboardImage={isTauri ? api.pasteClipboardImage : undefined}
         onError={onNotice}

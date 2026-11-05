@@ -21,7 +21,19 @@ they are). For the website, read `docs/WEBSITE.md`.
   - The Journal's activity map scales to the column instead of scrolling sideways (it showed a
     scrollbar on Macs set to always show scrollbars, e.g. with a mouse attached). It scrolls only
     below about 570 px of window.
-  - **Check on the Mac:** paste a screenshot (⌘⌃⇧4), an image copied from Safari and from Preview,
+  - **Links open now.** The capability had `opener:allow-open-url` with no URL scope, so the opener
+    refused every URL (source open icon, ⌘-click in notes, chat citations) and the error was
+    dropped. Added `opener:allow-default-urls` (http, https, mailto, tel); a failure now shows a notice.
+  - **Inserting Markdown** (`src/editor/commands.ts`, one command list for all three):
+    - Slash menu (`slash.ts`): `/` at the start of a line or after a space; filters by label and
+      keywords (`/todo`, `/h2`, `/mermaid`); Enter picks. The new-note placeholder mentions it.
+    - Right-click menu in the app (`contextMenu.ts`): a native menu laid out like Obsidian's, with
+      Open link (on a link), Add link, Format, Paragraph (ticks the current type), Insert, Cut, Copy,
+      Paste and Select All. In a plain browser the browser's own menu shows.
+    - Shortcuts: ⌘B, ⌘I, ⌘E (code), ⇧⌘X (strikethrough), ⇧⌘7/8/9 (numbered, bullet, task list).
+    - Only syntax the preview shows is offered: no highlight, comments, callouts or footnotes yet.
+  - **Check on the Mac:** the right-click menu (only the browser version was tried here), Insert →
+    Image… (file picker), Open link; paste a screenshot (⌘⌃⇧4), an image copied from Safari and from Preview,
     and drop a PNG from Finder; the source URL's open icon; the Journal on the bigger Mac.
 
 - **This repo is public** (2026-11-04), and releases live here from 0.1.6. Up to 0.1.5 they were
