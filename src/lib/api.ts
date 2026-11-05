@@ -417,8 +417,13 @@ export const api = {
   chatSend: (input: { chatId: string | null; scope: ChatScope; scopeLabel: string; text: string; consent: boolean }) =>
     call<{ chatId: string }>("chat_send", input),
   chatCancel: (id: string) => call<void>("chat_cancel", { id }),
-  saveAttachment: (bytes: Uint8Array, extension: string) =>
-    call<string>("save_attachment", { bytes: Array.from(bytes), extension }),
+  /** Save pasted or dropped bytes into the notebook; returns the vault-relative path. */
+  saveAttachment: (bytes: Uint8Array, extension: string): Promise<string> =>
+    isTauri
+      ? invoke<string>("save_attachment", bytes, { headers: { "x-extension": extension } })
+      : (mock("save_attachment", { extension }) as Promise<string>),
+  /** Save the image on the system clipboard, if any (for pastes the webview hands over empty). */
+  pasteClipboardImage: () => call<string | null>("paste_clipboard_image"),
 };
 
 /** Subscribe to a backend event. Returns an unsubscribe function. */

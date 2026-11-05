@@ -1,10 +1,12 @@
-// Fenced-block renderers: ```mermaid, ```math and $$…$$ blocks render as
-// widgets when the cursor is outside them. This is Noughtpad's extension point
+// Fenced-block renderers: ```mermaid, ```math and $$…$$ blocks, and GFM
+// tables, render as widgets when the cursor is outside them. This is Noughtpad's extension point
 // for "block plugins" — a renderer is just { languages, render(code, el) }.
 
 import { ensureSyntaxTree, syntaxTree } from "@codemirror/language";
 import { type EditorState, type Range, StateField } from "@codemirror/state";
 import { Decoration, type DecorationSet, EditorView, WidgetType } from "@codemirror/view";
+import { loadMarkdownPipeline } from "./clipboard";
+import { linkOpener } from "./livePreview";
 
 export interface BlockRenderer {
   /** Fence info strings this renderer handles, e.g. ["mermaid"]. */
@@ -19,6 +21,8 @@ export function registerBlockRenderer(r: BlockRenderer) {
 }
 
 let mermaidSeq = 0;
+/** Internal renderer name for GFM tables (not a fence language anyone types). */
+const TABLE = "noughtpad-table";
 
 registerBlockRenderer({
   languages: ["mermaid"],
@@ -44,6 +48,16 @@ registerBlockRenderer({
   },
 });
 
+// GFM tables. Rendered like a model answer (no images, http(s) and mailto links
+// only): a table is for reading, and its source is one click away.
+registerBlockRenderer({
+  languages: [TABLE],
+  async render(code, el) {
+    const p = await loadMarkdownPipeline();
+    el.innerHTML = p.untrustedMarkdownToHtml(code);
+  },
+});
+
 class BlockWidget extends WidgetType {
   constructor(
     readonly lang: string,
@@ -63,6 +77,13 @@ class BlockWidget extends WidgetType {
     void renderer?.render(this.code, el);
     el.addEventListener("mousedown", (e) => {
       e.preventDefault();
+      // Cmd/Ctrl-click on a link opens it, as in the rest of the note.
+      const a = (e.target as HTMLElement).closest?.("a");
+      if (a && (e.metaKey || e.ctrlKey)) {
+        const href = a.getAttribute("href");
+        if (href) view.state.facet(linkOpener)(href);
+        return;
+      }
       // Put the cursor on the first content line so the source shows.
       const line = view.state.doc.lineAt(this.from);
       const target = Math.min(line.to + 1, view.state.doc.length);
@@ -87,6 +108,15 @@ function buildBlocks(state: EditorState): DecorationSet {
 
   tree.iterate({
     enter(node) {
+      if (node.name === "Table") {
+        const from = state.doc.lineAt(node.from).from;
+        const to = state.doc.lineAt(node.to).to;
+        if (!overlapsSelection(state, from, to)) {
+          const code = state.doc.sliceString(from, to);
+          deco.push(Decoration.replace({ widget: new BlockWidget(TABLE, code, from), block: true }).range(from, to));
+        }
+        return false;
+      }
       if (node.name !== "FencedCode") return;
       codeRanges.push([node.from, node.to]);
       const info = node.node.getChild("CodeInfo");

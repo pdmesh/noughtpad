@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
 import { useEvent } from "../lib/useEvent";
-import { api, assetUrl, isApiError, mayHaveChanged, openExternal, type Change, type EditableMeta, type NoteDoc } from "../lib/api";
+import { api, assetUrl, isApiError, isTauri, mayHaveChanged, openExternal, type Change, type EditableMeta, type NoteDoc } from "../lib/api";
 import { Editor, type EditorHandle } from "../editor/Editor";
 import { MetaStrip } from "./MetaStrip";
 import { formatDateTime } from "../lib/format";
@@ -229,6 +229,8 @@ export function NotePane({ noteId, vaultRoot, presetLabels, onCreated, onTrashed
         resolveAsset={(src) => assetUrl(vaultRoot, src)}
         openLink={(url) => void openExternal(url)}
         saveAttachment={api.saveAttachment}
+        pasteClipboardImage={isTauri ? api.pasteClipboardImage : undefined}
+        onError={onNotice}
       />
     </article>
   );

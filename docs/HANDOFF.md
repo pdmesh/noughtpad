@@ -3,17 +3,36 @@
 Read this first, then `ROADMAP.md` (what's next) and `docs/DESIGN.md` (why things are the way
 they are). For the website, read `docs/WEBSITE.md`.
 
-## Where things stand (2026-11-04, end of day)
+## Where things stand (2026-11-05)
+
+- **Released: v0.1.6**, the first release on this repo. 0.1.5 installs reach it through the bridge
+  release on `pdmesh/noughtpad-releases`.
+- **Since 0.1.6 (unreleased, on `claude/eager-darwin-ghc7tw`):**
+  - Pasting images works in the Mac app. The editor reads image files from the paste's `files` or
+    `items`; when the webview hands over a paste with nothing in it (some screenshots and images
+    copied from apps), it asks the app, which reads the system clipboard (`arboard`) and saves a
+    PNG (`paste_clipboard_image`). Dropping image files on a note works too (window
+    `dragDropEnabled: false`, so drops reach the page). Attachments now cross the bridge as raw
+    bytes, not a JSON array, and a failed save shows a notice instead of nothing.
+  - Tables render in the note when the cursor is outside them (like Mermaid; ⌘-click opens a link).
+  - The source row has a line of its own under labels and date, so the URL runs to the note's right
+    edge; long titles and URLs end in "…" with the full text as a tooltip, and an open icon opens a
+    valid URL in the default browser.
+  - The Journal's activity map scales to the column instead of scrolling sideways (it showed a
+    scrollbar on Macs set to always show scrollbars, e.g. with a mouse attached). It scrolls only
+    below about 570 px of window.
+  - **Check on the Mac:** paste a screenshot (⌘⌃⇧4), an image copied from Safari and from Preview,
+    and drop a PNG from Finder; the source URL's open icon; the Journal on the bigger Mac.
 
 - **This repo is public** (2026-11-04), and releases live here from 0.1.6. Up to 0.1.5 they were
   on `pdmesh/noughtpad-releases` (see "Releases" under Gotchas).
-- **Released: v0.1.5**, on `pdmesh/noughtpad-releases`. The user runs it on two Macs. Each release is built by `release.yml` on a
+- **v0.1.5** was the last release on `pdmesh/noughtpad-releases`. The user runs Noughtpad on two Macs. Each release is built by `release.yml` on a
   `v*` tag, with sync linked in (`RELEASE_TOKEN`) and the Google client secret compiled in
   (`NOUGHTPAD_GOOGLE_CLIENT_SECRET`); both are GitHub secrets on this repo.
 - **Auto-update works:** 0.1.2 → 0.1.3 → 0.1.4 → 0.1.5 through Check for Updates…, with no
   Gatekeeper prompt after an update. Since 0.1.5 the app also checks quietly 10 s after start-up
-  and every 4 hours, and shows "Update to x.y.z" at the foot of the sidebar. **Not yet seen:**
-  that button on a real Mac (first chance: the release after 0.1.5).
+  and every 4 hours, and shows "Update to x.y.z" at the foot of the sidebar. **Not yet confirmed:**
+  that button on a real Mac (0.1.5 → 0.1.6 was the first chance).
 - **Sync works between the user's two Macs** (M6 slice 3, verified 2026-11-04): Google Drive,
   `My Drive/Noughtpad/<notes folder name>/`, Testing mode. Seen: a new note and edits reaching
   the other Mac; an open note updating in place when the other Mac's edit arrives (0.1.5).
@@ -41,6 +60,7 @@ they are). For the website, read `docs/WEBSITE.md`.
    /Applications/Noughtpad.app`): delete on one Mac, edit the same paragraph on both, a long
    offline gap, and a Windows or Linux machine (ROADMAP M6 exit).
 3. **Dogfood** (ROADMAP M5 exit), then the parked UX items below.
+4. **Mobile (M7) stays parked** until the user picks it up.
 
 ## How to release
 
@@ -72,8 +92,9 @@ while uploading, see "Release upload race" below. Sync changes must be pushed to
 ## Parked (do when convenient)
 
 - UX leftovers: dark mode, minimum window size, keyboard-only use, related-notes dismiss/undo,
-  chat history delete/hide, leaving a chat while it streams, images and Mermaid, the user's real
-  notes (and whether `min_related` 0.63 holds there).
+  chat history delete/hide, leaving a chat while it streams, the user's real notes (and whether
+  `min_related` 0.63 holds there). Mermaid is checked on the Mac; images are fixed but unchecked
+  there (see above). Code fences still show their ``` lines when the cursor is elsewhere.
 - Turn on "Sync this notebook" automatically after signing in (the user missed the switch once;
   asked, not answered).
 - Providers: Anthropic, OpenAI, LM Studio, the no-tools fallback, reading a key back after a rebuild.

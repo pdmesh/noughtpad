@@ -53,11 +53,13 @@ const theme = EditorView.theme({
   },
 });
 
-export function Editor({ initial, onChange, placeholder, autoFocus, resolveAsset, openLink, saveAttachment, ref }: Props) {
+export function Editor({ initial, onChange, placeholder, autoFocus, resolveAsset, openLink, saveAttachment, pasteClipboardImage, onError, ref }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
+  const onErrorRef = useRef(onError);
+  onErrorRef.current = onError;
   // Set while we replace content programmatically, so it isn't echoed as a user edit.
   const silent = useRef(false);
 
@@ -93,7 +95,7 @@ export function Editor({ initial, onChange, placeholder, autoFocus, resolveAsset
         keymap.of([...markdownKeymap, ...defaultKeymap, ...historyKeymap, indentWithTab]),
         livePreview,
         blockWidgets,
-        markdownClipboard({ saveAttachment }),
+        markdownClipboard({ saveAttachment, pasteClipboardImage, onError: (m) => onErrorRef.current?.(m) }),
         assetResolver.of(resolveAsset ?? ((s) => s)),
         ...(openLink ? [linkOpener.of(openLink)] : []),
         placeholderExt(placeholder ?? ""),

@@ -358,8 +358,9 @@ button {
 }
 .note-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
-  gap: 12px;
+  gap: 4px 12px;
   min-height: 34px;
   margin-bottom: 10px;
 }
@@ -414,8 +415,14 @@ button {
   opacity: 0.55;
 }
 .note-header:hover .meta-strip,
-.meta-strip:focus-within {
+.note-header:focus-within .meta-strip {
   opacity: 1;
+}
+/* The source row takes a line of its own under the labels and date. */
+.meta-source {
+  order: 1;
+  flex: 1 0 100%;
+  min-width: 0;
 }
 .is-typing .meta-strip:not(:focus-within) {
   opacity: 0;
@@ -445,11 +452,25 @@ button {
 .meta-input::placeholder {
   color: var(--fg-faint);
 }
+.meta-source .meta-row {
+  flex-wrap: nowrap;
+}
+.meta-source-title,
+.meta-source-url {
+  min-width: 0;
+  text-overflow: ellipsis;
+}
 .meta-source-title {
-  flex: 1 1 200px;
+  flex: 2 1 0;
 }
 .meta-source-url {
-  flex: 1 1 160px;
+  flex: 3 1 0;
+}
+.meta-open {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  color: var(--fg-faint);
 }
 .meta-add {
   display: inline-flex;
@@ -662,6 +683,28 @@ button {
 .cm-block-widget svg {
   max-width: 100%;
   height: auto;
+}
+.cm-block-noughtpad-table {
+  text-align: left;
+  padding: 6px 0;
+}
+.cm-block-noughtpad-table table {
+  border-collapse: collapse;
+  font-size: 0.95em;
+}
+.cm-block-noughtpad-table th,
+.cm-block-noughtpad-table td {
+  border: 1px solid var(--border);
+  padding: 4px 10px;
+  vertical-align: top;
+}
+.cm-block-noughtpad-table th {
+  background: var(--bg-sunk);
+  font-weight: 600;
+}
+.cm-block-noughtpad-table a {
+  color: var(--link);
+  text-underline-offset: 3px;
 }
 .cm-block-error {
   color: var(--danger);
@@ -1191,9 +1234,14 @@ button {
   overflow-x: auto;
   direction: rtl; /* start scrolled to the most recent weeks on narrow screens */
 }
+/* The year scales to the column's width, so there's no scrollbar beside the note;
+   it only scrolls on a narrow window, where it would get too small to read. */
 .activity-map {
   direction: ltr;
   display: block;
+  width: 100%;
+  height: auto;
+  min-width: 520px;
 }
 .activity-label {
   font-size: 9px;
