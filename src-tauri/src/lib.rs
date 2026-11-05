@@ -555,9 +555,12 @@ pub fn run() {
         .manage(AppState::default())
         .manage(think::LlmState::default());
 
+    // `capture`/`capture_alt` are registered in `setup` below, which runs on every
+    // platform (mobile needs `sync::init` to run too); the shortcut itself is
+    // desktop-only, so only its registration is `#[cfg(desktop)]`.
     #[cfg(desktop)]
-    {
-        use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
+    let (capture, capture_alt) = {
+        use tauri_plugin_global_shortcut::{Code, Modifiers, Shortcut, ShortcutState};
         // Quick capture from anywhere: Cmd/Ctrl+Shift+Space.
         let capture = Shortcut::new(Some(Modifiers::SUPER | Modifiers::SHIFT), Code::Space);
         let capture_alt = Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::Space);
@@ -579,13 +582,23 @@ pub fn run() {
                 lifecycle::on_window_event(window, event);
                 sync::on_window_event(window, event);
             });
-        #[cfg(target_os = "macos")]
+        (capture, capture_alt)
+    };
+    #[cfg(target_os = "macos")]
+    {
+        builder = builder.menu(menu::build).on_menu_event(menu::on_menu_event);
+    }
+
+    // Runs on every platform: without this, `SyncState` is never managed and
+    // every sync command (registered below, unconditionally) would fail at
+    // runtime on first call. Found while proving a mobile build of this
+    // crate's logic (it used to be nested inside the desktop-only block above).
+    builder = builder.setup(move |app| {
+        tracing::info!(ms = since_start(), "setup");
+        app.manage(sync::init(app.handle()));
+        #[cfg(desktop)]
         {
-            builder = builder.menu(menu::build).on_menu_event(menu::on_menu_event);
-        }
-        builder = builder.setup(move |app| {
-            tracing::info!(ms = since_start(), "setup");
-            app.manage(sync::init(app.handle()));
+            use tauri_plugin_global_shortcut::GlobalShortcutExt;
             lifecycle::show_at_startup(app.handle());
             let shortcut = if cfg!(target_os = "macos") {
                 capture
@@ -595,9 +608,9 @@ pub fn run() {
             if let Err(e) = app.global_shortcut().register(shortcut) {
                 tracing::warn!("could not register quick-capture shortcut: {e}");
             }
-            Ok(())
-        });
-    }
+        }
+        Ok(())
+    });
 
     builder
         // Startup timeline next to `editor ready`: page load start/finish show the webview's share.
