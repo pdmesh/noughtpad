@@ -507,6 +507,8 @@ export async function mock(cmd: string, a: Record<string, any> = {}): Promise<un
       return { indexed: notes.length, unchanged: 0, removed: 0 };
     case "save_attachment":
       return `attachments/mock-${Date.now()}.${a.extension}`;
+    case "paste_clipboard_image":
+      return null;
     default:
       throw { kind: "internal", message: `mock: unknown command ${cmd}` };
   }

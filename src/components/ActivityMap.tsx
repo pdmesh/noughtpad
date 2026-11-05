@@ -52,7 +52,7 @@ export function ActivityMap() {
         <Stat value={s.longest} label="longest streak" />
       </div>
       <div className="activity-scroll">
-        <svg width={width} height={height} role="img" aria-label={summary} className="activity-map">
+        <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={summary} className="activity-map">
           {monthLabels.map(({ i, d }) => (
             <text key={i} x={LEFT + i * (CELL + GAP)} y={10} className="activity-label">
               {monthFmt.format(d)}

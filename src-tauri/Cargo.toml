@@ -46,3 +46,6 @@ tauri-plugin-autostart = "2"
 tauri-plugin-global-shortcut = "2"
 tauri-plugin-updater = "2"
 tauri-plugin-single-instance = "2"
+# Reading a pasted image from the system clipboard when the webview gets no file for it.
+arboard = { version = "3", default-features = false, features = ["image-data"] }
+png = "0.18"

@@ -418,11 +418,15 @@ async fn rebuild_index(state: State<'_, AppState>) -> CmdResult<ScanReport> {
         .map_err(Into::into)
 }
 
-/// Save pasted/dropped binary data under `attachments/YYYY-MM/` and return
-/// its vault-relative path (for a Markdown link).
-#[tauri::command]
-async fn save_attachment(state: State<'_, AppState>, bytes: Vec<u8>, extension: String) -> CmdResult<String> {
-    let v = state.vault()?;
+fn io_err(e: impl std::fmt::Display) -> CmdError {
+    CmdError {
+        kind: "io",
+        message: e.to_string(),
+    }
+}
+
+/// Write `bytes` under `attachments/YYYY-MM/` and return the vault-relative path.
+fn write_attachment(vault: &Vault, bytes: &[u8], extension: &str) -> CmdResult<String> {
     let ext: String = extension
         .chars()
         .filter(|c| c.is_ascii_alphanumeric())
@@ -438,14 +442,68 @@ async fn save_attachment(state: State<'_, AppState>, bytes: Vec<u8>, extension: 
         chrono::Local::now().format("%Y-%m"),
         ulid::Ulid::new().to_string().to_lowercase()
     );
-    let abs = v.root().join(&rel);
+    let abs = vault.root().join(&rel);
     std::fs::create_dir_all(abs.parent().unwrap())
         .and_then(|_| std::fs::write(&abs, bytes))
-        .map_err(|e| CmdError {
-            kind: "io",
-            message: e.to_string(),
-        })?;
+        .map_err(io_err)?;
     Ok(rel)
+}
+
+/// Save pasted/dropped binary data and return its vault-relative path (for a
+/// Markdown link). The body is the raw bytes, not a JSON array of numbers, so a
+/// large screenshot crosses the bridge quickly; the `x-extension` header names
+/// the file type.
+#[tauri::command]
+async fn save_attachment(state: State<'_, AppState>, request: tauri::ipc::Request<'_>) -> CmdResult<String> {
+    let v = state.vault()?;
+    let tauri::ipc::InvokeBody::Raw(bytes) = request.body() else {
+        return Err(CmdError {
+            kind: "invalid",
+            message: "expected the attachment's bytes".into(),
+        });
+    };
+    let ext = request
+        .headers()
+        .get("x-extension")
+        .and_then(|h| h.to_str().ok())
+        .unwrap_or("bin");
+    write_attachment(&v, bytes, ext)
+}
+
+/// Save the image on the system clipboard as a PNG attachment, if there is one.
+/// The webview doesn't always hand pasted images to the page (a screenshot or an
+/// image copied from another app can arrive with no file), so the editor asks
+/// here when a paste carries nothing it can use.
+#[tauri::command]
+async fn paste_clipboard_image(state: State<'_, AppState>) -> CmdResult<Option<String>> {
+    let v = state.vault()?;
+    #[cfg(desktop)]
+    {
+        tauri::async_runtime::spawn_blocking(move || {
+            let Ok(img) = arboard::Clipboard::new().and_then(|mut c| c.get_image()) else {
+                return Ok(None);
+            };
+            let mut png_bytes = Vec::new();
+            {
+                let mut enc = png::Encoder::new(&mut png_bytes, img.width as u32, img.height as u32);
+                enc.set_color(png::ColorType::Rgba);
+                enc.set_depth(png::BitDepth::Eight);
+                let mut w = enc.write_header().map_err(io_err)?;
+                w.write_image_data(&img.bytes).map_err(io_err)?;
+            }
+            write_attachment(&v, &png_bytes, "png").map(Some)
+        })
+        .await
+        .map_err(|e| CmdError {
+            kind: "internal",
+            message: e.to_string(),
+        })?
+    }
+    #[cfg(mobile)]
+    {
+        let _ = v;
+        Ok(None)
+    }
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -537,6 +595,7 @@ pub fn run() {
             day_counts,
             rebuild_index,
             save_attachment,
+            paste_clipboard_image,
             sync::sync_status,
             sync::sync_sign_in,
             sync::sync_sign_out,

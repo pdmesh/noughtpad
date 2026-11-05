@@ -1,10 +1,14 @@
 // Fenced-block renderers: ```mermaid, ```math and $$…$$ blocks render as
-// widgets when the cursor is outside them. This is Noughtpad's extension point
+// widgets when the cursor is outside them. GFM tables are always a widget,
+// edited in place (table.ts). This is Noughtpad's extension point
 // for "block plugins" — a renderer is just { languages, render(code, el) }.
 
 import { ensureSyntaxTree, syntaxTree } from "@codemirror/language";
 import { type EditorState, type Range, StateField } from "@codemirror/state";
 import { Decoration, type DecorationSet, EditorView, WidgetType } from "@codemirror/view";
+import { TableWidget, tableSource } from "./table";
+import { linkOpener } from "./livePreview";
+import { caretRect, copyButton, ICONS, toolBar, toolButton } from "./widgetTools";
 
 export interface BlockRenderer {
   /** Fence info strings this renderer handles, e.g. ["mermaid"]. */
@@ -60,19 +64,35 @@ class BlockWidget extends WidgetType {
     el.className = `cm-block-widget cm-block-${this.lang}`;
     el.title = "Click to edit";
     const renderer = registry.get(this.lang);
-    void renderer?.render(this.code, el);
+    const body = document.createElement("div");
+    body.className = "cm-block-body";
+    el.append(body);
+    void renderer?.render(this.code, body);
+    const edit = () => {
+      const line = view.state.doc.lineAt(this.from);
+      view.dispatch({ selection: { anchor: Math.min(line.to + 1, view.state.doc.length) } });
+      view.focus();
+    };
+    el.append(toolBar([copyButton(() => this.code, "Copy source"), toolButton("Edit as Markdown", ICONS.code, edit)]));
     el.addEventListener("mousedown", (e) => {
       e.preventDefault();
+      // Cmd/Ctrl-click on a link opens it, as in the rest of the note.
+      const a = (e.target as HTMLElement).closest?.("a");
+      if (a && (e.metaKey || e.ctrlKey)) {
+        const href = a.getAttribute("href");
+        if (href) view.state.facet(linkOpener)(href);
+        return;
+      }
       // Put the cursor on the first content line so the source shows.
-      const line = view.state.doc.lineAt(this.from);
-      const target = Math.min(line.to + 1, view.state.doc.length);
-      view.dispatch({ selection: { anchor: target } });
-      view.focus();
+      edit();
     });
     return el;
   }
   ignoreEvent() {
     return true;
+  }
+  coordsAt(dom: HTMLElement, pos: number) {
+    return caretRect(dom, pos);
   }
 }
 
@@ -87,6 +107,16 @@ function buildBlocks(state: EditorState): DecorationSet {
 
   tree.iterate({
     enter(node) {
+      if (node.name === "Table") {
+        const from = state.doc.lineAt(node.from).from;
+        const to = state.doc.lineAt(node.to).to;
+        // Edited in place; its Markdown shows only after "Edit as Markdown" (</>).
+        if (state.field(tableSource, false) !== from) {
+          const code = state.doc.sliceString(from, to);
+          deco.push(Decoration.replace({ widget: new TableWidget(code), block: true }).range(from, to));
+        }
+        return false;
+      }
       if (node.name !== "FencedCode") return;
       codeRanges.push([node.from, node.to]);
       const info = node.node.getChild("CodeInfo");
@@ -126,8 +156,9 @@ function buildBlocks(state: EditorState): DecorationSet {
 export const blockWidgets = StateField.define<DecorationSet>({
   create: buildBlocks,
   update(value, tr) {
-    if (tr.docChanged || tr.selection || syntaxTree(tr.startState) !== syntaxTree(tr.state)) return buildBlocks(tr.state);
+    if (tr.docChanged || tr.selection || tr.effects.length || syntaxTree(tr.startState) !== syntaxTree(tr.state))
+      return buildBlocks(tr.state);
     return value;
   },
-  provide: (f) => EditorView.decorations.from(f),
+  provide: (f) => [EditorView.decorations.from(f), tableSource],
 });

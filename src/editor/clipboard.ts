@@ -2,7 +2,7 @@
 //  * Copy/cut puts Markdown on text/plain and rendered HTML on text/html.
 //  * Pasting rich HTML (browser, Docs, Word) converts it to Markdown.
 //  * Pasting a URL over a selection makes a link.
-//  * Pasting an image saves it into the vault and inserts ![](path).
+//  * Pasting or dropping an image saves it into the vault and inserts ![](path).
 //  * Cmd/Ctrl+Shift+V always pastes plain text.
 
 import { EditorSelection, type Extension } from "@codemirror/state";
@@ -22,7 +22,34 @@ export function loadMarkdownPipeline(): Promise<Pipeline> {
 export interface ClipboardOptions {
   /** Persist binary data, returning a vault-relative path. */
   saveAttachment?: (bytes: Uint8Array, extension: string) => Promise<string>;
+  /**
+   * Save the image on the system clipboard, returning its path, or null if there
+   * is none. Used when a paste reaches the page with nothing usable in it, which
+   * the macOS webview does for some screenshots and images copied from apps.
+   */
+  pasteClipboardImage?: () => Promise<string | null>;
+  /** Report a failure (saving an image) to the person. */
+  onError?: (message: string) => void;
 }
+
+/** Image files in a paste or drop, from `files` or, failing that, `items`. */
+export function imageFiles(data: DataTransfer): File[] {
+  const files = Array.from(data.files ?? []).filter((f) => f.type.startsWith("image/"));
+  if (files.length) return files;
+  return Array.from(data.items ?? [])
+    .filter((i) => i.kind === "file" && i.type.startsWith("image/"))
+    .map((i) => i.getAsFile())
+    .filter((f): f is File => !!f);
+}
+
+export function extensionFor(file: File): string {
+  const sub = file.type.split("/")[1]?.split("+")[0] ?? "";
+  if (sub === "jpeg") return "jpg";
+  if (sub) return sub;
+  return file.name.split(".").pop() || "png";
+}
+
+const imageLink = (rel: string) => `![](${encodeURI(rel)})`;
 
 function selectedMarkdown(view: EditorView): string {
   return view.state.selection.ranges
@@ -42,6 +69,53 @@ function writeClipboard(e: ClipboardEvent, md: string) {
   }
   e.preventDefault();
   return true;
+}
+
+function message(err: unknown): string {
+  if (err && typeof err === "object" && "message" in err) return String((err as { message: unknown }).message);
+  return String(err);
+}
+
+/** Replace from..to (clamped to the current document) with text, cursor after it. */
+function insertAt(view: EditorView, from: number, to: number, text: string) {
+  const len = view.state.doc.length;
+  const a = Math.min(from, len);
+  const b = Math.min(Math.max(to, a), len);
+  view.dispatch({
+    changes: { from: a, to: b, insert: text },
+    selection: EditorSelection.cursor(a + text.length),
+    scrollIntoView: true,
+    userEvent: "input.paste",
+  });
+}
+
+/** Save images and insert their links at `pos`, or over the selection when null. */
+export async function saveImages(view: EditorView, images: File[], opts: ClipboardOptions, pos: number | null) {
+  const sel = view.state.selection.main;
+  const [from, to] = pos === null ? [sel.from, sel.to] : [pos, pos];
+  const links: string[] = [];
+  for (const f of images) {
+    try {
+      links.push(imageLink(await opts.saveAttachment!(new Uint8Array(await f.arrayBuffer()), extensionFor(f))));
+    } catch (err) {
+      opts.onError?.(`Couldn't save the image: ${message(err)}`);
+    }
+  }
+  if (links.length) insertAt(view, from, to, links.join("\n"));
+}
+
+/** Ask for image files and insert them at the cursor (Insert → Image…). */
+export function pickImages(view: EditorView, opts: ClipboardOptions) {
+  if (!opts.saveAttachment) return;
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "image/*";
+  input.multiple = true;
+  input.addEventListener("change", () => {
+    const files = Array.from(input.files ?? []);
+    if (files.length) void saveImages(view, files, opts, null);
+  });
+  input.click();
 }
 
 function insert(view: EditorView, text: string) {
@@ -66,28 +140,50 @@ export function markdownClipboard(opts: ClipboardOptions = {}): Extension {
       view.dispatch(view.state.replaceSelection(""), { userEvent: "delete.cut" });
       return true;
     },
+    dragover(e) {
+      // Allow dropping image files (the default would open them in the window).
+      if (opts.saveAttachment && e.dataTransfer && Array.from(e.dataTransfer.types).includes("Files")) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "copy";
+        return true;
+      }
+      return false;
+    },
+    drop(e, view) {
+      if (!e.dataTransfer || !opts.saveAttachment) return false;
+      const images = imageFiles(e.dataTransfer);
+      if (!images.length) return false;
+      e.preventDefault();
+      const pos = view.posAtCoords({ x: e.clientX, y: e.clientY }) ?? view.state.selection.main.head;
+      void saveImages(view, images, opts, pos);
+      return true;
+    },
     paste(e, view) {
       const data = e.clipboardData;
       const plainOnly = plainNext;
       plainNext = false;
       if (!data) return false;
 
-      const images = Array.from(data.files).filter((f) => f.type.startsWith("image/"));
+      const images = imageFiles(data);
       if (images.length && opts.saveAttachment) {
         e.preventDefault();
-        void (async () => {
-          const links: string[] = [];
-          for (const f of images) {
-            const ext = f.type.split("/")[1]?.replace("jpeg", "jpg") ?? "png";
-            const rel = await opts.saveAttachment!(new Uint8Array(await f.arrayBuffer()), ext);
-            links.push(`![](${encodeURI(rel)})`);
-          }
-          insert(view, links.join("\n"));
-        })();
+        void saveImages(view, images, opts, null);
         return true;
       }
 
       const text = data.getData("text/plain");
+      const html = data.getData("text/html");
+      // Nothing the page can use: ask the app for the clipboard's image directly.
+      if (!text && !html && opts.pasteClipboardImage) {
+        e.preventDefault();
+        const at = view.state.selection.main;
+        void opts
+          .pasteClipboardImage()
+          .then((rel) => rel && insertAt(view, at.from, at.to, imageLink(rel)))
+          .catch((err) => opts.onError?.(`Couldn't paste the image: ${message(err)}`));
+        return true;
+      }
+
       const sel = view.state.selection.main;
       if (!plainOnly && isUrl(text) && !sel.empty) {
         const label = view.state.sliceDoc(sel.from, sel.to);
@@ -103,7 +199,6 @@ export function markdownClipboard(opts: ClipboardOptions = {}): Extension {
         }
       }
 
-      const html = data.getData("text/html");
       if (shouldConvertHtml(Array.from(data.types), html, plainOnly)) {
         if (!pipeline) {
           // Not loaded yet: take over the paste, convert once it arrives, and fall back to plain text.

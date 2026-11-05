@@ -8,7 +8,14 @@ import { drawSelection, EditorView, keymap, placeholder as placeholderExt } from
 import { tags as t } from "@lezer/highlight";
 import { assetResolver, linkOpener, livePreview } from "./livePreview";
 import { blockWidgets } from "./blocks";
-import { markdownClipboard, type ClipboardOptions } from "./clipboard";
+import { markdownClipboard, pickImages, type ClipboardOptions } from "./clipboard";
+import { COMMANDS, imagePicker } from "./commands";
+import { slashMenu } from "./slash";
+import { nativeContextMenu } from "./contextMenu";
+import { isTauri } from "../lib/api";
+
+// Formatting shortcuts (⌘B, ⌘I, ⌘E, ⇧⌘X, ⇧⌘7/8/9), ahead of the default keymap's ⌘I.
+const formatKeymap = COMMANDS.filter((c) => c.key).map((c) => ({ key: c.key!, run: c.run, preventDefault: true }));
 
 export interface EditorHandle {
   focus(): void;
@@ -53,11 +60,13 @@ const theme = EditorView.theme({
   },
 });
 
-export function Editor({ initial, onChange, placeholder, autoFocus, resolveAsset, openLink, saveAttachment, ref }: Props) {
+export function Editor({ initial, onChange, placeholder, autoFocus, resolveAsset, openLink, saveAttachment, pasteClipboardImage, onError, ref }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
+  const onErrorRef = useRef(onError);
+  onErrorRef.current = onError;
   // Set while we replace content programmatically, so it isn't echoed as a user edit.
   const silent = useRef(false);
 
@@ -90,10 +99,13 @@ export function Editor({ initial, onChange, placeholder, autoFocus, resolveAsset
         EditorView.contentAttributes.of({ spellcheck: "true", autocorrect: "on", autocapitalize: "sentences" }),
         markdown({ base: markdownLanguage, codeLanguages: languages, addKeymap: true }),
         syntaxHighlighting(highlight),
-        keymap.of([...markdownKeymap, ...defaultKeymap, ...historyKeymap, indentWithTab]),
+        slashMenu,
+        keymap.of([...formatKeymap, ...markdownKeymap, ...defaultKeymap, ...historyKeymap, indentWithTab]),
         livePreview,
         blockWidgets,
-        markdownClipboard({ saveAttachment }),
+        markdownClipboard({ saveAttachment, pasteClipboardImage, onError: (m) => onErrorRef.current?.(m) }),
+        imagePicker.of((v) => pickImages(v, { saveAttachment, onError: (m) => onErrorRef.current?.(m) })),
+        ...(isTauri ? [nativeContextMenu()] : []),
         assetResolver.of(resolveAsset ?? ((s) => s)),
         ...(openLink ? [linkOpener.of(openLink)] : []),
         placeholderExt(placeholder ?? ""),
