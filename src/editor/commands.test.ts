@@ -1,9 +1,16 @@
 // @vitest-environment jsdom
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { EditorSelection, EditorState } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { insertBlock, parseLine, setBlock, stripInline, toggleMark } from "./commands";
 import { matchCommands } from "./slash";
+
+// jsdom has no layout: give CodeMirror's measuring something to call, and
+// destroy each view so no measurement runs after its test.
+Range.prototype.getClientRects ??= () => ({ length: 0, item: () => null, [Symbol.iterator]: [][Symbol.iterator] }) as unknown as DOMRectList;
+Range.prototype.getBoundingClientRect ??= () => new DOMRect();
+const views: EditorView[] = [];
+afterEach(() => views.splice(0).forEach((v) => v.destroy()));
 
 /** A view over `doc`, where `|` marks the cursor and `[`…`]` a selection. */
 function view(doc: string) {
@@ -18,7 +25,9 @@ function view(doc: string) {
     doc = doc.replace("|", "");
     sel = EditorSelection.single(c);
   }
-  return new EditorView({ state: EditorState.create({ doc, selection: sel, extensions: [EditorState.allowMultipleSelections.of(true)] }) });
+  const v = new EditorView({ state: EditorState.create({ doc, selection: sel, extensions: [EditorState.allowMultipleSelections.of(true)] }) });
+  views.push(v);
+  return v;
 }
 
 /** The document with the cursor/selection marked the same way. */
