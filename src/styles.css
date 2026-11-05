@@ -669,11 +669,13 @@ button {
   height: 1.7em;
   background: linear-gradient(var(--border), var(--border)) center / 100% 1px no-repeat;
 }
+/* A picture always has a line of its own, even when its Markdown shares a line with text
+   or another picture: text beside it would wrap around it and read as overlapping. */
 .cm-md-image-wrap {
   position: relative;
-  display: inline-block;
+  display: block;
+  width: fit-content;
   max-width: 100%;
-  vertical-align: top;
 }
 .cm-md-image {
   display: block;

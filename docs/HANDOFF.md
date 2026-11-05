@@ -104,13 +104,14 @@ Fixed while testing (in 0.1.8):
 - Images go in a paragraph of their own (`imageBlock` in `clipboard.ts`): an image in the middle of
   a line was drawn over its text, and pasted images sat side by side. A drop on the text goes
   below the line it lands on, a drop below the text at the end of the note; images re-measure
-  the editor when they load.
+  the editor when they load. An image whose Markdown already shares a line (older notes) still
+  shows on a line of its own, with the text above and below it (`.cm-md-image-wrap` is a block).
 - Clicking below a table (or a closed code or maths block) at the end of a note opens a fresh
   paragraph (`cursorToEnd`); before, the next line typed became a table row.
 - `/table` puts the cursor in the first heading with its text selected; Tab selects the next
   cell's text, as in Word.
 
-Not covered: a real drag from Safari, and a release build (the release jobs build it). macOS may
+Not covered: a real Safari Copy Image (computer use can't drive Safari; simulated), and a release build (the release jobs build it). macOS may
 capitalise the first word typed in a table cell (system text correction); left as is.
 
 ## Next (the user chooses)
