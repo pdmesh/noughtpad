@@ -475,13 +475,14 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
           }
         }}
         onDrop={(e) => {
-          // Images dropped beside the text (margins, title, empty page) go in at the cursor.
-          // Drops on the text itself are handled by the editor first.
+          // Images dropped beside the text (margins, title) go in at the cursor; below the
+          // text, at the end of the note. Drops on the text itself are handled by the editor first.
           if (view.kind !== "write" || e.defaultPrevented) return;
           const files = imageFiles(e.dataTransfer);
           if (!files.length) return;
           e.preventDefault();
-          editorRef.current?.insertImages(files);
+          const bottom = editorRef.current?.contentBottom();
+          editorRef.current?.insertImages(files, bottom != null && e.clientY > bottom ? "end" : "cursor");
         }}
         onMouseDown={(e) => {
           // On the writing page, clicking empty space puts the cursor at the end, like paper.

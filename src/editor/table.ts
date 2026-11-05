@@ -166,6 +166,8 @@ interface Live {
   code: string;
   table: Table;
   render(): void;
+  /** Put the cursor in cell [r, c] with its text selected, so typing replaces it. */
+  select?(r: number, c: number): void;
 }
 
 type Item =
@@ -233,6 +235,16 @@ export class TableWidget extends WidgetType {
         sel.removeAllRanges();
         sel.addRange(rng);
       }
+    };
+    live.select = (r, c) => {
+      const cell = cellAt(r, c);
+      if (!cell) return;
+      cell.focus();
+      const sel = window.getSelection();
+      const rng = document.createRange();
+      rng.selectNodeContents(cell);
+      sel?.removeAllRanges();
+      sel?.addRange(rng);
     };
     const leave = (after: boolean) => {
       const { from, to } = range();
@@ -354,11 +366,13 @@ export class TableWidget extends WidgetType {
         } else commit(ops.insertRow(t, r + 1), [r + 1, c]);
       } else if (e.key === "Tab") {
         stop();
+        // Tab selects the next cell's text, as in a spreadsheet or Word, so typing replaces it.
+        const select = (rr: number, cc: number) => live.select?.(rr, cc);
         if (e.shiftKey) {
-          if (c > 0) focusCell(r, c - 1);
-          else if (r > 0) focusCell(r - 1, lastCol);
-        } else if (c < lastCol) focusCell(r, c + 1);
-        else if (r < lastRow) focusCell(r + 1, 0);
+          if (c > 0) select(r, c - 1);
+          else if (r > 0) select(r - 1, lastCol);
+        } else if (c < lastCol) select(r, c + 1);
+        else if (r < lastRow) select(r + 1, 0);
         else commit(ops.insertRow(t, r + 1), [r + 1, 0]);
       } else if (e.key === "ArrowUp") {
         stop();
@@ -530,4 +544,13 @@ async function popup(items: Item[]) {
   };
   const menu = await Menu.new({ items: (await Promise.all(items.map(make))) as never[] });
   await menu.popup();
+}
+
+/** Put the cursor in a cell of the table starting at `pos`, with its text selected (a new table). */
+export function selectTableCell(view: EditorView, pos: number, r: number, c: number) {
+  for (const dom of Array.from(view.contentDOM.querySelectorAll<HTMLElement>(".cm-table-widget"))) {
+    if (view.posAtDOM(dom) !== pos) continue;
+    (dom as HTMLElement & { npTable?: Live }).npTable?.select?.(r, c);
+    return;
+  }
 }

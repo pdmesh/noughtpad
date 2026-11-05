@@ -4,6 +4,7 @@
 
 import { EditorSelection, type EditorState, Facet, type Line } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
+import { selectTableCell } from "./table";
 
 export type Section = "Format" | "Paragraph" | "Insert";
 
@@ -196,6 +197,29 @@ export function setBlock(view: EditorView, block: Block): boolean {
 
 // ---------- inserted blocks ----------------------------------------------------
 
+/** Whether the note ends with a block that the next typed line would join or break:
+ * a table (a line under it becomes a row) or a closed code or maths block. */
+function endsInBlock(doc: string): boolean {
+  const lines = doc.split("\n");
+  const last = lines[lines.length - 1].trim();
+  if (last.startsWith("|")) return true;
+  const fence = /^(```|~~~|\$\$)/.exec(last);
+  if (!fence) return false;
+  // Closed only if the fences before it pair up: an odd count means this one opens a block.
+  const count = lines.filter((l) => l.trim().startsWith(fence[1])).length;
+  return count % 2 === 0;
+}
+
+/** Put the cursor at the end of the note, on a fresh paragraph if the note ends in a block. */
+export function cursorToEnd(view: EditorView) {
+  const doc = view.state.doc;
+  if (endsInBlock(doc.toString())) {
+    view.dispatch({ changes: { from: doc.length, insert: "\n\n" }, selection: { anchor: doc.length + 2 }, scrollIntoView: true });
+  } else {
+    view.dispatch({ selection: { anchor: doc.length }, scrollIntoView: true });
+  }
+}
+
 /**
  * Insert a block of Markdown on its own lines. `select` is [from, to] within
  * `text` to select afterwards (a cursor when equal).
@@ -231,6 +255,15 @@ export function insertBlock(view: EditorView, text: string, select: [number, num
 }
 
 const TABLE = "| Column | Column |\n| --- | --- |\n|  |  |";
+
+/** A new table, with the cursor in its first heading to name it. */
+function insertTable(view: EditorView): boolean {
+  insertBlock(view, TABLE, [2, 8]);
+  // The table shows as a widget over its Markdown: the cursor goes into the widget's cell.
+  const at = view.state.doc.lineAt(view.state.selection.main.head).from;
+  selectTableCell(view, at, 0, 0);
+  return true;
+}
 const MERMAID = "```mermaid\nflowchart TD\n  A[Start] --> B[Finish]\n```";
 
 // ---------- the list -------------------------------------------------------------
@@ -319,7 +352,7 @@ export const COMMANDS: EditorCommand[] = [
     run: (v) => setBlock(v, "quote"),
   },
   // Insert
-  { id: "table", label: "Table", section: "Insert", keywords: "grid columns rows", slash: true, run: (v) => insertBlock(v, TABLE, [2, 8]) },
+  { id: "table", label: "Table", section: "Insert", keywords: "grid columns rows", slash: true, run: insertTable },
   {
     id: "image",
     label: "Image…",

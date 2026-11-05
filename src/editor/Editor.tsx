@@ -9,7 +9,7 @@ import { tags as t } from "@lezer/highlight";
 import { assetResolver, linkOpener, livePreview } from "./livePreview";
 import { blockWidgets } from "./blocks";
 import { markdownClipboard, pickImages, saveImages, type ClipboardOptions } from "./clipboard";
-import { COMMANDS, imagePicker } from "./commands";
+import { COMMANDS, cursorToEnd, imagePicker } from "./commands";
 import { slashMenu } from "./slash";
 import { nativeContextMenu } from "./contextMenu";
 import { isTauri } from "../lib/api";
@@ -22,8 +22,10 @@ export interface EditorHandle {
   focusEnd(): void;
   setContent(text: string): void;
   getContent(): string;
-  /** Save image files and insert them at the cursor (a drop beside the text). */
-  insertImages(files: File[]): void;
+  /** Save image files and insert them at the cursor, or at the end of the note (a drop beside or below the text). */
+  insertImages(files: File[], at?: "cursor" | "end"): void;
+  /** The bottom of the text on screen, for telling a drop below it from one beside it. */
+  contentBottom(): number | null;
 }
 
 interface Props extends ClipboardOptions {
@@ -77,14 +79,17 @@ export function Editor({ initial, onChange, placeholder, autoFocus, resolveAsset
     focusEnd: () => {
       const v = view.current;
       if (!v) return;
-      v.dispatch({ selection: { anchor: v.state.doc.length }, scrollIntoView: true });
+      cursorToEnd(v);
       v.focus();
     },
     getContent: () => view.current?.state.doc.toString() ?? "",
-    insertImages: (files: File[]) => {
+    insertImages: (files: File[], at = "cursor") => {
       const v = view.current;
-      if (v && files.length) void saveImages(v, files, { saveAttachment, onError: (m) => onErrorRef.current?.(m) }, null);
+      if (!v || !files.length) return;
+      const pos = at === "end" ? v.state.doc.length : null;
+      void saveImages(v, files, { saveAttachment, onError: (m) => onErrorRef.current?.(m) }, pos);
     },
+    contentBottom: () => view.current?.contentDOM.getBoundingClientRect().bottom ?? null,
     setContent: (text: string) => {
       const v = view.current;
       if (!v || v.state.doc.toString() === text) return;
