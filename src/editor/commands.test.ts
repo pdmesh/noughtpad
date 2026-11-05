@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { EditorSelection, EditorState } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
-import { insertBlock, parseLine, setBlock, stripInline, toggleMark } from "./commands";
+import { cursorToEnd, insertBlock, parseLine, setBlock, stripInline, toggleMark } from "./commands";
 import { matchCommands } from "./slash";
 
 // jsdom has no layout: give CodeMirror's measuring something to call, and
@@ -102,5 +102,34 @@ describe("matchCommands", () => {
     expect(matchCommands("todo")[0].id).toBe("task");
     expect(matchCommands("mermaid")[0].id).toBe("mermaid");
     expect(matchCommands("zzz")).toEqual([]);
+  });
+});
+
+describe("cursorToEnd", () => {
+  const atEnd = (doc: string) => {
+    const v = new EditorView({ state: EditorState.create({ doc }) });
+    views.push(v);
+    cursorToEnd(v);
+    return { doc: v.state.doc.toString(), head: v.state.selection.main.head };
+  };
+
+  it("goes to the end of ordinary text", () => {
+    expect(atEnd("Some text.")).toEqual({ doc: "Some text.", head: 10 });
+  });
+
+  it("opens a paragraph below a table, so typing doesn't join it", () => {
+    const table = "| A | B |\n| --- | --- |\n| 1 | 2 |";
+    const r = atEnd(table);
+    expect(r.doc).toBe(table + "\n\n");
+    expect(r.head).toBe(r.doc.length);
+  });
+
+  it("opens a paragraph below a closed code or maths block", () => {
+    expect(atEnd("```\ncode\n```").doc).toBe("```\ncode\n```\n\n");
+    expect(atEnd("$$\nx\n$$").doc).toBe("$$\nx\n$$\n\n");
+  });
+
+  it("leaves an open code block alone", () => {
+    expect(atEnd("```\ncode").doc).toBe("```\ncode");
   });
 });

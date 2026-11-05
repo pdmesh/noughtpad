@@ -450,24 +450,25 @@ fn write_attachment(vault: &Vault, bytes: &[u8], extension: &str) -> CmdResult<S
 }
 
 /// Save pasted/dropped binary data and return its vault-relative path (for a
-/// Markdown link). The body is the raw bytes, not a JSON array of numbers, so a
-/// large screenshot crosses the bridge quickly; the `x-extension` header names
-/// the file type.
+/// Markdown link). The bytes arrive base64-encoded in ordinary JSON arguments:
+/// a raw binary body doesn't reach the command intact on every platform's IPC
+/// (on macOS it failed with "expected the attachment's bytes").
 #[tauri::command]
-async fn save_attachment(state: State<'_, AppState>, request: tauri::ipc::Request<'_>) -> CmdResult<String> {
+async fn save_attachment(state: State<'_, AppState>, data: String, extension: String) -> CmdResult<String> {
+    use base64::Engine as _;
     let v = state.vault()?;
-    let tauri::ipc::InvokeBody::Raw(bytes) = request.body() else {
-        return Err(CmdError {
+    let bytes = base64::engine::general_purpose::STANDARD
+        .decode(data.trim())
+        .map_err(|e| CmdError {
             kind: "invalid",
-            message: "expected the attachment's bytes".into(),
-        });
-    };
-    let ext = request
-        .headers()
-        .get("x-extension")
-        .and_then(|h| h.to_str().ok())
-        .unwrap_or("bin");
-    write_attachment(&v, bytes, ext)
+            message: format!("the image data was unreadable: {e}"),
+        })?;
+    tauri::async_runtime::spawn_blocking(move || write_attachment(&v, &bytes, &extension))
+        .await
+        .map_err(|e| CmdError {
+            kind: "internal",
+            message: e.to_string(),
+        })?
 }
 
 /// Save the image on the system clipboard as a PNG attachment, if there is one.

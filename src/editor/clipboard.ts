@@ -76,14 +76,35 @@ function message(err: unknown): string {
   return String(err);
 }
 
-/** Replace from..to (clamped to the current document) with text, cursor after it. */
-function insertAt(view: EditorView, from: number, to: number, text: string) {
+/**
+ * The text that puts image links in place of doc[from..to], each in a paragraph of its own
+ * (an image inside a line of text is drawn over that text, and side by side images crowd
+ * the page). Returns the range to replace (widened over spaces at a split), the text, and
+ * where the cursor goes: just after the last image, or on the fresh line below it at the
+ * end of the note.
+ */
+export function imageBlock(doc: string, from: number, to: number, links: string[]) {
+  // Splitting a line: drop the spaces either side of the split.
+  while (from > 0 && (doc[from - 1] === " " || doc[from - 1] === "\t")) from--;
+  while (to < doc.length && (doc[to] === " " || doc[to] === "\t")) to++;
+  const before = doc.slice(Math.max(0, from - 2), from);
+  const after = doc.slice(to, to + 2);
+  const prefix = from === 0 || before.endsWith("\n\n") ? "" : before.endsWith("\n") ? "\n" : "\n\n";
+  const body = links.join("\n\n");
+  if (to >= doc.length) return { from, to, insert: prefix + body + "\n", cursor: from + prefix.length + body.length + 1 };
+  const suffix = after.startsWith("\n\n") ? "" : after.startsWith("\n") ? "\n" : "\n\n";
+  return { from, to, insert: prefix + body + suffix, cursor: from + prefix.length + body.length };
+}
+
+/** Put image links over from..to (clamped to the document), each on a paragraph of its own. */
+function insertImageLinks(view: EditorView, from: number, to: number, links: string[]) {
   const len = view.state.doc.length;
   const a = Math.min(from, len);
   const b = Math.min(Math.max(to, a), len);
+  const block = imageBlock(view.state.doc.toString(), a, b, links);
   view.dispatch({
-    changes: { from: a, to: b, insert: text },
-    selection: EditorSelection.cursor(a + text.length),
+    changes: { from: block.from, to: block.to, insert: block.insert },
+    selection: EditorSelection.cursor(block.cursor),
     scrollIntoView: true,
     userEvent: "input.paste",
   });
@@ -92,6 +113,7 @@ function insertAt(view: EditorView, from: number, to: number, text: string) {
 /** Save images and insert their links at `pos`, or over the selection when null. */
 export async function saveImages(view: EditorView, images: File[], opts: ClipboardOptions, pos: number | null) {
   const sel = view.state.selection.main;
+  // Remember the place across the save, which can take a moment for a large image.
   const [from, to] = pos === null ? [sel.from, sel.to] : [pos, pos];
   const links: string[] = [];
   for (const f of images) {
@@ -101,7 +123,7 @@ export async function saveImages(view: EditorView, images: File[], opts: Clipboa
       opts.onError?.(`Couldn't save the image: ${message(err)}`);
     }
   }
-  if (links.length) insertAt(view, from, to, links.join("\n"));
+  if (links.length) insertImageLinks(view, from, to, links);
 }
 
 /** Ask for image files and insert them at the cursor (Insert → Image…). */
@@ -154,8 +176,9 @@ export function markdownClipboard(opts: ClipboardOptions = {}): Extension {
       const images = imageFiles(e.dataTransfer);
       if (!images.length) return false;
       e.preventDefault();
-      const pos = view.posAtCoords({ x: e.clientX, y: e.clientY }) ?? view.state.selection.main.head;
-      void saveImages(view, images, opts, pos);
+      // Below the line it lands on, never inside a word.
+      const at = view.posAtCoords({ x: e.clientX, y: e.clientY }) ?? view.state.selection.main.head;
+      void saveImages(view, images, opts, view.state.doc.lineAt(at).to);
       return true;
     },
     paste(e, view) {
@@ -179,7 +202,7 @@ export function markdownClipboard(opts: ClipboardOptions = {}): Extension {
         const at = view.state.selection.main;
         void opts
           .pasteClipboardImage()
-          .then((rel) => rel && insertAt(view, at.from, at.to, imageLink(rel)))
+          .then((rel) => rel && insertImageLinks(view, at.from, at.to, [imageLink(rel)]))
           .catch((err) => opts.onError?.(`Couldn't paste the image: ${message(err)}`));
         return true;
       }

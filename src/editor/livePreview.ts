@@ -157,6 +157,9 @@ class ImageWidget extends WidgetType {
     img.className = "cm-md-image";
     img.loading = "lazy";
     img.draggable = false;
+    // The picture's height is only known once it loads: measure again so the lines below
+    // move down instead of sitting under it.
+    img.addEventListener("load", () => view.requestMeasure());
     const tools = toolBar(
       [
         toolButton("Zoom", ICONS.zoom, () => showLightbox(this.src, this.alt)),

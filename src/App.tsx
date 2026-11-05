@@ -11,7 +11,7 @@ import { describeStatus, useSemanticStatus } from "./lib/useSemantic";
 import { ChatHistory } from "./components/ChatHistory";
 import { useChatLive, type ScopeChoice } from "./lib/chat";
 import type { EditorHandle } from "./editor/Editor";
-import { loadMarkdownPipeline } from "./editor/clipboard";
+import { imageFiles, loadMarkdownPipeline } from "./editor/clipboard";
 import { checkForUpdates, describeUpdate, installUpdate, startUpdateChecks, updateButtonLabel, useUpdateState } from "./lib/updates";
 import { describeSync, useSync } from "./lib/sync";
 
@@ -468,6 +468,22 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
 
       <main
         className={`main ${view.kind === "chat" ? "is-chat" : ""}`}
+        onDragOver={(e) => {
+          if (view.kind === "write" && Array.from(e.dataTransfer.types).includes("Files")) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = "copy";
+          }
+        }}
+        onDrop={(e) => {
+          // Images dropped beside the text (margins, title) go in at the cursor; below the
+          // text, at the end of the note. Drops on the text itself are handled by the editor first.
+          if (view.kind !== "write" || e.defaultPrevented) return;
+          const files = imageFiles(e.dataTransfer);
+          if (!files.length) return;
+          e.preventDefault();
+          const bottom = editorRef.current?.contentBottom();
+          editorRef.current?.insertImages(files, bottom != null && e.clientY > bottom ? "end" : "cursor");
+        }}
         onMouseDown={(e) => {
           // On the writing page, clicking empty space puts the cursor at the end, like paper.
           const t = e.target as HTMLElement;
