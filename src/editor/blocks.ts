@@ -1,11 +1,12 @@
-// Fenced-block renderers: ```mermaid, ```math and $$…$$ blocks, and GFM
-// tables, render as widgets when the cursor is outside them. This is Noughtpad's extension point
+// Fenced-block renderers: ```mermaid, ```math and $$…$$ blocks render as
+// widgets when the cursor is outside them. GFM tables are always a widget,
+// edited in place (table.ts). This is Noughtpad's extension point
 // for "block plugins" — a renderer is just { languages, render(code, el) }.
 
 import { ensureSyntaxTree, syntaxTree } from "@codemirror/language";
 import { type EditorState, type Range, StateField } from "@codemirror/state";
 import { Decoration, type DecorationSet, EditorView, WidgetType } from "@codemirror/view";
-import { loadMarkdownPipeline } from "./clipboard";
+import { TableWidget, tableSource } from "./table";
 import { linkOpener } from "./livePreview";
 
 export interface BlockRenderer {
@@ -21,8 +22,6 @@ export function registerBlockRenderer(r: BlockRenderer) {
 }
 
 let mermaidSeq = 0;
-/** Internal renderer name for GFM tables (not a fence language anyone types). */
-const TABLE = "noughtpad-table";
 
 registerBlockRenderer({
   languages: ["mermaid"],
@@ -45,16 +44,6 @@ registerBlockRenderer({
   async render(code, el) {
     const { default: katex } = await import("katex");
     katex.render(code, el, { displayMode: true, throwOnError: false });
-  },
-});
-
-// GFM tables. Rendered like a model answer (no images, http(s) and mailto links
-// only): a table is for reading, and its source is one click away.
-registerBlockRenderer({
-  languages: [TABLE],
-  async render(code, el) {
-    const p = await loadMarkdownPipeline();
-    el.innerHTML = p.untrustedMarkdownToHtml(code);
   },
 });
 
@@ -111,9 +100,10 @@ function buildBlocks(state: EditorState): DecorationSet {
       if (node.name === "Table") {
         const from = state.doc.lineAt(node.from).from;
         const to = state.doc.lineAt(node.to).to;
-        if (!overlapsSelection(state, from, to)) {
+        // Edited in place; its Markdown shows only after "Edit as Markdown" (</>).
+        if (state.field(tableSource, false) !== from) {
           const code = state.doc.sliceString(from, to);
-          deco.push(Decoration.replace({ widget: new BlockWidget(TABLE, code, from), block: true }).range(from, to));
+          deco.push(Decoration.replace({ widget: new TableWidget(code), block: true }).range(from, to));
         }
         return false;
       }
@@ -156,8 +146,9 @@ function buildBlocks(state: EditorState): DecorationSet {
 export const blockWidgets = StateField.define<DecorationSet>({
   create: buildBlocks,
   update(value, tr) {
-    if (tr.docChanged || tr.selection || syntaxTree(tr.startState) !== syntaxTree(tr.state)) return buildBlocks(tr.state);
+    if (tr.docChanged || tr.selection || tr.effects.length || syntaxTree(tr.startState) !== syntaxTree(tr.state))
+      return buildBlocks(tr.state);
     return value;
   },
-  provide: (f) => EditorView.decorations.from(f),
+  provide: (f) => [EditorView.decorations.from(f), tableSource],
 });

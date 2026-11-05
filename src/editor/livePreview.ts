@@ -119,14 +119,80 @@ class ImageWidget extends WidgetType {
   eq(other: ImageWidget) {
     return other.src === this.src && other.alt === this.alt;
   }
-  toDOM() {
+  toDOM(view: EditorView) {
+    const wrap = document.createElement("span");
+    wrap.className = "cm-md-image-wrap";
     const img = document.createElement("img");
     img.src = this.src;
     img.alt = this.alt;
     img.className = "cm-md-image";
     img.loading = "lazy";
-    return img;
+    img.draggable = false;
+    const tools = document.createElement("span");
+    tools.className = "cm-widget-tools";
+    tools.append(
+      toolButton("Zoom", ZOOM_ICON, () => showLightbox(this.src, this.alt)),
+      toolButton("Edit as Markdown", "</>", () => {
+        // Put the cursor inside the image's Markdown, which shows it.
+        const from = view.posAtDOM(wrap);
+        view.dispatch({ selection: { anchor: from + 2 } });
+        view.focus();
+      }),
+    );
+    wrap.append(img, tools);
+    // Clicking the image selects nothing and keeps it rendered, like a picture in a document.
+    wrap.addEventListener("mousedown", (e) => e.preventDefault());
+    img.addEventListener("dblclick", () => showLightbox(this.src, this.alt));
+    return wrap;
   }
+  ignoreEvent() {
+    return true;
+  }
+}
+
+const ZOOM_ICON =
+  '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5M11 8v6M8 11h6"/></svg>';
+
+function toolButton(title: string, content: string, onClick: () => void) {
+  const b = document.createElement("button");
+  b.title = title;
+  b.setAttribute("aria-label", title);
+  b.tabIndex = -1;
+  if (content.startsWith("<svg")) b.innerHTML = content;
+  else b.textContent = content;
+  b.addEventListener("mousedown", (e) => e.preventDefault());
+  b.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onClick();
+  });
+  return b;
+}
+
+/** The image at full size over the page; click or Escape closes it. */
+function showLightbox(src: string, alt: string) {
+  const overlay = document.createElement("div");
+  overlay.className = "np-lightbox";
+  overlay.setAttribute("role", "dialog");
+  overlay.setAttribute("aria-label", alt || "Image");
+  const img = document.createElement("img");
+  img.src = src;
+  img.alt = alt;
+  overlay.append(img);
+  const close = () => {
+    overlay.remove();
+    document.removeEventListener("keydown", onKey, true);
+  };
+  const onKey = (e: KeyboardEvent) => {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      e.stopPropagation();
+      close();
+    }
+  };
+  overlay.addEventListener("click", close);
+  document.addEventListener("keydown", onKey, true);
+  document.body.append(overlay);
 }
 
 function activeLines(state: EditorState): Set<number> {
@@ -139,8 +205,14 @@ function activeLines(state: EditorState): Set<number> {
   return lines;
 }
 
-function build(view: EditorView): DecorationSet {
+/** Whether the cursor or selection is inside [from, to] (a cursor at either edge doesn't count). */
+function selectionInside(state: EditorState, from: number, to: number) {
+  return state.selection.ranges.some((r) => (r.empty ? r.head > from && r.head < to : r.from < to && r.to > from));
+}
+
+function build(view: EditorView): { decorations: DecorationSet; atoms: DecorationSet } {
   const { state } = view;
+  const atoms: Range<Decoration>[] = [];
   const active = view.hasFocus ? activeLines(state) : new Set<number>();
   const isActive = (pos: number) => active.has(state.doc.lineAt(pos).number);
   const deco: Range<Decoration>[] = [];
@@ -209,13 +281,16 @@ function build(view: EditorView): DecorationSet {
             }
             return;
           case "Image": {
-            if (isActive(node.from)) return false;
+            // Rendered unless the cursor is inside its Markdown; deleted as a whole otherwise.
+            if (view.hasFocus && selectionInside(state, node.from, node.to)) return false;
             const urlNode = node.node.getChild("URL");
             if (!urlNode) return false;
             const raw = state.doc.sliceString(node.from, node.to);
             const alt = /^!\[([^\]]*)\]/.exec(raw)?.[1] ?? "";
             const src = resolve(state.doc.sliceString(urlNode.from, urlNode.to).replace(/^<|>$/g, ""));
-            deco.push(Decoration.replace({ widget: new ImageWidget(src, alt) }).range(node.from, node.to));
+            const image = Decoration.replace({ widget: new ImageWidget(src, alt) }).range(node.from, node.to);
+            deco.push(image);
+            atoms.push(image);
             return false;
           }
           case "Blockquote":
@@ -285,14 +360,15 @@ function build(view: EditorView): DecorationSet {
       pos = line.to + 1;
     }
   }
-  return Decoration.set(deco, true);
+  return { decorations: Decoration.set(deco, true), atoms: Decoration.set(atoms, true) };
 }
 
 export const livePreview = ViewPlugin.fromClass(
   class {
     decorations: DecorationSet;
+    atoms: DecorationSet;
     constructor(view: EditorView) {
-      this.decorations = build(view);
+      ({ decorations: this.decorations, atoms: this.atoms } = build(view));
     }
     update(u: ViewUpdate) {
       if (
@@ -302,11 +378,12 @@ export const livePreview = ViewPlugin.fromClass(
         u.focusChanged ||
         syntaxTree(u.startState) !== syntaxTree(u.state)
       )
-        this.decorations = build(u.view);
+        ({ decorations: this.decorations, atoms: this.atoms } = build(u.view));
     }
   },
   {
     decorations: (v) => v.decorations,
+    provide: (p) => EditorView.atomicRanges.of((view) => view.plugin(p)?.atoms ?? Decoration.none),
     eventHandlers: {
       mousedown(e, view) {
         const target = e.target as HTMLElement;

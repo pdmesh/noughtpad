@@ -32,7 +32,20 @@ they are). For the website, read `docs/WEBSITE.md`.
       Paste and Select All. In a plain browser the browser's own menu shows.
     - Shortcuts: ⌘B, ⌘I, ⌘E (code), ⇧⌘X (strikethrough), ⇧⌘7/8/9 (numbered, bullet, task list).
     - Only syntax the preview shows is offered: no highlight, comments, callouts or footnotes yet.
-  - **Check on the Mac:** the right-click menu (only the browser version was tried here), Insert →
+  - **Rich blocks, still plain Markdown underneath:**
+    - Tables are always a widget, edited in place (`src/editor/table.ts`): type in cells; Tab,
+      Enter and the arrow keys move between cells (Tab or Enter on the last row adds one); + buttons
+      on hover add a row or a column; right-click in the app gives Row and Column menus (add, move,
+      duplicate, delete, align), sort A–Z or Z–A and Delete table; </> shows the Markdown until the
+      cursor leaves the table. Each edit rewrites only the changed characters, so undo works as it
+      does for normal typing. Cell formatting shows when the cell isn't being edited.
+    - Images stay rendered with the cursor next to them; their Markdown shows only when the cursor
+      is inside it (</> on hover). Backspace deletes the whole image; zoom or double-click opens it
+      full size.
+    - Text selected inside code blocks and inline code now shows (their background was opaque and
+      covered the selection, which is drawn behind the text).
+  - **Check on the Mac:** the table right-click menu and typing in cells (WebKit, not tried there),
+    the right-click menu (only the browser version was tried here), Insert →
     Image… (file picker), Open link; paste a screenshot (⌘⌃⇧4), an image copied from Safari and from Preview,
     and drop a PNG from Finder; the source URL's open icon; the Journal on the bigger Mac.
 
