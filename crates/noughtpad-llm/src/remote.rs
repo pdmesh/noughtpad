@@ -76,7 +76,7 @@ mod imp {
         }
     }
 
-    fn client(kind: RemoteKind, base_url: Option<String>, key: Option<String>, model: String) -> Result<Client> {
+    pub(super) fn client(kind: RemoteKind, base_url: Option<String>, key: Option<String>, model: String) -> Result<Client> {
         if kind.needs_key() && key.as_deref().is_none_or(|k| k.trim().is_empty()) {
             return Err(Error::Provider(format!("{} needs an API key", kind.label())));
         }
@@ -84,6 +84,16 @@ mod imp {
         // Endpoints without a key still need a non-empty auth value for genai.
         let key = key.filter(|k| !k.trim().is_empty()).unwrap_or_else(|| "none".into());
         Client::builder()
+            // Without this, genai infers the adapter from the model name
+            // string on every call (its hardcoded prefix list doesn't know
+            // every model name, e.g. "chat-latest"), and on a miss falls
+            // back to Ollama's default endpoint for the *initial* lookup.
+            // Our resolver below then only relabels the model's adapter kind
+            // back to the right one, leaving that stale localhost:11434
+            // endpoint in place for any remote whose kind doesn't set a
+            // custom base_url (every hosted provider). Binding the kind here
+            // skips the guesswork entirely.
+            .with_adapter_kind(ak)
             .with_service_target_resolver_fn(
                 move |mut t: ServiceTarget| -> std::result::Result<ServiceTarget, genai::resolver::Error> {
                     if let Some(u) = &base_url {
@@ -517,5 +527,20 @@ mod tests {
     async fn hosted_providers_need_a_key() {
         let err = list_models(RemoteKind::Anthropic, None, None).await.unwrap_err();
         assert!(err.to_string().contains("needs an API key"));
+    }
+
+    /// A hosted provider (no `base_url` override) must stay on its own
+    /// endpoint even for a model name genai's own adapter-from-name guesser
+    /// doesn't recognise (anything not starting with "gpt", "o1", "chatgpt"…
+    /// falls back to Ollama's localhost:11434 there). Regression test for a
+    /// bug where the chat call ended up hitting
+    /// `http://localhost:11434/chat/completions` for an OpenAI remote whose
+    /// model was named e.g. "chat-latest".
+    #[test]
+    fn hosted_remote_keeps_its_adapter_for_an_unrecognised_model_name() {
+        use genai::adapter::AdapterKind;
+
+        let c = imp::client(RemoteKind::OpenAi, None, Some("sk-test".into()), "chat-latest".into()).unwrap();
+        assert_eq!(c.adapter_kind(), Some(AdapterKind::OpenAI));
     }
 }
