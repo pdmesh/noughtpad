@@ -54,20 +54,24 @@ Exit: edit the same notebook on two Macs and one non-Apple device for a week wit
 ## Started: M7, mobile apps (paid with Sync)
 
 Plan and status: `docs/MOBILE.md`. iOS and Android with Tauri 2 mobile, reusing the React UI
-(`src/`) and the Rust core (`crates/noughtpad-core`) as-is.
+(`src/`) and the Rust core (`crates/noughtpad-core`) as-is. **The mobile app itself is not
+source-available** (like Sync): the actual app project (`gen/android`, `gen/apple`, app-store
+identity) lives in the private `pdmesh/noughtpad-mobile` repo, not here — see
+`docs/MOBILE.md` § "Where the mobile app project actually lives".
 
 - [x] Design and slice plan (`docs/MOBILE.md`, 2026-11-05)
-- [ ] Slice 1, scaffolding: mobile entry point, desktop-only code switched off, `tauri android/ios
-      init` committed. Rust/Cargo changes done and reviewed; desktop `cargo fmt`/clippy/tests and
-      `pnpm typecheck`/`test`/`perf` checked green. `tauri android init` couldn't run in the cloud
-      session that did this work (its network policy blocks the Android SDK download) and `tauri
-      ios init` needs Xcode on a Mac, so neither `gen/android` nor `gen/apple` is committed yet —
-      see `docs/MOBILE.md` for the exact commands to run them yourself
-- [ ] Slice 2, phone layout: sidebar as a drawer, 375px note page, tap alternatives for hover
+- [x] Slice 1, scaffolding: mobile entry point, desktop-only code switched off in this repo
+      (`#[cfg(mobile)]` branches, `default_vault_path` via Tauri's path resolver), desktop
+      `cargo fmt`/clippy/tests and `pnpm typecheck`/`test`/`perf` checked green throughout. A
+      debug Android build was proven end to end against this repo's own `src-tauri` to validate
+      the approach (SDK/NDK versions and the exact recipe are in `docs/MOBILE.md`), then that
+      scaffolding moved to `pdmesh/noughtpad-mobile`, which now carries the actual app project
+- [x] Slice 2, phone layout: sidebar as a drawer, 375px note page, tap alternatives for hover
       tools and the right-click menu. Done for the write page, sidebar and editor, checked with
       screenshots; not yet checked on Journal/Ideas/Chat/Settings
-- [ ] Slice 3, runs on a real device: a debug Android build and an Xcode build on a Mac. Not
-      reached (blocked on the SDK/Xcode availability above)
+- [ ] Slice 3, runs on a real device: Android proven (debug APK built and verified, see
+      `docs/MOBILE.md`); `pdmesh/noughtpad-mobile`'s own build is in progress there. iOS picks up
+      in a local Mac session (see `docs/HANDOFF.md`)
 - [ ] Slice 4, capture from outside the app (share sheet/intent), same shape as desktop's
       ⌘⇧Space
 - [ ] Slice 5, Sync checked on a real phone alongside the two Macs
