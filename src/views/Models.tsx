@@ -343,25 +343,30 @@ function AddProvider({ data, onSaved }: { data: LlmOverview; onSaved: () => void
       <label className="field">
         <span>Model</span>
         <div className="field-row">
-          <input
-            list="provider-models"
-            spellCheck={false}
-            value={model}
-            onChange={(e) => setModel(e.target.value)}
-            placeholder={models ? "Choose a model" : "Model name"}
-          />
-          <datalist id="provider-models">
-            {models?.map((m) => (
-              <option key={m} value={m} />
-            ))}
-          </datalist>
+          {models ? (
+            <select className="settings-select" value={model} onChange={(e) => setModel(e.target.value)}>
+              {!models.includes(model) && <option value={model}>{model || "Choose a model"}</option>}
+              {models.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input
+              spellCheck={false}
+              value={model}
+              onChange={(e) => setModel(e.target.value)}
+              placeholder="Model name"
+            />
+          )}
           <button type="button" className="btn btn-small" onClick={() => void loadModels()} disabled={!canList || busy !== null}>
             {busy === "models" ? <Loader2 size={13} className="spin" aria-hidden /> : null} Load models
           </button>
         </div>
         {models && (
           <small className="faint">
-            {models.length} {models.length === 1 ? "model" : "models"} available. Type to filter.
+            {models.length} {models.length === 1 ? "model" : "models"} available.
           </small>
         )}
       </label>
