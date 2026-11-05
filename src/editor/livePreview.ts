@@ -366,7 +366,7 @@ function build(view: EditorView): { decorations: DecorationSet; atoms: Decoratio
             // Hide the ``` lines; the opening one shows the language and a copy button.
             const text = node.node.getChild("CodeText");
             const code = text ? state.doc.sliceString(text.from, text.to) : "";
-            lineClass(first.from, "cm-md-codeblock-start");
+            lineClass(first.from, lang ? "cm-md-codeblock-start" : "cm-md-codeblock-start cm-md-codeblock-bare");
             deco.push(Decoration.replace({ widget: new CodeHeaderWidget(lang, code) }).range(first.from, first.to));
             if (last.number > first.number && /^\s*(`{3,}|~{3,})\s*$/.test(last.text)) {
               lineClass(last.from, "cm-md-codeblock-end");

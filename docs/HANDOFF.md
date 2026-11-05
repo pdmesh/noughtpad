@@ -7,7 +7,9 @@ they are). For the website, read `docs/WEBSITE.md`.
 
 - **Released: v0.1.6**, the first release on this repo. 0.1.5 installs reach it through the bridge
   release on `pdmesh/noughtpad-releases`.
-- **Since 0.1.6 (unreleased, on `claude/eager-darwin-ghc7tw`):**
+- **v0.1.7 (2026-11-05, tagged; draft until the user publishes it):** everything below. After
+  publishing, set `VERSION` in `website/src/config.ts` to 0.1.7 (the download links use it).
+- **New in 0.1.7:**
   - Pasting images works in the Mac app. The editor reads image files from the paste's `files` or
     `items`; when the webview hands over a paste with nothing in it (some screenshots and images
     copied from apps), it asks the app, which reads the system clipboard (`arboard`) and saves a

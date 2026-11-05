@@ -696,8 +696,11 @@ button {
   z-index: 2;
 }
 .cm-widget-tools.is-boxed {
+  top: 8px;
+  right: 8px;
+  gap: 0;
   padding: 2px;
-  border-radius: 8px;
+  border-radius: 7px;
   background: color-mix(in srgb, var(--bg-elev) 90%, transparent);
   box-shadow: 0 1px 6px rgb(0 0 0 / 0.14);
 }
@@ -718,6 +721,9 @@ button {
   color: var(--fg-faint);
   cursor: pointer;
 }
+.cm-widget-tool svg {
+  display: block;
+}
 .cm-widget-tool:hover {
   background: var(--bg-sunk);
   color: var(--fg);
@@ -732,7 +738,7 @@ button {
   display: inline-flex;
   align-items: center;
   width: 100%;
-  min-height: 1.2em;
+  height: 1.4em;
   vertical-align: top;
 }
 .cm-code-lang {
@@ -741,18 +747,32 @@ button {
 }
 .cm-code-header .cm-widget-tools {
   top: 50%;
-  right: -8px;
+  right: -6px;
   transform: translateY(-50%);
   opacity: 0.5;
 }
 .cm-md-codeblock-start:hover .cm-code-header .cm-widget-tools {
   opacity: 1;
 }
+/* The fence lines become a slim header and footer, so the code sits evenly inside the block. */
 .cm-md-codeblock-start {
-  padding-top: 4px !important;
+  padding-top: 6px !important;
+  line-height: 1.4;
 }
 .cm-md-codeblock-end {
-  line-height: 0.6;
+  line-height: 0.8;
+}
+/* No language: as slim as the closing line; Copy floats at the right of the first line of code. */
+.cm-md-codeblock-bare {
+  padding-top: 0 !important;
+  line-height: 0.8;
+}
+.cm-md-codeblock-bare .cm-code-header {
+  height: 0.8em;
+}
+.cm-md-codeblock-bare .cm-code-header .cm-widget-tools {
+  top: 2px;
+  transform: none;
 }
 
 .np-lightbox {

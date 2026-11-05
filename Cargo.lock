@@ -4914,7 +4914,7 @@ dependencies = [
 
 [[package]]
 name = "noughtpad-app"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "arboard",
  "chrono",
@@ -4940,7 +4940,7 @@ dependencies = [
 
 [[package]]
 name = "noughtpad-core"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "blake3",
  "chrono",
@@ -4961,7 +4961,7 @@ dependencies = [
 
 [[package]]
 name = "noughtpad-llm"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "futures",
  "genai",
