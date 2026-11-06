@@ -112,7 +112,7 @@ export function ChatView({
   };
 
   if (!llm) return null;
-  if (!llm.active) return <ChatIntro onModels={onModels} />;
+  if (!llm.active) return <ChatIntro onModels={onModels} localAvailable={llm.localAvailable} />;
 
   const allNotes = (chat?.notes ?? []).concat(live?.notes ?? []);
   const noteOf = (n: number) => allNotes.find((x) => x.n === n);
@@ -362,7 +362,7 @@ function StepLine({ step, noteOf, onOpenNote }: { step: ChatStep; noteOf: (n: nu
   );
 }
 
-function ChatIntro({ onModels }: { onModels: (focus?: "local" | "remote") => void }) {
+function ChatIntro({ onModels, localAvailable }: { onModels: (focus?: "local" | "remote") => void; localAvailable: boolean }) {
   return (
     <div className="chat-page">
       <h2 className="journal-heading">Chat</h2>
@@ -370,14 +370,17 @@ function ChatIntro({ onModels }: { onModels: (focus?: "local" | "remote") => voi
         Chat with your notes: how an idea changed, what you left open, what a month was about. This needs a language model, and none is switched on.
       </p>
       <div className="think-choices">
-        <button className="theme-card" onClick={() => onModels("local")}>
-          <span className="theme-card-main">
-            <span className="theme-name">
-              <HardDrive size={15} aria-hidden /> Run a model on this computer
+        {/* Builds without the local runtime (mobile) can't offer this at all. */}
+        {localAvailable && (
+          <button className="theme-card" onClick={() => onModels("local")}>
+            <span className="theme-card-main">
+              <span className="theme-name">
+                <HardDrive size={15} aria-hidden /> Run a model on this computer
+              </span>
+              <span className="theme-meta faint">Private and free. A one-time download of about 2.5 GB.</span>
             </span>
-            <span className="theme-meta faint">Private and free. A one-time download of about 2.5 GB.</span>
-          </span>
-        </button>
+          </button>
+        )}
         <button className="theme-card" onClick={() => onModels("remote")}>
           <span className="theme-card-main">
             <span className="theme-name">

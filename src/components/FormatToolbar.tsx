@@ -1,4 +1,4 @@
-import type { RefObject } from "react";
+import { useEffect, useState, type RefObject } from "react";
 import { Bold, Code, Heading1, Heading2, Image, Italic, Link2, List, ListOrdered, ListTodo, Minus, Quote, Strikethrough, Table2 } from "lucide-react";
 import type { EditorHandle } from "../editor/Editor";
 
@@ -27,10 +27,21 @@ const BUTTONS: { id: string; label: string; icon: React.ReactNode }[] = [
  * one definition of what each command does. Shown only on a coarse pointer
  * (see docs/MOBILE.md § Phone layout); cut/copy/paste are left to the
  * webview's own text-selection toolbar.
+ *
+ * Docked to the bottom of the screen rather than following the text. iOS
+ * doesn't shrink the layout viewport when the on-screen keyboard opens, so a
+ * plain `bottom: 0` would sit behind the keyboard: the visual viewport says
+ * how much of the screen the keyboard covers, and the toolbar is lifted by that.
  */
 export function FormatToolbar({ editorRef }: { editorRef: RefObject<EditorHandle | null> }) {
+  const keyboard = useKeyboardInset();
   return (
-    <div className="format-toolbar" role="toolbar" aria-label="Formatting">
+    <div
+      className={`format-toolbar ${keyboard > 0 ? "is-raised" : ""}`}
+      role="toolbar"
+      aria-label="Formatting"
+      style={{ bottom: keyboard }}
+    >
       {BUTTONS.map((b) => (
         <button
           key={b.id}
@@ -46,4 +57,22 @@ export function FormatToolbar({ editorRef }: { editorRef: RefObject<EditorHandle
       ))}
     </div>
   );
+}
+
+/** How far the on-screen keyboard covers the bottom of the layout viewport, in px. */
+function useKeyboardInset(): number {
+  const [inset, setInset] = useState(0);
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const update = () => setInset(Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop)));
+    update();
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+    };
+  }, []);
+  return inset;
 }
