@@ -14,6 +14,7 @@ import type { EditorHandle } from "./editor/Editor";
 import { imageFiles, loadMarkdownPipeline } from "./editor/clipboard";
 import { checkForUpdates, describeUpdate, installUpdate, startUpdateChecks, updateButtonLabel, useUpdateState } from "./lib/updates";
 import { describeSync, useSync } from "./lib/sync";
+import { useMatchMedia } from "./lib/useMediaQuery";
 
 // Pages other than writing load after the editor is ready, keeping them out of
 // the startup bundle (G1: capture in < 300 ms).
@@ -144,6 +145,9 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
   const [paneKey, setPaneKey] = useState("new-0");
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [chromePinned, setChromePinned] = useState(() => readPref("noughtpad.chrome") === "pinned");
+  // Phone width: the sidebar is a drawer instead of the hover-reveal panel (docs/MOBILE.md).
+  const isNarrow = useMatchMedia("(max-width: 680px)");
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [toast, setToast] = useState<{ text: string; undo?: () => void } | null>(null);
   const setNotice = useCallback((text: string | null, undo?: () => void) => setToast(text ? { text, undo } : null), []);
@@ -217,11 +221,21 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
   }, []);
 
   const toggleChrome = useCallback(() => {
+    // Below 680px the same button opens/closes the drawer instead of pinning the sidebar.
+    if (isNarrow) {
+      setDrawerOpen((o) => !o);
+      return;
+    }
     setChromePinned((p) => {
       writePref("noughtpad.chrome", p ? "auto" : "pinned");
       return !p;
     });
-  }, []);
+  }, [isNarrow]);
+
+  // The drawer closes itself once you've picked something from it.
+  useEffect(() => {
+    if (isNarrow) setDrawerOpen(false);
+  }, [view, isNarrow]);
 
   const showLabel = useCallback((label: string) => {
     setView({ kind: "notes", label });
@@ -373,9 +387,10 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
 
   return (
     <div
-      className={`app ${chromePinned ? "chrome-pinned" : "chrome-auto"} ${typing ? "is-typing" : ""} ${(relatedOpen && view.kind === "write") || showHistory ? "related-open" : ""}`}
+      className={`app ${chromePinned ? "chrome-pinned" : "chrome-auto"} ${typing ? "is-typing" : ""} ${(relatedOpen && view.kind === "write") || showHistory ? "related-open" : ""} ${drawerOpen ? "sidebar-drawer-open" : ""}`}
     >
       <div className="sidebar-hotzone" aria-hidden />
+      {isNarrow && drawerOpen && <div className="sidebar-backdrop" onClick={() => setDrawerOpen(false)} aria-hidden />}
       <aside className="sidebar chrome" aria-label="Navigation">
         <nav className="sidebar-section">
           <SideItem icon={<PenLine size={15} />} label="Write" active={view.kind === "write"} onClick={() => setView({ kind: "write" })} />
@@ -406,9 +421,16 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
           >
             <SettingsIcon size={13} aria-hidden /> Settings
           </button>
-          <button className="vault-path" title={`${vault.path}\nClick to switch folder`} onClick={onSwitchVault}>
-            <FolderOpen size={13} aria-hidden /> {vault.path.split(/[\\/]/).pop()}
-          </button>
+          {/* Mobile has one fixed notes location and no folder picker (docs/MOBILE.md). */}
+          {vault.canSwitchVault ? (
+            <button className="vault-path" title={`${vault.path}\nClick to switch folder`} onClick={onSwitchVault}>
+              <FolderOpen size={13} aria-hidden /> {vault.path.split(/[\\/]/).pop()}
+            </button>
+          ) : (
+            <span className="vault-path" title={vault.path}>
+              <FolderOpen size={13} aria-hidden /> {vault.path.split(/[\\/]/).pop()}
+            </span>
+          )}
         </div>
       </aside>
 

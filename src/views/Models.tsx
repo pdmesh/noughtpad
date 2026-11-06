@@ -90,27 +90,29 @@ export function ModelsView({ focus }: { focus?: "local" | "remote" }) {
         </p>
       )}
 
-      <section className="ideas-section" id="models-local">
-        <h3 className="ideas-section-title">
-          <HardDrive size={15} aria-hidden /> On this computer
-        </h3>
-        <p className="ideas-hint faint">Private and free: runs offline, and your notes never leave this machine. Download once, then choose it.</p>
-        {!data.localAvailable && <p className="faint">This build of Noughtpad doesn't include the local runtime.</p>}
-        <ul className="model-list">
-          {data.local.map((l) => (
-            <LocalRow
-              key={l.model.id}
-              entry={l}
-              inUse={activeLocal === l.model.id}
-              disabled={!data.localAvailable}
-              onDownload={act(() => api.llmDownload(l.model.id))}
-              onCancel={act(() => api.llmCancelDownload(l.model.id))}
-              onUse={act(() => api.llmUse({ kind: "local", model: l.model.id }))}
-              onDelete={act(() => api.llmDeleteModel(l.model.id))}
-            />
-          ))}
-        </ul>
-      </section>
+      {/* Builds without the local runtime (mobile) don't show this section at all. */}
+      {data.localAvailable && (
+        <section className="ideas-section" id="models-local">
+          <h3 className="ideas-section-title">
+            <HardDrive size={15} aria-hidden /> On this computer
+          </h3>
+          <p className="ideas-hint faint">Private and free: runs offline, and your notes never leave this machine. Download once, then choose it.</p>
+          <ul className="model-list">
+            {data.local.map((l) => (
+              <LocalRow
+                key={l.model.id}
+                entry={l}
+                inUse={activeLocal === l.model.id}
+                disabled={!data.localAvailable}
+                onDownload={act(() => api.llmDownload(l.model.id))}
+                onCancel={act(() => api.llmCancelDownload(l.model.id))}
+                onUse={act(() => api.llmUse({ kind: "local", model: l.model.id }))}
+                onDelete={act(() => api.llmDeleteModel(l.model.id))}
+              />
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section className="ideas-section" id="models-remote">
         <h3 className="ideas-section-title">

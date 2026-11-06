@@ -171,6 +171,8 @@ export interface VaultInfo {
   path: string;
   noteCount: number;
   defaultPath: string;
+  /** Desktop only: mobile has one fixed notes location and no folder picker. */
+  canSwitchVault: boolean;
 }
 
 export type Change =

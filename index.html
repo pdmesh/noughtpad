@@ -2,7 +2,9 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- maximum-scale=1: an app, not a page. Without it iOS zooms in whenever an
+         input with text under 16px gets focus (labels, source, search). -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
     <title>Noughtpad</title>
   </head>

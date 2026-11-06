@@ -2,6 +2,7 @@
 
 /* ---------- tokens ---------------------------------------------------- */
 :root {
+  --safe-top: env(safe-area-inset-top, 0px);
   --bg: #faf8f4;
   --bg-elev: #ffffff;
   --bg-sunk: #f2efe8;
@@ -166,7 +167,8 @@ button {
   box-sizing: border-box;
   max-width: var(--measure);
   margin: 0 auto;
-  padding: 72px 24px 120px;
+  /* --safe-top: a phone's status bar / notch, 0 on desktop (viewport-fit=cover in index.html). */
+  padding: calc(72px + var(--safe-top)) 24px 120px;
   transition: margin-left 0.2s ease;
 }
 /* With a panel open, the note is centred in the space left beside it. */
@@ -186,11 +188,12 @@ button {
   top: 0;
   left: 0;
   right: 0;
-  height: 44px;
+  height: calc(44px + var(--safe-top));
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 0 12px;
+  padding: var(--safe-top) 12px 0;
+  box-sizing: border-box;
   z-index: 20;
 }
 .topbar-spacer {
@@ -211,7 +214,7 @@ button {
   left: 0;
   box-sizing: border-box;
   width: var(--sidebar-w);
-  padding: 52px 10px 12px;
+  padding: calc(52px + var(--safe-top)) 10px calc(12px + env(safe-area-inset-bottom, 0px));
   background: var(--bg-sunk);
   border-right: 1px solid var(--border);
   display: flex;
@@ -222,7 +225,7 @@ button {
 }
 .sidebar-hotzone {
   position: fixed;
-  top: 44px;
+  top: calc(44px + var(--safe-top));
   bottom: 0;
   left: 0;
   width: 14px;
@@ -244,6 +247,66 @@ button {
 }
 .chrome-auto.is-typing .sidebar {
   transform: translateX(-100%) !important;
+}
+
+/* ---------- phone layout: sidebar as a drawer, below 680px ---------------
+   Hover can't reveal anything on a touch device, so under this width the
+   sidebar is always a hidden-by-default overlay (opened by the same button
+   that pins/unpins it on desktop) instead of the hover-reveal panel above,
+   and chrome that only showed on hover is always shown instead. */
+@media (max-width: 680px) {
+  .sidebar-hotzone {
+    display: none;
+  }
+  .sidebar {
+    top: 0;
+    width: min(86vw, 320px);
+    transform: translateX(-100%);
+    box-shadow: none;
+    z-index: 30;
+    transition: transform 0.2s ease;
+  }
+  .chrome-pinned .main {
+    margin-left: 0;
+  }
+  /* The desktop hover/focus reveal (.chrome-auto .sidebar:focus-within) would
+     otherwise keep the drawer open after a tap in it navigates: the tapped
+     button keeps focus. On a phone only the drawer state opens it. */
+  .chrome-auto .sidebar-hotzone:hover + .sidebar,
+  .chrome-auto .sidebar:hover,
+  .chrome-auto .sidebar:focus-within {
+    transform: translateX(-100%);
+    box-shadow: none;
+  }
+  .sidebar-drawer-open .sidebar,
+  .chrome-auto.sidebar-drawer-open .sidebar {
+    transform: none;
+    box-shadow: 4px 0 24px rgb(0 0 0 / 0.18);
+  }
+  .chrome-auto .topbar,
+  .chrome-auto .note-header-right,
+  /* There's no mouse move to bring chrome back after typing on a touch
+     keyboard, so don't hide it in the first place. */
+  .chrome-auto.is-typing .topbar,
+  .chrome-auto.is-typing .note-header-right {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+  .meta-strip.meta-empty {
+    opacity: 0.55;
+  }
+  /* Pages scroll under the fixed top bar; give it the page's own background
+     so its buttons never sit on top of text. Same colour as the page, so it
+     only shows where something would otherwise overlap. */
+  .topbar {
+    background: var(--bg);
+  }
+}
+.sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 25;
+  background: rgb(0 0 0 / 0.35);
 }
 
 .sidebar-section {
@@ -357,6 +420,42 @@ button {
 /* ---------- note pane --------------------------------------------------- */
 .note-pane {
   min-height: 30vh;
+}
+/* The format toolbar: a tap alternative to the right-click menu, docked to
+   the bottom of the screen, above the on-screen keyboard when it's open (the
+   component sets `bottom` to the keyboard's height; see docs/MOBILE.md §
+   Phone layout). */
+.format-toolbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 18;
+  display: flex;
+  gap: 2px;
+  overflow-x: auto;
+  padding: 6px max(8px, env(safe-area-inset-left)) calc(6px + env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-right));
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+}
+/* Sitting on the keyboard: no home indicator underneath to keep clear of. */
+.format-toolbar.is-raised {
+  padding-bottom: 6px;
+}
+.format-toolbar-btn {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--fg-muted);
+}
+.format-toolbar-btn:active {
+  background: var(--border);
+  color: var(--fg);
 }
 .note-header {
   display: flex;
@@ -878,6 +977,19 @@ button {
   color: var(--fg);
   background: var(--bg-sunk);
 }
+/* Tap alternative for every hover-only widget tool above: a touchscreen has
+   no hover, so show them all the time instead of waiting for one that never
+   comes (see docs/MOBILE.md § Phone layout). */
+@media (pointer: coarse) {
+  .cm-md-image-wrap .cm-widget-tools,
+  .cm-table-widget .cm-widget-tools,
+  .cm-block-widget .cm-widget-tools,
+  .cm-md-codeblock-start .cm-code-header .cm-widget-tools,
+  .cm-table-widget .cm-table-add-row,
+  .cm-table-widget .cm-table-add-col {
+    opacity: 1;
+  }
+}
 .cm-block-widget {
   position: relative;
   padding: 12px 0;
@@ -1223,7 +1335,7 @@ button {
   width: var(--related-w);
   max-width: 100vw;
   overflow-y: auto;
-  padding: 52px 18px 24px;
+  padding: calc(52px + var(--safe-top)) 18px 24px;
   background: var(--bg-sunk);
   border-left: 1px solid var(--border);
   z-index: 18;
@@ -2161,7 +2273,7 @@ button.cue:hover {
   padding-bottom: 0;
 }
 .chat-page {
-  min-height: calc(100vh - 72px);
+  min-height: calc(100vh - 72px - var(--safe-top));
   display: flex;
   flex-direction: column;
 }

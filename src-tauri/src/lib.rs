@@ -123,12 +123,26 @@ struct VaultInfo {
     path: String,
     note_count: i64,
     default_path: String,
+    /// Whether the UI should offer to switch notebooks. Desktop only: mobile
+    /// has one fixed location (see `default_vault_path`) and no folder picker.
+    can_switch_vault: bool,
 }
 
-fn default_vault_path() -> PathBuf {
-    dirs::document_dir()
-        .or_else(dirs::home_dir)
-        .unwrap_or_else(|| PathBuf::from("."))
+/// Where notes live when nothing else says otherwise.
+///
+/// Desktop: `~/Documents/Noughtpad` (or the home folder if there's no
+/// Documents directory), chosen once and then replaceable via the folder
+/// picker. Mobile has no folder picker and no `NOUGHTPAD_VAULT` override
+/// (both are desktop ideas, see docs/MOBILE.md): it always uses the app's own
+/// documents directory, which Tauri's path resolver — unlike the `dirs` crate
+/// `default_vault_path` used before mobile existed — knows how to place on
+/// iOS (`NSDocumentDirectory`, visible in the Files app once the Xcode
+/// project turns on file sharing) and Android (the app's external files dir).
+fn default_vault_path(app: &AppHandle) -> PathBuf {
+    app.path()
+        .document_dir()
+        .or_else(|_| app.path().home_dir())
+        .unwrap_or_else(|_| PathBuf::from("."))
         .join("Noughtpad")
 }
 
@@ -291,7 +305,8 @@ fn activate(app: &AppHandle, state: &AppState, path: &Path, remember: bool) -> C
     Ok(VaultInfo {
         path: vault.root().display().to_string(),
         note_count: vault.count()?,
-        default_path: default_vault_path().display().to_string(),
+        default_path: default_vault_path(app).display().to_string(),
+        can_switch_vault: cfg!(desktop),
     })
 }
 
@@ -304,16 +319,25 @@ async fn vault_info(app: AppHandle, state: State<'_, AppState>) -> CmdResult<Opt
         return Ok(Some(VaultInfo {
             path: v.root().display().to_string(),
             note_count: v.count()?,
-            default_path: default_vault_path().display().to_string(),
+            default_path: default_vault_path(&app).display().to_string(),
+            can_switch_vault: cfg!(desktop),
         }));
     }
     // `NOUGHTPAD_VAULT` (e.g. from `pnpm dev:sample`) opens a folder for this
-    // session only, without replacing the remembered notes folder.
+    // session only, without replacing the remembered notes folder. A desktop
+    // idea: mobile has no env vars to set before launch.
+    #[cfg(desktop)]
     if let Some(p) = std::env::var_os("NOUGHTPAD_VAULT").map(PathBuf::from) {
         return activate(&app, &state, &p, false).map(Some);
     }
     match load_config(&app).vault_path {
         Some(p) if p.exists() => activate(&app, &state, &p, true).map(Some),
+        // Mobile has no folder picker (desktop's "choose a folder" screen), so
+        // there's nothing to show while waiting for a choice: open the one
+        // fixed location straight away, same as a blank page opening instantly.
+        #[cfg(mobile)]
+        _ => activate(&app, &state, &default_vault_path(&app), true).map(Some),
+        #[cfg(desktop)]
         _ => Ok(None),
     }
 }
@@ -333,8 +357,8 @@ fn since_start() -> u64 {
 }
 
 #[tauri::command]
-fn default_vault() -> String {
-    default_vault_path().display().to_string()
+fn default_vault(app: AppHandle) -> String {
+    default_vault_path(&app).display().to_string()
 }
 
 #[tauri::command]
@@ -531,9 +555,12 @@ pub fn run() {
         .manage(AppState::default())
         .manage(think::LlmState::default());
 
+    // `capture`/`capture_alt` are registered in `setup` below, which runs on every
+    // platform (mobile needs `sync::init` to run too); the shortcut itself is
+    // desktop-only, so only its registration is `#[cfg(desktop)]`.
     #[cfg(desktop)]
-    {
-        use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
+    let (capture, capture_alt) = {
+        use tauri_plugin_global_shortcut::{Code, Modifiers, Shortcut, ShortcutState};
         // Quick capture from anywhere: Cmd/Ctrl+Shift+Space.
         let capture = Shortcut::new(Some(Modifiers::SUPER | Modifiers::SHIFT), Code::Space);
         let capture_alt = Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::Space);
@@ -555,13 +582,23 @@ pub fn run() {
                 lifecycle::on_window_event(window, event);
                 sync::on_window_event(window, event);
             });
-        #[cfg(target_os = "macos")]
+        (capture, capture_alt)
+    };
+    #[cfg(target_os = "macos")]
+    {
+        builder = builder.menu(menu::build).on_menu_event(menu::on_menu_event);
+    }
+
+    // Runs on every platform: without this, `SyncState` is never managed and
+    // every sync command (registered below, unconditionally) would fail at
+    // runtime on first call. Found while proving a mobile build of this
+    // crate's logic (it used to be nested inside the desktop-only block above).
+    builder = builder.setup(move |app| {
+        tracing::info!(ms = since_start(), "setup");
+        app.manage(sync::init(app.handle()));
+        #[cfg(desktop)]
         {
-            builder = builder.menu(menu::build).on_menu_event(menu::on_menu_event);
-        }
-        builder = builder.setup(move |app| {
-            tracing::info!(ms = since_start(), "setup");
-            app.manage(sync::init(app.handle()));
+            use tauri_plugin_global_shortcut::GlobalShortcutExt;
             lifecycle::show_at_startup(app.handle());
             let shortcut = if cfg!(target_os = "macos") {
                 capture
@@ -571,9 +608,9 @@ pub fn run() {
             if let Err(e) = app.global_shortcut().register(shortcut) {
                 tracing::warn!("could not register quick-capture shortcut: {e}");
             }
-            Ok(())
-        });
-    }
+        }
+        Ok(())
+    });
 
     builder
         // Startup timeline next to `editor ready`: page load start/finish show the webview's share.

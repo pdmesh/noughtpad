@@ -9,10 +9,11 @@ import { tags as t } from "@lezer/highlight";
 import { assetResolver, linkOpener, livePreview } from "./livePreview";
 import { blockWidgets } from "./blocks";
 import { markdownClipboard, pickImages, saveImages, type ClipboardOptions } from "./clipboard";
-import { COMMANDS, cursorToEnd, imagePicker } from "./commands";
+import { commandById, COMMANDS, cursorToEnd, imagePicker } from "./commands";
 import { slashMenu } from "./slash";
 import { nativeContextMenu } from "./contextMenu";
 import { isTauri } from "../lib/api";
+import { isCoarsePointer } from "../lib/platform";
 
 // Formatting shortcuts (⌘B, ⌘I, ⌘E, ⇧⌘X, ⇧⌘7/8/9), ahead of the default keymap's ⌘I.
 const formatKeymap = COMMANDS.filter((c) => c.key).map((c) => ({ key: c.key!, run: c.run, preventDefault: true }));
@@ -26,6 +27,8 @@ export interface EditorHandle {
   insertImages(files: File[], at?: "cursor" | "end"): void;
   /** The bottom of the text on screen, for telling a drop below it from one beside it. */
   contentBottom(): number | null;
+  /** Run one of `COMMANDS` by id (the format toolbar's tap alternative to the right-click menu). */
+  runCommand(id: string): void;
 }
 
 interface Props extends ClipboardOptions {
@@ -90,6 +93,11 @@ export function Editor({ initial, onChange, placeholder, autoFocus, resolveAsset
       void saveImages(v, files, { saveAttachment, onError: (m) => onErrorRef.current?.(m) }, pos);
     },
     contentBottom: () => view.current?.contentDOM.getBoundingClientRect().bottom ?? null,
+    runCommand: (id: string) => {
+      const v = view.current;
+      const c = commandById(id);
+      if (v && c) c.run(v);
+    },
     setContent: (text: string) => {
       const v = view.current;
       if (!v || v.state.doc.toString() === text) return;
@@ -116,7 +124,11 @@ export function Editor({ initial, onChange, placeholder, autoFocus, resolveAsset
         blockWidgets,
         markdownClipboard({ saveAttachment, pasteClipboardImage, onError: (m) => onErrorRef.current?.(m) }),
         imagePicker.of((v) => pickImages(v, { saveAttachment, onError: (m) => onErrorRef.current?.(m) })),
-        ...(isTauri ? [nativeContextMenu()] : []),
+        // On a touch device there's no right-click to replace: leave the
+        // webview's own text-selection menu (Copy/Paste) in place, and let
+        // the format toolbar (src/components/FormatToolbar.tsx) stand in for
+        // the rest (see docs/MOBILE.md § Phone layout).
+        ...(isTauri && !isCoarsePointer ? [nativeContextMenu()] : []),
         assetResolver.of(resolveAsset ?? ((s) => s)),
         ...(openLink ? [linkOpener.of(openLink)] : []),
         placeholderExt(placeholder ?? ""),

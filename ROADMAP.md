@@ -51,12 +51,39 @@ stays FSL; sync lives in a private repo (`pdmesh/noughtpad-sync`) that plugs int
 
 Exit: edit the same notebook on two Macs and one non-Apple device for a week with no lost edits.
 
-## Later: M7, mobile apps (paid with Sync)
+## Started: M7, mobile apps (paid with Sync)
 
-- [ ] iOS and Android with Tauri 2 mobile, reusing the React UI and the Rust core
-- [ ] Same distraction-free capture: open to a blank page, labels and source on demand, quick capture widget or shortcut
-- [ ] Search and related notes on device (BGE-small is small enough); chat through your own provider. Local LLMs on phones are a later experiment
-- [ ] Sync through M6
+Plan and status: `docs/MOBILE.md`. iOS and Android with Tauri 2 mobile, reusing the React UI
+(`src/`) and the Rust core (`crates/noughtpad-core`) as-is. **The mobile app itself is not
+source-available** (like Sync): the actual app project (`gen/android`, `gen/apple`, app-store
+identity) lives in the private `pdmesh/noughtpad-mobile` repo, not here — see
+`docs/MOBILE.md` § "Where the mobile app project actually lives".
+
+- [x] Design and slice plan (`docs/MOBILE.md`, 2026-11-05)
+- [x] Slice 1, scaffolding: mobile entry point, desktop-only code switched off in this repo
+      (`#[cfg(mobile)]` branches, `default_vault_path` via Tauri's path resolver), desktop
+      `cargo fmt`/clippy/tests and `pnpm typecheck`/`test`/`perf` checked green throughout. A
+      debug Android build was proven end to end against this repo's own `src-tauri` to validate
+      the approach (SDK/NDK versions and the exact recipe are in `docs/MOBILE.md`), then that
+      scaffolding moved to `pdmesh/noughtpad-mobile`, which now carries the actual app project
+- [x] Slice 2, phone layout: sidebar as a drawer, 375px note page, tap alternatives for hover
+      tools and the right-click menu. Done for the write page, sidebar and editor, checked with
+      screenshots; not yet checked on Journal/Ideas/Chat/Settings
+- [ ] Slice 3, runs on a real device: Android done — `pdmesh/noughtpad-mobile` builds a verified
+      debug APK from its own `src-tauri` (see `docs/MOBILE.md`); not yet run on an actual device
+      or emulator. iOS picks up in a local Mac session (see `docs/HANDOFF.md`)
+- [ ] Slice 4, capture from outside the app (share sheet/intent), same shape as desktop's
+      ⌘⇧Space
+- [ ] Slice 5, Sync checked on a real phone alongside the two Macs
+- [ ] Same distraction-free capture: open to a blank page, labels and source on demand (covered by
+      reusing `src/`; a quick-capture widget/share target is slice 4, above)
+- [ ] Search and related notes on device (BGE-small is small enough, unverified build-wise — see
+      "Open risks" in `docs/MOBILE.md`); chat through your own provider. Local LLMs on phones are a
+      later experiment (see `docs/MOBILE.md` § Local AI on mobile for what's actually available)
+- [ ] Sync through M6, exercised on a real device (slice 5)
+
+Exit: the same M6 exit, plus a phone — edit the same notebook on a phone and a Mac with no lost
+edits, over the app's normal day-to-day use, not just a one-off test.
 
 ## Website (in progress, own sessions)
 

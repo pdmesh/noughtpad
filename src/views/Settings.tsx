@@ -56,11 +56,17 @@ export function SettingsView({
 
       <section className="settings-section">
         <h3 className="ideas-section-title">Notes folder</h3>
-        <Row label={vault.path} hint="Plain Markdown files. Noughtpad keeps its index in a .noughtpad folder inside it.">
-          <button className="btn btn-small" onClick={onSwitchVault}>
-            <FolderOpen size={13} aria-hidden /> Switch…
-          </button>
-        </Row>
+        {vault.canSwitchVault ? (
+          <Row label={vault.path} hint="Plain Markdown files. Noughtpad keeps its index in a .noughtpad folder inside it.">
+            <button className="btn btn-small" onClick={onSwitchVault}>
+              <FolderOpen size={13} aria-hidden /> Switch…
+            </button>
+          </Row>
+        ) : (
+          // Mobile: one fixed folder in the app's own storage (docs/MOBILE.md § Where notes live),
+          // so its sandbox path means nothing to the user and there's nothing to switch to.
+          <Row label="Noughtpad" hint="Plain Markdown files in this app's Noughtpad folder, which your phone's Files app can open." />
+        )}
         <Row label="Rebuild the search index" hint="Only needed if search seems out of date. Your notes are not touched.">
           <button className="btn btn-small" onClick={onRebuildIndex}>
             Rebuild
@@ -316,7 +322,7 @@ function WritingSettings() {
   );
 }
 
-function Row({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+function Row({ label, hint, children }: { label: string; hint?: string; children?: React.ReactNode }) {
   return (
     <div className="settings-row">
       <div className="settings-text">
