@@ -7,6 +7,7 @@ import { describeSync, syncNotices, useSync } from "../lib/sync";
 import { useState } from "react";
 import { useLlm } from "./Models";
 import { FONTS, SIZES, loadStyle, saveStyle, type FontChoice, type TextStyle } from "../lib/textStyle";
+import { thisDevice } from "../lib/platform";
 
 const isMac = typeof navigator !== "undefined" && /Mac/i.test(navigator.platform);
 const mod = isMac ? "⌘" : "Ctrl";
@@ -80,7 +81,7 @@ export function SettingsView({
         <h3 className="ideas-section-title">Finding connections</h3>
         <Row
           label="Search by meaning, related notes and ideas over time"
-          hint={`Uses a small model that runs on this computer (about 65 MB, downloaded once). ${semanticLine}.`}
+          hint={`Uses a small model that runs on ${thisDevice} (about 65 MB, downloaded once). ${semanticLine}.`}
         >
           <Toggle
             on={semanticOn}
@@ -181,7 +182,7 @@ function Sync() {
     <section className="settings-section">
       <h3 className="ideas-section-title">Sync</h3>
       {!sync.configured ? (
-        <Row label="Google Drive" hint="This build can't sign in to Google (it was built without Noughtpad's Google client secret)." >
+        <Row label="Google Drive" hint="This build can't sign in to Google: it was built without Noughtpad's Google sign-in client." >
           <span />
         </Row>
       ) : !sync.signedIn ? (
@@ -195,7 +196,7 @@ function Sync() {
         </Row>
       ) : (
         <>
-          <Row label={`Google Drive${sync.account ? ` · ${sync.account}` : ""}`} hint="Signed in. The sign-in is kept in this computer's keychain.">
+          <Row label={`Google Drive${sync.account ? ` · ${sync.account}` : ""}`} hint={`Signed in. The sign-in is kept in ${thisDevice}'s keychain.`}>
             <button className="btn btn-small" onClick={() => void api.syncSignOut().then(refresh, fail)}>
               Sign out
             </button>

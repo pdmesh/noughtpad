@@ -6,6 +6,7 @@ import { answerHtml } from "../lib/cite";
 import { formatDay } from "../lib/format";
 import type { Live, ScopeChoice } from "../lib/chat";
 import { useLlm } from "./Models";
+import { thisDevice } from "../lib/platform";
 
 const thisMonth = () => new Date().toISOString().slice(0, 7);
 const message = (e: unknown) => (isApiError(e) ? e.message : String(e));
@@ -136,7 +137,7 @@ export function ChatView({
             <p>Ask anything about your notes: how an idea changed, what you left open, what a month was about.</p>
             <p className="faint">
               {llm.active.kind === "local"
-                ? "Runs on this computer; your notes stay here."
+                ? `Runs on ${thisDevice}; your notes stay here.`
                 : "The model searches and reads notes within the scope you pick below; each one it reads shows up here."}
             </p>
           </div>

@@ -5,3 +5,6 @@
  * alternatives (see docs/MOBILE.md § Phone layout).
  */
 export const isCoarsePointer = typeof window !== "undefined" && !!window.matchMedia?.("(pointer: coarse)").matches;
+
+/** How the UI names the machine it runs on: "this computer", or on a phone or tablet "this device". */
+export const thisDevice = isCoarsePointer ? "this device" : "this computer";

@@ -300,6 +300,51 @@ button {
      only shows where something would otherwise overlap. */
   .topbar {
     background: var(--bg);
+    height: calc(50px + var(--safe-top));
+    gap: 0;
+    padding: var(--safe-top) 4px 0;
+  }
+  /* iOS-sized controls: 44pt touch targets, 22pt icons (the Lucide size
+     props are desktop sizes). */
+  .topbar .icon-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+  }
+  .topbar .icon-btn svg {
+    width: 22px;
+    height: 22px;
+  }
+  .format-toolbar-scroll {
+    gap: 0;
+  }
+  .format-toolbar-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+  }
+  .format-toolbar-btn svg {
+    width: 22px;
+    height: 22px;
+  }
+  .side-item {
+    padding: 11px 12px;
+    font-size: 1rem;
+    gap: 12px;
+  }
+  .side-item svg {
+    width: 18px;
+    height: 18px;
+  }
+  .main {
+    padding-top: calc(70px + var(--safe-top));
+  }
+}
+/* A touch "hover" sticks after the tap; only real pointers get hover colours. */
+@media (hover: none) {
+  .icon-btn:hover,
+  .side-item:not(.is-active):hover {
+    background: transparent;
   }
 }
 .sidebar-backdrop {
@@ -432,11 +477,25 @@ button {
   right: 0;
   z-index: 18;
   display: flex;
-  gap: 2px;
-  overflow-x: auto;
+  align-items: center;
   padding: 6px max(8px, env(safe-area-inset-left)) calc(6px + env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-right));
   background: var(--bg);
   border-top: 1px solid var(--border);
+}
+/* The format buttons scroll; the hide-keyboard button stays at the end. */
+.format-toolbar-scroll {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  gap: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.format-toolbar .format-toolbar-done {
+  margin-left: 4px;
+  padding-left: 4px;
+  border-left: 1px solid var(--border);
+  border-radius: 0;
 }
 /* Sitting on the keyboard: no home indicator underneath to keep clear of. */
 .format-toolbar.is-raised {

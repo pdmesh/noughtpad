@@ -3,6 +3,7 @@ import { BookOpen, MessageSquareText, Sprout, Tag, X } from "lucide-react";
 import { api, type Related } from "../lib/api";
 import { describeStatus, useSemanticStatus } from "../lib/useSemantic";
 import { formatDay, plainExcerpt } from "../lib/format";
+import { thisDevice } from "../lib/platform";
 
 interface Props {
   noteId: string | null;
@@ -145,8 +146,8 @@ export function EnableCard() {
   return (
     <div className="related-card">
       <p>
-        Related notes, search by meaning and Ideas over time use a small language model that runs entirely on this
-        computer. Your notes never leave it.
+        Related notes, search by meaning and Ideas over time use a small language model that runs entirely on{" "}
+        {thisDevice}. Your notes never leave it.
       </p>
       <p className="faint">One-time download of about 65 MB from Hugging Face. You can turn it off any time.</p>
       <button className="btn btn-primary" onClick={() => void api.enableSemantic()}>

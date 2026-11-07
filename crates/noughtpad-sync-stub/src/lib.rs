@@ -82,6 +82,11 @@ impl Service {
     pub fn sign_in(&self) -> Result<String> {
         Err(unavailable())
     }
+    /// Sign in through an app redirect (mobile): `authorize` shows Google's
+    /// page and returns the URL it redirected to.
+    pub fn sign_in_with(&self, _authorize: &dyn Fn(&str, &str) -> Result<String>) -> Result<String> {
+        Err(unavailable())
+    }
     pub fn sign_out(&self) -> Result<()> {
         Ok(())
     }
