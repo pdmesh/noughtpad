@@ -300,6 +300,51 @@ button {
      only shows where something would otherwise overlap. */
   .topbar {
     background: var(--bg);
+    height: calc(50px + var(--safe-top));
+    gap: 0;
+    padding: var(--safe-top) 4px 0;
+  }
+  /* iOS-sized controls: 44pt touch targets, 22pt icons (the Lucide size
+     props are desktop sizes). */
+  .topbar .icon-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+  }
+  .topbar .icon-btn svg {
+    width: 22px;
+    height: 22px;
+  }
+  .format-toolbar {
+    gap: 0;
+  }
+  .format-toolbar-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+  }
+  .format-toolbar-btn svg {
+    width: 21px;
+    height: 21px;
+  }
+  .side-item {
+    padding: 11px 12px;
+    font-size: 1rem;
+    gap: 12px;
+  }
+  .side-item svg {
+    width: 18px;
+    height: 18px;
+  }
+  .main {
+    padding-top: calc(70px + var(--safe-top));
+  }
+}
+/* A touch "hover" sticks after the tap; only real pointers get hover colours. */
+@media (hover: none) {
+  .icon-btn:hover,
+  .side-item:not(.is-active):hover {
+    background: transparent;
   }
 }
 .sidebar-backdrop {

@@ -32,9 +32,14 @@ const BUTTONS: { id: string; label: string; icon: React.ReactNode }[] = [
  * doesn't shrink the layout viewport when the on-screen keyboard opens, so a
  * plain `bottom: 0` would sit behind the keyboard: the visual viewport says
  * how much of the screen the keyboard covers, and the toolbar is lifted by that.
+ *
+ * Only while the note's text is being edited, like iOS writing apps: reading
+ * a note, or typing in its title, labels or source, shows no toolbar.
  */
 export function FormatToolbar({ editorRef }: { editorRef: RefObject<EditorHandle | null> }) {
   const keyboard = useKeyboardInset();
+  const editing = useEditorFocus();
+  if (!editing) return null;
   return (
     <div
       className={`format-toolbar ${keyboard > 0 ? "is-raised" : ""}`}
@@ -57,6 +62,23 @@ export function FormatToolbar({ editorRef }: { editorRef: RefObject<EditorHandle
       ))}
     </div>
   );
+}
+
+/** Whether the cursor is in the note's text (CodeMirror's `.cm-editor`). */
+function useEditorFocus(): boolean {
+  const [focused, setFocused] = useState(() => !!document.activeElement?.closest(".cm-editor"));
+  useEffect(() => {
+    const update = () => setFocused(!!document.activeElement?.closest(".cm-editor"));
+    // On focusout the new element isn't active yet; check once it is.
+    const later = () => setTimeout(update, 0);
+    document.addEventListener("focusin", update);
+    document.addEventListener("focusout", later);
+    return () => {
+      document.removeEventListener("focusin", update);
+      document.removeEventListener("focusout", later);
+    };
+  }, []);
+  return focused;
 }
 
 /** How far the on-screen keyboard covers the bottom of the layout viewport, in px. */

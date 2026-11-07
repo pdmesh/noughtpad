@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Cloud, HardDrive, KeyRound, Loader2, Plus, Trash2, X } from "lucide-react";
 import { useEvent } from "../lib/useEvent";
 import { api, isApiError, type DownloadEvent, type LlmOverview, type LocalEntry, type RemoteKind } from "../lib/api";
+import { thisDevice } from "../lib/platform";
 
 const GB = 1e9;
 const gb = (b: number) => `${(b / GB).toFixed(1)} GB`;
@@ -74,7 +75,7 @@ export function ModelsView({ focus }: { focus?: "local" | "remote" }) {
           <>
             <span>
               Answering with <strong>{data.activeLabel}</strong>.{" "}
-              {activeLocal ? "Your notes stay on this computer." : "The notes you choose are sent to this provider when you ask."}
+              {activeLocal ? `Your notes stay on ${thisDevice}.` : "The notes you choose are sent to this provider when you ask."}
             </span>
             <button className="btn btn-small" onClick={act(api.llmTurnOff)}>
               Turn off

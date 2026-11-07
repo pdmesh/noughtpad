@@ -169,7 +169,9 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
   }, []);
   const showChat = useCallback((id: string) => setView({ kind: "chat", id, key: id }), []);
   // Chat history: a right-hand panel on the chat page, open unless the user hid it.
-  const [historyOpen, setHistoryOpen] = useState(() => readPref("noughtpad.chatHistory") !== "off");
+  // On a phone the history covers the chat, so it starts closed there and
+  // closes again once a chat is picked.
+  const [historyOpen, setHistoryOpen] = useState(() => !isPhone() && readPref("noughtpad.chatHistory") !== "off");
   const toggleHistory = useCallback(() => {
     setHistoryOpen((o) => {
       writePref("noughtpad.chatHistory", o ? "off" : "on");
@@ -616,8 +618,14 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
         <ChatHistory
           currentId={view.kind === "chat" ? view.id : null}
           running={new Set(Object.keys(chatLive.live))}
-          onOpen={showChat}
-          onNew={() => openChat()}
+          onOpen={(id) => {
+            showChat(id);
+            if (isPhone()) setHistoryOpen(false);
+          }}
+          onNew={() => {
+            openChat();
+            if (isPhone()) setHistoryOpen(false);
+          }}
           onDeleted={(id) => {
             if (view.kind === "chat" && view.id === id) openChat();
           }}
@@ -670,6 +678,11 @@ function UpdateButton() {
       <ArrowUpCircle size={14} aria-hidden /> {label}
     </button>
   );
+}
+
+/** Phone width: the same breakpoint as the phone layout in styles.css. */
+function isPhone(): boolean {
+  return window.matchMedia("(max-width: 680px)").matches;
 }
 
 function readPref(key: string): string | null {

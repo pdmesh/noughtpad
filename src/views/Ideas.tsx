@@ -6,6 +6,7 @@ import { formatDay, formatMonth, plainExcerpt } from "../lib/format";
 import { useSemanticStatus, describeStatus } from "../lib/useSemantic";
 import { Sparkline } from "../components/Sparkline";
 import { EnableCard } from "../components/RelatedPanel";
+import { thisDevice } from "../lib/platform";
 
 interface Nav {
   onOpenNote: (id: string) => void;
@@ -43,7 +44,7 @@ export function IdeasView({ onOpenNote, onOpenTheme }: Nav) {
     <div className="ideas">
       <h2 className="journal-heading">Ideas over time</h2>
       <p className="ideas-lede">
-        Patterns found in your notes on this computer. They are suggestions, not conclusions: open a thread to see the
+        Patterns found in your notes on {thisDevice}. They are suggestions, not conclusions: open a thread to see the
         notes behind it.
       </p>
 
