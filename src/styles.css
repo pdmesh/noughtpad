@@ -315,7 +315,7 @@ button {
     width: 22px;
     height: 22px;
   }
-  .format-toolbar {
+  .format-toolbar-scroll {
     gap: 0;
   }
   .format-toolbar-btn {
@@ -324,8 +324,8 @@ button {
     border-radius: 10px;
   }
   .format-toolbar-btn svg {
-    width: 21px;
-    height: 21px;
+    width: 22px;
+    height: 22px;
   }
   .side-item {
     padding: 11px 12px;
@@ -477,11 +477,25 @@ button {
   right: 0;
   z-index: 18;
   display: flex;
-  gap: 2px;
-  overflow-x: auto;
+  align-items: center;
   padding: 6px max(8px, env(safe-area-inset-left)) calc(6px + env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-right));
   background: var(--bg);
   border-top: 1px solid var(--border);
+}
+/* The format buttons scroll; the hide-keyboard button stays at the end. */
+.format-toolbar-scroll {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  gap: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.format-toolbar .format-toolbar-done {
+  margin-left: 4px;
+  padding-left: 4px;
+  border-left: 1px solid var(--border);
+  border-radius: 0;
 }
 /* Sitting on the keyboard: no home indicator underneath to keep clear of. */
 .format-toolbar.is-raised {

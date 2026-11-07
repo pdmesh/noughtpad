@@ -1,5 +1,5 @@
 import { useEffect, useState, type RefObject } from "react";
-import { Bold, Code, Heading1, Heading2, Image, Italic, Link2, List, ListOrdered, ListTodo, Minus, Quote, Strikethrough, Table2 } from "lucide-react";
+import { Bold, Code, Heading1, Heading2, Image, Italic, KeyboardOff, Link2, List, ListOrdered, ListTodo, Minus, Quote, Strikethrough, Table2 } from "lucide-react";
 import type { EditorHandle } from "../editor/Editor";
 
 const BUTTONS: { id: string; label: string; icon: React.ReactNode }[] = [
@@ -33,13 +33,13 @@ const BUTTONS: { id: string; label: string; icon: React.ReactNode }[] = [
  * plain `bottom: 0` would sit behind the keyboard: the visual viewport says
  * how much of the screen the keyboard covers, and the toolbar is lifted by that.
  *
- * Only while the note's text is being edited, like iOS writing apps: reading
- * a note, or typing in its title, labels or source, shows no toolbar.
+ * It takes the place of the iOS keyboard's own "^ v Done" bar, which the iOS
+ * app hides (noughtpad-mobile's main.mm), so while the note's text is being
+ * edited it ends with a hide-keyboard button.
  */
 export function FormatToolbar({ editorRef }: { editorRef: RefObject<EditorHandle | null> }) {
   const keyboard = useKeyboardInset();
   const editing = useEditorFocus();
-  if (!editing) return null;
   return (
     <div
       className={`format-toolbar ${keyboard > 0 ? "is-raised" : ""}`}
@@ -47,19 +47,32 @@ export function FormatToolbar({ editorRef }: { editorRef: RefObject<EditorHandle
       aria-label="Formatting"
       style={{ bottom: keyboard }}
     >
-      {BUTTONS.map((b) => (
+      <div className="format-toolbar-scroll">
+        {BUTTONS.map((b) => (
+          <button
+            key={b.id}
+            className="format-toolbar-btn"
+            title={b.label}
+            aria-label={b.label}
+            // Keep the editor's focus and on-screen keyboard open.
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => editorRef.current?.runCommand(b.id)}
+          >
+            {b.icon}
+          </button>
+        ))}
+      </div>
+      {editing && (
         <button
-          key={b.id}
-          className="format-toolbar-btn"
-          title={b.label}
-          aria-label={b.label}
-          // Keep the editor's focus and on-screen keyboard open.
+          className="format-toolbar-btn format-toolbar-done"
+          title="Hide keyboard"
+          aria-label="Hide keyboard"
           onMouseDown={(e) => e.preventDefault()}
-          onClick={() => editorRef.current?.runCommand(b.id)}
+          onClick={() => (document.activeElement as HTMLElement | null)?.blur()}
         >
-          {b.icon}
+          <KeyboardOff size={16} />
         </button>
-      ))}
+      )}
     </div>
   );
 }
@@ -73,6 +86,8 @@ function useEditorFocus(): boolean {
     const later = () => setTimeout(update, 0);
     document.addEventListener("focusin", update);
     document.addEventListener("focusout", later);
+    // The editor may have taken focus (autoFocus) before this listened.
+    update();
     return () => {
       document.removeEventListener("focusin", update);
       document.removeEventListener("focusout", later);
