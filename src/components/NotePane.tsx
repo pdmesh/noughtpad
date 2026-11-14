@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { headingLine } from "../lib/metaLayout";
 import { useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
 import { useEvent } from "../lib/useEvent";
@@ -34,6 +36,16 @@ export function NotePane({ noteId, vaultRoot, presetLabels, onCreated, onTrashed
   const [loaded, setLoaded] = useState(noteId === null);
   const [meta, setMeta] = useState<EditableMeta>({ ...emptyMeta, labels: presetLabels ?? [] });
   const [status, setStatus] = useState<"idle" | "pending" | "saving" | "saved" | "error">("idle");
+  // "+ Title" in the details line: show the (empty) title field until it loses focus.
+  const [addingTitle, setAddingTitle] = useState(false);
+  // With no title and a heading on the first line, the details line sits inside
+  // the editor under that heading (editor/headerSlot.ts), rendered into this host.
+  const [slot] = useState(() => {
+    const host = document.createElement("div");
+    host.className = "note-header-slot";
+    return { host, onHeading: (has: boolean) => setHeadingFirst(has) };
+  });
+  const [headingFirst, setHeadingFirst] = useState(false);
 
   const localRef = useRef<EditorHandle | null>(null);
   const editor = editorRef ?? localRef;
@@ -57,6 +69,8 @@ export function NotePane({ noteId, vaultRoot, presetLabels, onCreated, onTrashed
         metaRef.current = m;
         setDoc(d);
         setMeta(m);
+        // Known now, so a heading-first note opens with its details already under the heading.
+        setHeadingFirst(headingLine(d.content) !== null);
         setLoaded(true);
       },
       (e) => onNotice?.(isApiError(e) ? e.message : String(e)),
@@ -197,34 +211,42 @@ export function NotePane({ noteId, vaultRoot, presetLabels, onCreated, onTrashed
   const openLink = (url: string) =>
     void openExternal(url).catch((e) => onNotice?.(`Couldn't open the link: ${isApiError(e) ? e.message : String(e)}`));
 
+  const showTitle = !!meta.title || addingTitle;
+  const header = (
+    <header className="note-header">
+      <MetaStrip meta={meta} onChange={onMeta} onOpenUrl={openLink} onAddTitle={showTitle ? undefined : () => setAddingTitle(true)} />
+      <div className="note-header-right chrome">
+        {doc && <span className="note-date" title={doc.path}>{formatDateTime(doc.created)}</span>}
+        <span className={`save-dot save-${status}`} title={statusLabel(status)} aria-label={statusLabel(status)} />
+        {doc && (
+          <button className="icon-btn" onClick={trash} title="Move to trash" aria-label="Move to trash">
+            <Trash2 size={15} />
+          </button>
+        )}
+      </div>
+    </header>
+  );
   return (
     <article className="note-pane">
-      <header className="note-header">
-        <MetaStrip meta={meta} onChange={onMeta} onOpenUrl={openLink} />
-        <div className="note-header-right chrome">
-          {doc && <span className="note-date" title={doc.path}>{formatDateTime(doc.created)}</span>}
-          <span className={`save-dot save-${status}`} title={statusLabel(status)} aria-label={statusLabel(status)} />
-          {doc && (
-            <button className="icon-btn" onClick={trash} title="Move to trash" aria-label="Move to trash">
-              <Trash2 size={15} />
-            </button>
-          )}
-        </div>
-      </header>
-      {/* Optional title: invisible until the top of the note is hovered, unless one is set. */}
-      <input
-        className={`note-title ${meta.title ? "has-title" : "no-title"}`}
-        value={meta.title ?? ""}
-        placeholder="Title"
-        aria-label="Title (optional)"
-        onChange={(e) => onMeta({ ...meta, title: e.target.value || null })}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === "ArrowDown") {
-            e.preventDefault();
-            editor.current?.focus();
-          }
-        }}
-      />
+      {!showTitle && headingFirst ? createPortal(header, slot.host) : header}
+      {/* Optional title: shown when set, or once "+ Title" is chosen in the details line. */}
+      {showTitle && (
+        <input
+          className="note-title"
+          value={meta.title ?? ""}
+          placeholder="Title"
+          aria-label="Title (optional)"
+          autoFocus={addingTitle && !meta.title}
+          onChange={(e) => onMeta({ ...meta, title: e.target.value || null })}
+          onBlur={() => setAddingTitle(false)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === "ArrowDown") {
+              e.preventDefault();
+              editor.current?.focus();
+            }
+          }}
+        />
+      )}
       <Editor
         ref={editor}
         initial={doc?.content ?? ""}
@@ -233,6 +255,7 @@ export function NotePane({ noteId, vaultRoot, presetLabels, onCreated, onTrashed
         placeholder={noteId ? "" : "Write anything… Type / to insert a heading, list, table…"}
         resolveAsset={(src) => assetUrl(vaultRoot, src)}
         openLink={openLink}
+        headerSlot={slot}
         saveAttachment={api.saveAttachment}
         pasteClipboardImage={isTauri ? api.pasteClipboardImage : undefined}
         onError={onNotice}

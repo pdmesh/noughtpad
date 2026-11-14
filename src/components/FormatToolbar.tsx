@@ -1,6 +1,7 @@
 import { useEffect, useState, type RefObject } from "react";
 import { Bold, Code, Heading1, Heading2, Image, Italic, KeyboardOff, Link2, List, ListOrdered, ListTodo, Minus, Quote, Strikethrough, Table2 } from "lucide-react";
 import type { EditorHandle } from "../editor/Editor";
+import { inNoteText } from "../lib/metaLayout";
 
 const BUTTONS: { id: string; label: string; icon: React.ReactNode }[] = [
   { id: "bold", label: "Bold", icon: <Bold size={16} /> },
@@ -77,11 +78,11 @@ export function FormatToolbar({ editorRef }: { editorRef: RefObject<EditorHandle
   );
 }
 
-/** Whether the cursor is in the note's text (CodeMirror's `.cm-editor`). */
+/** Whether the cursor is in the note's text (the editor, not the details line inside it). */
 function useEditorFocus(): boolean {
-  const [focused, setFocused] = useState(() => !!document.activeElement?.closest(".cm-editor"));
+  const [focused, setFocused] = useState(() => inNoteText(document.activeElement));
   useEffect(() => {
-    const update = () => setFocused(!!document.activeElement?.closest(".cm-editor"));
+    const update = () => setFocused(inNoteText(document.activeElement));
     // On focusout the new element isn't active yet; check once it is.
     const later = () => setTimeout(update, 0);
     document.addEventListener("focusin", update);

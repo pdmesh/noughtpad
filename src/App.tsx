@@ -1,6 +1,6 @@
 import { lazy, Suspense, type ComponentType, useCallback, useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowUpCircle, CalendarDays, History, Settings as SettingsIcon, FilePlus2, FolderOpen, MessageSquareText, Notebook, PanelLeft, PenLine, Search, Sprout, Waypoints, X } from "lucide-react";
+import { ArrowUpCircle, CalendarDays, FolderCheck, ChevronLeft, ChevronRight, History, Settings as SettingsIcon, FilePlus2, FolderOpen, MessageSquareText, Notebook, PanelLeft, PenLine, Search, Sprout, Waypoints, X } from "lucide-react";
 import { api, isApiError, onEvent, pickFolder, type VaultInfo } from "./lib/api";
 import { useEvent } from "./lib/useEvent";
 import { NotePane } from "./components/NotePane";
@@ -15,6 +15,9 @@ import { imageFiles, loadMarkdownPipeline } from "./editor/clipboard";
 import { checkForUpdates, describeUpdate, installUpdate, startUpdateChecks, updateButtonLabel, useUpdateState } from "./lib/updates";
 import { describeSync, useSync } from "./lib/sync";
 import { useMatchMedia } from "./lib/useMediaQuery";
+import { back, canBack, canForward, emptyHistory, forward, replaceCurrent, visit, type NavHistory } from "./lib/navHistory";
+import { relatePlaces, type Place, type View } from "./lib/place";
+import { inNoteText } from "./lib/metaLayout";
 
 // Pages other than writing load after the editor is ready, keeping them out of
 // the startup bundle (G1: capture in < 300 ms).
@@ -54,18 +57,6 @@ const SettingsView = page(settings, (m) => m.SettingsView);
 function preloadDeferred() {
   for (const load of [loadMarkdownPipeline, chat.load, journal.load, ideas.load, settings.load, models.load]) void load();
 }
-
-/** "write" is the blank page; "notes" lists all notes (optionally one collection). */
-type View =
-  | { kind: "write" }
-  | { kind: "notes"; label?: string }
-  | { kind: "journal" }
-  | { kind: "ideas" }
-  | { kind: "theme"; id: string }
-  | { kind: "models"; focus?: "local" | "remote" }
-  | { kind: "settings" }
-  /** `key` stays the same when a new chat gets its id, so the page isn't remounted. */
-  | { kind: "chat"; id: string | null; start?: ScopeChoice; key: string };
 
 export function App() {
   const [vault, setVault] = useState<VaultInfo | null | undefined>(undefined);
@@ -127,10 +118,10 @@ function Welcome({ onOpened, error, setError }: { onOpened: (v: VaultInfo) => vo
       <p className="welcome-lede">A blank page that quietly remembers. Your notes are plain Markdown files in a folder you choose.</p>
       <div className="welcome-actions">
         <button className="btn btn-primary" onClick={() => open(defaultPath ?? null)}>
-          Start in {defaultPath ?? "~/Documents/Noughtpad"}
+          <FolderCheck size={14} aria-hidden /> Start in {defaultPath ?? "~/Documents/Noughtpad"}
         </button>
         <button className="btn" onClick={async () => open(await pickFolder())}>
-          <FolderOpen size={16} aria-hidden /> Choose another folder…
+          <FolderOpen size={14} aria-hidden /> Choose another folder…
         </button>
       </div>
       {error && <p className="error">{error}</p>}
@@ -205,15 +196,63 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
     window.scrollTo({ top: 0 });
   }, []);
 
-  const newNote = useCallback(() => {
+  // `fromHistory`: a blank page reached with Back/Forward, which takes no label from the page left.
+  const startNote = useCallback((fromHistory: boolean) => {
     setView((v) => {
-      setPresetLabel(v.kind === "notes" ? v.label : undefined);
+      setPresetLabel(!fromHistory && v.kind === "notes" ? v.label : undefined);
       return { kind: "write" };
     });
     setCurrentId(null);
     setPaneKey(`new-${++newSeq.current}`);
     window.scrollTo({ top: 0 });
   }, []);
+  const newNote = useCallback(() => startNote(false), [startNote]);
+  // A save that lands after its pane was left (it flushes on unmount) mustn't claim the current note.
+  const paneKeyRef = useRef(paneKey);
+  paneKeyRef.current = paneKey;
+
+  // Back/forward. Every view change is recorded; going back or forward moves the index
+  // first, so the view change it causes is "the same place" and records nothing.
+  const [nav, setNav] = useState<NavHistory<Place>>(() => emptyHistory<Place>({ view: { kind: "write" }, noteId: null, paneKey: "new-0" }));
+  const navRef = useRef(nav);
+  navRef.current = nav;
+  // Bumped on every place change, so a slow Back/Forward can tell it has been overtaken.
+  const placeSeq = useRef(0);
+  useEffect(() => {
+    placeSeq.current++;
+    setNav((h) => visit(h, { view, noteId: view.kind === "write" ? currentId : null, paneKey }, relatePlaces));
+  }, [view, currentId, paneKey]);
+  const goTo = useCallback(
+    async (place: Place) => {
+      if (place.view.kind !== "write") return setView(place.view);
+      if (!place.noteId) return startNote(true);
+      const ticket = placeSeq.current;
+      const exists = await api.getNote(place.noteId).then(
+        () => true,
+        () => false,
+      );
+      // The user went somewhere else (or pressed Back again) while this was loading.
+      if (placeSeq.current !== ticket) return;
+      if (exists) return openNote(place.noteId);
+      // Trashed or deleted since: the blank page takes its place in the history,
+      // so Back keeps going past it instead of landing here again.
+      const blank: Place = { view: { kind: "write" }, noteId: null, paneKey: "" };
+      navRef.current = replaceCurrent(navRef.current, blank);
+      setNav(navRef.current);
+      startNote(true);
+    },
+    [openNote, startNote],
+  );
+  const step = useCallback(
+    (dir: "back" | "forward") => {
+      const r = dir === "back" ? back(navRef.current) : forward(navRef.current);
+      if (!r.place) return;
+      navRef.current = r.history;
+      setNav(r.history);
+      void goTo(r.place);
+    },
+    [goTo],
+  );
 
   const toggleListUnderEditor = useCallback(() => {
     setListUnderEditor((on) => {
@@ -322,9 +361,15 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
         case "go-models":
           setView({ kind: "models" });
           break;
+        case "go-back":
+          step("back");
+          break;
+        case "go-forward":
+          step("forward");
+          break;
       }
     },
-    [newNote, toggleChrome, openChat],
+    [newNote, toggleChrome, openChat, step],
   );
   useEvent<string>("menu", runCommand);
 
@@ -363,11 +408,33 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
     return () => window.removeEventListener("keydown", onKey, true);
   }, [runCommand]);
 
+  // ⌘[ / ⌘] go back and forward, caught before the editor (whose keymap outdents/indents
+  // with them; Tab and Shift-Tab still do that). The mouse's side buttons do the same.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || e.shiftKey || e.altKey || (e.key !== "[" && e.key !== "]")) return;
+      e.preventDefault();
+      e.stopPropagation();
+      runCommand(e.key === "[" ? "go-back" : "go-forward");
+    };
+    const onMouse = (e: MouseEvent) => {
+      if (e.button !== 3 && e.button !== 4) return;
+      e.preventDefault();
+      runCommand(e.button === 3 ? "go-back" : "go-forward");
+    };
+    window.addEventListener("keydown", onKey, true);
+    window.addEventListener("mouseup", onMouse);
+    return () => {
+      window.removeEventListener("keydown", onKey, true);
+      window.removeEventListener("mouseup", onMouse);
+    };
+  }, [runCommand]);
+
   // While typing, chrome stays hidden even if the pointer rests on it; moving the mouse brings it back.
   const [typing, setTyping] = useState(false);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const inEditor = (e.target as HTMLElement | null)?.closest?.(".cm-content");
+      const inEditor = inNoteText(e.target as Element | null);
       if (inEditor && !e.metaKey && !e.ctrlKey && e.key.length === 1) setTyping(true);
     };
     const onMove = () => setTyping(false);
@@ -439,6 +506,12 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
       <div className="topbar chrome">
         <button className="icon-btn" onClick={toggleChrome} title="Toggle sidebar (⌘\)" aria-label="Toggle sidebar">
           <PanelLeft size={16} />
+        </button>
+        <button className="icon-btn nav-btn" onClick={() => runCommand("go-back")} disabled={!canBack(nav)} title="Back (⌘[)" aria-label="Back">
+          <ChevronLeft size={16} />
+        </button>
+        <button className="icon-btn nav-btn" onClick={() => runCommand("go-forward")} disabled={!canForward(nav)} title="Forward (⌘])" aria-label="Forward">
+          <ChevronRight size={16} />
         </button>
         <div className="topbar-spacer" />
         {sync.available && sync.enabled && (
@@ -524,7 +597,7 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
             noteId={currentId ?? (paneKey.startsWith("new-") ? null : paneKey)}
             vaultRoot={vault.path}
             presetLabels={presetLabel ? [presetLabel] : undefined}
-            onCreated={setCurrentId}
+            onCreated={(id) => paneKeyRef.current === paneKey && setCurrentId(id)}
             onTrashed={newNote}
             onNotice={setNotice}
             editorRef={editorRef}

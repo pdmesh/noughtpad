@@ -1,8 +1,28 @@
 @import "tailwindcss";
 
 /* ---------- tokens ---------------------------------------------------- */
+/* Shared, theme-independent tokens. */
 :root {
   --safe-top: env(safe-area-inset-top, 0px);
+  /* Translucent, so the selection (drawn behind the text) shows through code. */
+  --code-tint: color-mix(in srgb, var(--fg) 5.5%, transparent);
+  --font-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  /* Note text: the system font and size unless changed in Settings → Writing (lib/textStyle.ts). */
+  --font-text: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --text-size: 1rem;
+  --sidebar-w: 260px;
+  --related-w: 340px;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --measure: 720px;
+  /* Space above the page, under the hover top bar (the phone's bar is taller). */
+  --main-top: 44px;
+}
+
+/* Themes (Settings → Appearance, lib/theme.ts sets data-theme on <html>).
+   Each defines every colour token. Paper is also the fallback with no attribute.
+   The activity heat ramp is one hue per theme, an ordinal ramp against the surface. */
+:root,
+:root[data-theme="paper"] {
   --bg: #faf8f4;
   --bg-elev: #ffffff;
   --bg-sunk: #f2efe8;
@@ -16,49 +36,88 @@
   --selection: #f0dcbc;
   --mark: #f6dfae;
   --code-bg: #f1ede4;
-  /* Translucent, so the selection (drawn behind the text) shows through code. */
-  --code-tint: color-mix(in srgb, var(--fg) 5.5%, transparent);
   --danger: #b4443a;
-  /* Activity heat ramp (one hue, validated as an ordinal ramp vs the surface). */
+  --sync-ok: #7fb685;
   --heat-0: #ece7dc;
   --heat-1: #d9a35a;
   --heat-2: #c08036;
   --heat-3: #9a5f1c;
   --heat-4: #6b3e0c;
-  --font-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
-  /* Note text: the system font and size unless changed in Settings → Writing (lib/textStyle.ts). */
-  --font-text: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
-  --text-size: 1rem;
-  --sidebar-w: 260px;
-  --related-w: 340px;
-  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
-  --measure: 720px;
   color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #17191e;
-    --bg-elev: #1e2128;
-    --bg-sunk: #121418;
-    --fg: #e6e3dc;
-    --fg-muted: #a7aab2;
-    --fg-faint: #6c707a;
-    --border: #2c3039;
-    --accent: #e0a458;
-    --accent-soft: #3a2f22;
-    --link: #8cbce0;
-    --selection: #4a3c28;
-    --mark: #5a4523;
-    --code-bg: #22252d;
-    --danger: #e0786e;
-    --heat-0: #262a32;
-    --heat-1: #7a5220;
-    --heat-2: #a4702f;
-    --heat-3: #cf9446;
-    --heat-4: #f0bf78;
-    color-scheme: dark;
-  }
+:root[data-theme="white"] {
+  --bg: #ffffff;
+  --bg-elev: #ffffff;
+  --bg-sunk: #f6f7f8;
+  --fg: #1f2328;
+  --fg-muted: #59636e;
+  --fg-faint: #8c959f;
+  --border: #e4e6e9;
+  --accent: #2f6fb7;
+  --accent-soft: #e3eefa;
+  --link: #0969da;
+  --selection: #cfe2fb;
+  --mark: #fff1b3;
+  --code-bg: #f3f4f6;
+  --danger: #cf222e;
+  --sync-ok: #5fae72;
+  --heat-0: #e8edf3;
+  --heat-1: #a8c7ea;
+  --heat-2: #6fa2dc;
+  --heat-3: #3a78c2;
+  --heat-4: #1d4f8f;
+  color-scheme: light;
+}
+
+/* Graphite: the original dark palette on neutral (zinc) surfaces; keeps the amber accent. */
+:root[data-theme="graphite"] {
+  --bg: #18181b;
+  --bg-elev: #202024;
+  --bg-sunk: #121214;
+  --fg: #ececed;
+  --fg-muted: #a1a1aa;
+  --fg-faint: #71717a;
+  --border: #2e2e33;
+  --accent: #e0a458;
+  --accent-soft: #3a2f22;
+  --link: #8cbce0;
+  --selection: #3f3f46;
+  --mark: #5a4523;
+  --code-bg: #232327;
+  --danger: #f07167;
+  --sync-ok: #7ccf8f;
+  --heat-0: #262a32;
+  --heat-1: #7a5220;
+  --heat-2: #a4702f;
+  --heat-3: #cf9446;
+  --heat-4: #f0bf78;
+  color-scheme: dark;
+}
+
+/* Midnight: a blue-tinted dark, in the spirit of VS Code's dark themes. */
+:root[data-theme="midnight"] {
+  --bg: #161b26;
+  --bg-elev: #1c2230;
+  --bg-sunk: #11151d;
+  --fg: #e2e6ee;
+  --fg-muted: #9aa4b5;
+  --fg-faint: #687286;
+  --border: #2a3242;
+  --accent: #6cb6ff;
+  --accent-soft: #1f3350;
+  --link: #79c0ff;
+  --selection: #264f78;
+  --mark: #5a4a1f;
+  --code-bg: #1e2533;
+  --danger: #f47067;
+  --sync-ok: #7ccf8f;
+  --heat-0: #222a38;
+  --heat-1: #1f4a7a;
+  --heat-2: #2f6fb0;
+  --heat-3: #4f95d8;
+  --heat-4: #8cc4f5;
+  color-scheme: dark;
 }
 
 /* ---------- base -------------------------------------------------------- */
@@ -139,22 +198,106 @@ button {
   margin-top: 28px;
   align-items: flex-start;
 }
+/* ---------- controls: one look for buttons, dropdowns and text fields ---------- */
+:root {
+  --control-h: 32px;
+  --control-h-small: 28px;
+  --control-radius: 7px;
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
 .btn {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 9px 16px;
-  border-radius: 8px;
+  justify-content: center;
+  gap: 6px;
+  box-sizing: border-box;
+  height: var(--control-h);
+  padding: 0 14px;
+  border-radius: var(--control-radius);
   border: 1px solid var(--border);
   background: var(--bg-elev);
+  color: var(--fg);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 500;
+  white-space: nowrap;
+  box-shadow: 0 1px 1px rgb(0 0 0 / 0.04);
+  transition:
+    background 0.12s ease,
+    border-color 0.12s ease;
 }
-.btn:hover {
-  border-color: var(--fg-faint);
+.btn svg {
+  flex: none;
+  color: var(--fg-muted);
+}
+.btn:hover:not(:disabled) {
+  background: var(--bg-sunk);
+  border-color: color-mix(in srgb, var(--fg) 18%, var(--border));
+}
+.btn:active:not(:disabled) {
+  transform: translateY(0.5px);
+}
+.btn:focus-visible,
+.icon-btn:focus-visible,
+.segmented button:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-color: var(--accent);
 }
 .btn-primary {
   background: var(--fg);
   color: var(--bg);
   border-color: var(--fg);
+}
+.btn-primary svg {
+  color: inherit;
+}
+.btn-primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--fg) 86%, var(--bg));
+  border-color: transparent;
+}
+
+/* Dropdown (components/Select.tsx): drawn like a button, opens the system menu. */
+.select {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.select select {
+  appearance: none;
+  -webkit-appearance: none;
+  box-sizing: border-box;
+  height: var(--control-h-small);
+  min-width: 9.5rem;
+  max-width: 100%;
+  padding: 0 30px 0 10px;
+  border-radius: var(--control-radius);
+  border: 1px solid var(--border);
+  background: var(--bg-elev);
+  color: var(--fg);
+  font: inherit;
+  font-size: 0.86rem;
+  box-shadow: 0 1px 1px rgb(0 0 0 / 0.04);
+  cursor: pointer;
+}
+.select select:hover {
+  border-color: color-mix(in srgb, var(--fg) 18%, var(--border));
+}
+.select select:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
+}
+.select-chevron {
+  position: absolute;
+  right: 9px;
+  pointer-events: none;
+  color: var(--fg-faint);
+}
+.select-wide,
+.select-wide select {
+  flex: 1;
+  width: 100%;
 }
 .error {
   color: var(--danger);
@@ -168,7 +311,7 @@ button {
   max-width: var(--measure);
   margin: 0 auto;
   /* --safe-top: a phone's status bar / notch, 0 on desktop (viewport-fit=cover in index.html). */
-  padding: calc(72px + var(--safe-top)) 24px 120px;
+  padding: calc(var(--main-top) + var(--safe-top)) 24px 120px;
   transition: margin-left 0.2s ease;
 }
 /* With a panel open, the note is centred in the space left beside it. */
@@ -198,6 +341,29 @@ button {
 }
 .topbar-spacer {
   flex: 1;
+}
+/* The page's own background behind the bar, so a scrolled page (Settings, a long
+   note) never runs under its buttons. It stops at the sidebar and the right-hand
+   panel when they show, which keep their own background up to the top. */
+.topbar::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--topbar-inset-left, 0px);
+  right: var(--topbar-inset-right, 0px);
+  z-index: -1;
+  background: var(--bg);
+  pointer-events: none;
+}
+.chrome-pinned .topbar,
+.chrome-auto .sidebar-hotzone:hover ~ .topbar,
+.chrome-auto .sidebar:hover ~ .topbar,
+.chrome-auto .sidebar:focus-within ~ .topbar {
+  --topbar-inset-left: var(--sidebar-w);
+}
+.related-open .topbar {
+  --topbar-inset-right: var(--related-w);
 }
 .chrome-auto .topbar {
   opacity: 0;
@@ -284,16 +450,20 @@ button {
     box-shadow: 4px 0 24px rgb(0 0 0 / 0.18);
   }
   .chrome-auto .topbar,
-  .chrome-auto .note-header-right,
+  .chrome-auto .note-header-right > *,
   /* There's no mouse move to bring chrome back after typing on a touch
      keyboard, so don't hide it in the first place. */
   .chrome-auto.is-typing .topbar,
-  .chrome-auto.is-typing .note-header-right {
+  .chrome-auto.is-typing .note-header-right > * {
     opacity: 1 !important;
     pointer-events: auto !important;
   }
   .meta-strip.meta-empty {
     opacity: 0.55;
+  }
+  /* No hover on touch: the adders stay visible. */
+  .meta-hover-only {
+    visibility: visible;
   }
   /* Pages scroll under the fixed top bar; give it the page's own background
      so its buttons never sit on top of text. Same colour as the page, so it
@@ -336,8 +506,15 @@ button {
     width: 18px;
     height: 18px;
   }
-  .main {
-    padding-top: calc(70px + var(--safe-top));
+  :root {
+    --main-top: 70px;
+    /* Touch-sized buttons, dropdowns and fields. */
+    --control-h: 40px;
+    --control-h-small: 36px;
+  }
+  /* No room in the phone's top bar; the mobile pass decides where back/forward go. */
+  .topbar .nav-btn {
+    display: none;
   }
 }
 /* A touch "hover" sticks after the tap; only real pointers get hover colours. */
@@ -461,10 +638,17 @@ button {
   background: var(--border);
   color: var(--fg);
 }
+.icon-btn:disabled {
+  opacity: 0.35;
+  pointer-events: none;
+}
 
 /* ---------- note pane --------------------------------------------------- */
 .note-pane {
   min-height: 30vh;
+  /* A title, when shown, comes first (`order`), then the details line, then the text. */
+  display: flex;
+  flex-direction: column;
 }
 /* The format toolbar: a tap alternative to the right-click menu, docked to
    the bottom of the screen, above the on-screen keyboard when it's open (the
@@ -519,10 +703,10 @@ button {
 .note-header {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
+  align-items: center;
   gap: 4px 12px;
-  min-height: 34px;
-  margin-bottom: 10px;
+  min-height: 28px;
+  margin-bottom: 12px;
 }
 .note-header-right {
   margin-left: auto;
@@ -531,11 +715,20 @@ button {
   gap: 8px;
   white-space: nowrap;
 }
-.chrome-auto .note-header-right {
+/* The date stays as a faint marker; save state and trash only show on hover. */
+.note-header-right > * {
+  transition: opacity 0.18s ease;
+}
+/* Trash only on hover, pinned or not. The save dot stays: it's invisible once
+   saved, and an error must show. */
+.note-header-right > .icon-btn {
   opacity: 0;
 }
-.note-header:hover .note-header-right,
-.chrome-pinned .note-header-right {
+.chrome-auto.is-typing .note-header-right > .note-date {
+  opacity: 0.3;
+}
+.note-header:hover .note-header-right > *,
+.note-header:focus-within .note-header-right > * {
   opacity: 1;
 }
 .note-date {
@@ -559,42 +752,46 @@ button {
   background: var(--danger);
 }
 
+/* The line's own items fade (--meta-fade), never the popovers hanging from it,
+   so an opening popover is solid at once. */
 .meta-strip {
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  min-width: 0;
   font-size: 0.82rem;
   color: var(--fg-muted);
+  --meta-fade: 1;
+}
+.meta-strip .popover-anchor,
+.meta-row > .meta-open,
+.meta-row > .meta-add {
+  opacity: var(--meta-fade);
   transition: opacity 0.18s ease;
 }
 .meta-empty {
-  opacity: 0;
+  --meta-fade: 0;
 }
 .meta-filled {
-  opacity: 0.55;
+  --meta-fade: 0.55;
 }
 .note-header:hover .meta-strip,
 .note-header:focus-within .meta-strip {
-  opacity: 1;
-}
-/* The source row takes a line of its own under the labels and date. */
-.meta-source {
-  order: 1;
-  flex: 1 0 100%;
-  min-width: 0;
+  --meta-fade: 1;
 }
 .is-typing .meta-strip:not(:focus-within) {
-  opacity: 0;
+  --meta-fade: 0;
 }
 .is-typing .meta-filled:not(:focus-within) {
-  opacity: 0.35;
+  --meta-fade: 0.2;
 }
+/* One line that never wraps: labels (as many as fit, then "+N"), source, ↗, "+ Title". */
 .meta-row {
+  position: relative;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 6px;
+  min-width: 0;
+  white-space: nowrap;
 }
 .meta-icon {
   color: var(--fg-faint);
@@ -612,19 +809,69 @@ button {
 .meta-input::placeholder {
   color: var(--fg-faint);
 }
-.meta-source .meta-row {
-  flex-wrap: nowrap;
+/* An invisible copy of every label chip, for measuring how many fit. */
+/* Zero-sized and clipped, so many labels never widen the page; the chips inside
+   still lay out at their natural width for measuring. */
+.meta-measure {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+  display: flex;
+  gap: 4px;
 }
-.meta-source-title,
-.meta-source-url {
+.meta-measure > * {
+  flex: none;
+}
+.meta-tag-btn,
+.meta-source-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   min-width: 0;
+  max-width: 100%;
+  border: 0;
+  background: none;
+  padding: 2px 4px;
+  border-radius: 6px;
+  color: inherit;
+  font: inherit;
+}
+.meta-tag-btn:hover,
+.meta-source-btn:hover {
+  background: var(--bg-sunk);
+}
+.meta-tags {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+.meta-tags-line {
+  display: inline-flex;
+  min-width: 0;
+  overflow: hidden;
+}
+.chip-more {
+  color: var(--fg-muted);
+  background: var(--bg-sunk);
+}
+/* The source keeps its name (up to a cap); labels give way to "+N" first. */
+.meta-source {
+  flex: 0 0 auto;
+  min-width: 0;
+  max-width: 40%;
+}
+.meta-source .popover-anchor,
+.meta-tags .popover-anchor {
+  display: flex;
+  min-width: 0;
+}
+.meta-source-name {
+  overflow: hidden;
   text-overflow: ellipsis;
-}
-.meta-source-title {
-  flex: 2 1 0;
-}
-.meta-source-url {
-  flex: 3 1 0;
 }
 .meta-open {
   flex: none;
@@ -636,6 +883,7 @@ button {
   display: inline-flex;
   align-items: center;
   gap: 5px;
+  flex: none;
   border: 0;
   background: none;
   color: var(--fg-faint);
@@ -644,6 +892,137 @@ button {
 }
 .meta-add:hover {
   color: var(--fg);
+}
+/* Adders keep their space (so labels don't reflow on hover) but only show on hover. */
+.meta-hover-only {
+  visibility: hidden;
+}
+.note-header:hover .meta-hover-only,
+.note-header:focus-within .meta-hover-only {
+  visibility: visible;
+}
+
+/* ---------- popover (details line) ---------- */
+.popover-wrap {
+  position: relative;
+  display: inline-flex;
+  min-width: 0;
+}
+.popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: -6px;
+  z-index: 40;
+  box-sizing: border-box;
+  width: 280px;
+  max-width: calc(100vw - 24px);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  white-space: normal;
+  text-align: left;
+  background: var(--bg-elev);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.06),
+    0 8px 24px rgb(0 0 0 / 0.12);
+  font-size: 0.82rem;
+  animation: popover-in 0.12s ease-out;
+}
+.meta-source .popover {
+  width: 320px;
+}
+:root[data-scheme="dark"] .popover {
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.3),
+    0 10px 28px rgb(0 0 0 / 0.45);
+}
+@keyframes popover-in {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .popover {
+    animation: none;
+  }
+}
+/* Hover preview: a compact tooltip, not a panel. */
+.popover.is-peek {
+  pointer-events: none;
+  width: max-content;
+  max-width: min(320px, calc(100vw - 24px));
+  padding: 6px 8px;
+  gap: 4px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+}
+.popover-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.popover-url {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-all;
+  color: var(--fg-muted);
+}
+.popover-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.72rem;
+  color: var(--fg-faint);
+}
+.popover-field .settings-input,
+.popover .label-combo .meta-input {
+  width: 100%;
+  min-width: 0;
+}
+/* Suggestions sit inside the panel, under the field, rather than in a second floating box. */
+.popover .label-list {
+  position: static;
+  margin-top: 4px;
+  min-width: 0;
+  max-height: 200px;
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+  background: none;
+}
+.popover .label-option {
+  padding: 5px 8px;
+  font-size: 0.82rem;
+}
+.popover-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+.popover-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  background: none;
+  padding: 2px 0;
+  color: var(--fg-muted);
+  font-size: 0.78rem;
+}
+.popover-link:hover {
+  color: var(--fg);
+}
+.popover-danger:hover {
+  color: var(--danger);
 }
 
 .label-combo {
@@ -729,17 +1108,24 @@ button {
 .note-title::placeholder {
   color: var(--fg-faint);
 }
-.note-title.no-title {
-  /* Space is kept so the text never jumps when the title appears. */
-  opacity: 0;
+/* The details line inside the editor, under a first-line heading (editor/headerSlot.ts):
+   it keeps the UI font and sizes, not the note text's. */
+.note-header-slot {
+  font-family: var(--font-ui);
+  font-size: 1rem;
+  line-height: normal;
+  white-space: normal;
+  cursor: default;
+  caret-color: auto;
 }
-.note-header:hover + .note-title.no-title,
-.note-title.no-title:hover,
-.note-title.no-title:focus {
-  opacity: 1;
+.note-header-slot .note-header {
+  margin: 2px 0 10px;
 }
-.chrome-auto.is-typing .note-title.no-title:not(:focus) {
-  opacity: 0;
+
+/* The title, when there is one, comes before the details line (see .note-pane). */
+.note-title {
+  order: -1;
+  margin-bottom: 4px;
 }
 
 /* ---------- editor (CodeMirror live preview) ---------------------------- */
@@ -1082,19 +1468,17 @@ button {
 .tok-def {
   color: #2f6d9a;
 }
-@media (prefers-color-scheme: dark) {
-  .tok-keyword {
-    color: #c99be6;
-  }
-  .tok-string {
-    color: #a3cf8a;
-  }
-  .tok-number {
-    color: #e6a172;
-  }
-  .tok-def {
-    color: #8cbce0;
-  }
+:root[data-scheme="dark"] .tok-keyword {
+  color: #c99be6;
+}
+:root[data-scheme="dark"] .tok-string {
+  color: #a3cf8a;
+}
+:root[data-scheme="dark"] .tok-number {
+  color: #e6a172;
+}
+:root[data-scheme="dark"] .tok-def {
+  color: #8cbce0;
 }
 
 /* ---------- stream ------------------------------------------------------ */
@@ -1215,26 +1599,6 @@ button {
   font-weight: 650;
   letter-spacing: -0.02em;
   margin: 0;
-}
-.segmented {
-  display: inline-flex;
-  padding: 2px;
-  border-radius: 8px;
-  background: var(--bg-sunk);
-  border: 1px solid var(--border);
-}
-.segmented button {
-  border: 0;
-  background: transparent;
-  padding: 3px 12px;
-  border-radius: 6px;
-  font-size: 0.82rem;
-  color: var(--fg-muted);
-}
-.segmented button.is-current {
-  background: var(--bg-elev);
-  color: var(--fg);
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
 }
 .journal-week {
   margin-top: 28px;
@@ -1958,11 +2322,9 @@ button.cue:hover {
 
 /* ---------- models (M4) ------------------------------------------------------ */
 .btn-small {
-  white-space: nowrap;
-  padding: 5px 11px;
+  height: var(--control-h-small);
+  padding: 0 11px;
   font-size: 0.84rem;
-  border-radius: 7px;
-  gap: 6px;
 }
 .btn:disabled {
   opacity: 0.5;
@@ -2075,24 +2437,32 @@ button.cue:hover {
   border-radius: 10px;
   background: var(--bg-elev);
 }
+/* Segmented control (journal ranges, provider kinds): one style. */
 .segmented {
-  display: flex;
+  display: inline-flex;
   flex-wrap: wrap;
-  gap: 4px;
-  padding: 3px;
-  border-radius: 9px;
+  gap: 2px;
+  padding: 2px;
+  border-radius: calc(var(--control-radius) + 2px);
+  border: 1px solid var(--border);
   background: var(--bg-sunk);
   align-self: flex-start;
 }
 .segmented button {
+  height: calc(var(--control-h-small) - 6px);
   border: 0;
   background: none;
-  padding: 5px 10px;
-  border-radius: 7px;
+  padding: 0 11px;
+  border-radius: var(--control-radius);
+  font: inherit;
   font-size: 0.84rem;
   color: var(--fg-muted);
 }
-.segmented button.is-on {
+.segmented button:hover {
+  color: var(--fg);
+}
+.segmented button.is-on,
+.segmented button.is-current {
   background: var(--bg-elev);
   color: var(--fg);
   box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
@@ -2108,14 +2478,10 @@ button.cue:hover {
   font-weight: 600;
 }
 .field input {
-  font: inherit;
-  font-size: 0.9rem;
-  padding: 7px 10px;
-  border-radius: 7px;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  color: var(--fg);
   min-width: 0;
+}
+/* Beside a button (Model + Load models), the field takes the room left. */
+.field-row input {
   flex: 1;
 }
 .settings-controls {
@@ -2123,23 +2489,35 @@ button.cue:hover {
   gap: 8px;
   align-items: center;
 }
-.settings-select,
-.settings-input {
-  font: inherit;
-  font-size: 0.88rem;
-  padding: 5px 8px;
-  border-radius: 7px;
+/* Text fields: one look everywhere (settings, provider form, popovers). */
+.settings-input,
+.field input,
+.popover-field .settings-input,
+.popover .label-combo .meta-input {
+  box-sizing: border-box;
+  height: var(--control-h-small);
+  padding: 0 10px;
+  border-radius: var(--control-radius);
   border: 1px solid var(--border);
   background: var(--bg-elev);
   color: var(--fg);
+  font: inherit;
+  font-size: 0.86rem;
+  outline: none;
+}
+.settings-input::placeholder,
+.field input::placeholder {
+  color: var(--fg-faint);
 }
 .settings-input {
   width: 170px;
 }
-.settings-select:focus,
-.settings-input:focus {
-  outline: 2px solid var(--accent-soft);
+.settings-input:focus,
+.field input:focus,
+.popover-field .settings-input:focus,
+.popover .label-combo .meta-input:focus {
   border-color: var(--accent);
+  box-shadow: var(--focus-ring);
 }
 .settings-sample {
   margin: 10px 0 0;
@@ -2148,10 +2526,7 @@ button.cue:hover {
   line-height: 1.7;
   color: var(--fg-muted);
 }
-.field input:focus {
-  outline: 2px solid var(--accent-soft);
-  border-color: var(--accent);
-}
+
 .field small {
   font-size: 0.76rem;
 }
@@ -2332,7 +2707,7 @@ button.cue:hover {
   padding-bottom: 0;
 }
 .chat-page {
-  min-height: calc(100vh - 72px - var(--safe-top));
+  min-height: calc(100vh - var(--main-top) - var(--safe-top));
   display: flex;
   flex-direction: column;
 }
@@ -2667,12 +3042,15 @@ button.cue:hover {
   color: var(--fg);
 }
 
-/* Sync status in the top bar: quiet when synced, accent while syncing, red when it needs you. */
+/* Sync status in the top bar: green when synced, accent while syncing, red when it needs you. */
 .sync-dot span {
   width: 7px;
   height: 7px;
   border-radius: 50%;
   background: var(--fg-faint);
+}
+.sync-dot.is-idle span {
+  background: var(--sync-ok);
 }
 .sync-dot.is-syncing span {
   background: var(--accent);

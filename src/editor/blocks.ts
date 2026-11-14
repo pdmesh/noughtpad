@@ -24,12 +24,16 @@ export function registerBlockRenderer(r: BlockRenderer) {
 
 let mermaidSeq = 0;
 
+/** Diagrams follow the app's theme (Settings → Appearance), which may differ from the system's. */
+export function mermaidTheme(): "dark" | "neutral" {
+  return document.documentElement.dataset.scheme === "dark" ? "dark" : "neutral";
+}
+
 registerBlockRenderer({
   languages: ["mermaid"],
   async render(code, el) {
     const { default: mermaid } = await import("mermaid");
-    const dark = window.matchMedia?.("(prefers-color-scheme: dark)").matches;
-    mermaid.initialize({ startOnLoad: false, theme: dark ? "dark" : "neutral", securityLevel: "strict" });
+    mermaid.initialize({ startOnLoad: false, theme: mermaidTheme(), securityLevel: "strict" });
     try {
       const { svg } = await mermaid.render(`noughtpad-mermaid-${++mermaidSeq}`, code);
       el.innerHTML = svg;

@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronRight, FolderOpen } from "lucide-react";
+import { ChevronRight, Download, FolderOpen, LogIn, RefreshCw, RotateCcw } from "lucide-react";
+import { Select } from "../components/Select";
 import { api, isApiError, type VaultInfo } from "../lib/api";
 import { describeStatus, useSemanticStatus } from "../lib/useSemantic";
 import { checkForUpdates, describeUpdate, installUpdate, useUpdateState } from "../lib/updates";
@@ -8,6 +9,7 @@ import { useState } from "react";
 import { useLlm } from "./Models";
 import { FONTS, SIZES, loadStyle, saveStyle, type FontChoice, type TextStyle } from "../lib/textStyle";
 import { thisDevice } from "../lib/platform";
+import { DARK_THEMES, LIGHT_THEMES, MODES, loadTheme, saveTheme, type ThemePrefs } from "../lib/theme";
 
 const isMac = typeof navigator !== "undefined" && /Mac/i.test(navigator.platform);
 const mod = isMac ? "⌘" : "Ctrl";
@@ -17,6 +19,8 @@ const SHORTCUTS: Array<[string, string]> = [
   [`${mod} K`, "Search and commands"],
   [`${mod} J`, "Related notes"],
   [`${mod} L`, "New chat"],
+  [`${mod} [`, "Back"],
+  [`${mod} ]`, "Forward"],
   [`${mod} \\`, "Show or hide the sidebar and toolbar"],
   [`${isMac ? "⌘ ⇧" : "Ctrl ⇧"} Space`, "Quick capture from anywhere"],
 ];
@@ -60,7 +64,7 @@ export function SettingsView({
         {vault.canSwitchVault ? (
           <Row label={vault.path} hint="Plain Markdown files. Noughtpad keeps its index in a .noughtpad folder inside it.">
             <button className="btn btn-small" onClick={onSwitchVault}>
-              <FolderOpen size={13} aria-hidden /> Switch…
+              <FolderOpen size={14} aria-hidden /> Switch…
             </button>
           </Row>
         ) : (
@@ -70,7 +74,7 @@ export function SettingsView({
         )}
         <Row label="Rebuild the search index" hint="Only needed if search seems out of date. Your notes are not touched.">
           <button className="btn btn-small" onClick={onRebuildIndex}>
-            Rebuild
+            <RefreshCw size={14} aria-hidden /> Rebuild
           </button>
         </Row>
       </section>
@@ -93,7 +97,7 @@ export function SettingsView({
         </Row>
         <Row label="Reset what related notes learned" hint="Related notes adapt to what you open and dismiss. This forgets that and starts fresh.">
           <button className="btn btn-small" onClick={onResetRelated}>
-            Reset
+            <RotateCcw size={14} aria-hidden /> Reset
           </button>
         </Row>
       </section>
@@ -108,6 +112,8 @@ export function SettingsView({
           <ChevronRight size={15} aria-hidden />
         </button>
       </section>
+
+      <AppearanceSettings />
 
       <WritingSettings />
 
@@ -191,7 +197,7 @@ function Sync() {
           hint="Keep this notebook the same on your other devices through your own Google Drive. Noughtpad can only see the files it creates there."
         >
           <button className="btn btn-small" disabled={signingIn} onClick={signIn}>
-            {signingIn ? "Waiting for the browser…" : "Sign in with Google…"}
+            <LogIn size={14} aria-hidden /> {signingIn ? "Waiting for the browser…" : "Sign in with Google…"}
           </button>
         </Row>
       ) : (
@@ -225,7 +231,7 @@ function Sync() {
           {sync.enabled && (
             <Row label="Sync now" hint="Noughtpad syncs on its own every minute and a few seconds after you stop typing.">
               <button className="btn btn-small" disabled={sync.state === "syncing"} onClick={() => void api.syncNow()}>
-                Sync now
+                <RefreshCw size={14} aria-hidden /> Sync now
               </button>
             </Row>
           )}
@@ -256,15 +262,45 @@ function Updates() {
       >
         {canInstall ? (
           <button className="btn btn-small" onClick={() => void installUpdate()}>
+            {update.kind === "error" ? <RotateCcw size={14} aria-hidden /> : <Download size={14} aria-hidden />}
             {update.kind === "error" ? "Try again" : "Install and restart"}
           </button>
         ) : (
           <button className="btn btn-small" disabled={busy} onClick={() => void checkForUpdates()}>
-            Check for updates
+            <RefreshCw size={14} aria-hidden /> Check for updates
           </button>
         )}
       </Row>
       {update.kind === "available" && update.notes && <p className="settings-hint faint settings-notes">{update.notes}</p>}
+    </section>
+  );
+}
+
+/** Light and dark themes, and which one shows (this computer only). */
+function AppearanceSettings() {
+  const [prefs, setPrefs] = useState<ThemePrefs>(loadTheme);
+  const change = (patch: Partial<ThemePrefs>) => {
+    const next = { ...prefs, ...patch };
+    setPrefs(next);
+    saveTheme(next);
+  };
+  const select = <T extends string>(label: string, value: T, list: Array<{ value: T; label: string }>, key: keyof ThemePrefs) => (
+    <Select aria-label={label} value={value} onChange={(e) => change({ [key]: e.target.value })}>
+      {list.map((o) => (
+        <option key={o.value} value={o.value}>
+          {o.label}
+        </option>
+      ))}
+    </Select>
+  );
+  return (
+    <section className="settings-section">
+      <h3 className="ideas-section-title">Appearance</h3>
+      <Row label="Mode" hint="System follows your computer's light or dark setting.">
+        {select("Mode", prefs.mode, MODES, "mode")}
+      </Row>
+      <Row label="Light theme">{select("Light theme", prefs.light, LIGHT_THEMES, "light")}</Row>
+      <Row label="Dark theme">{select("Dark theme", prefs.dark, DARK_THEMES, "dark")}</Row>
     </section>
   );
 }
@@ -292,18 +328,17 @@ function WritingSettings() {
               onChange={(e) => change({ custom: e.target.value })}
             />
           )}
-          <select className="settings-select" aria-label="Font" value={style.font} onChange={(e) => change({ font: e.target.value as FontChoice })}>
+          <Select aria-label="Font" value={style.font} onChange={(e) => change({ font: e.target.value as FontChoice })}>
             {FONTS.map((f) => (
               <option key={f.value} value={f.value}>
                 {f.label}
               </option>
             ))}
-          </select>
+          </Select>
         </span>
       </Row>
       <Row label="Text size" hint="System uses your computer's default size.">
-        <select
-          className="settings-select"
+        <Select
           aria-label="Text size"
           value={style.size ?? ""}
           onChange={(e) => change({ size: e.target.value ? Number(e.target.value) : null })}
@@ -314,7 +349,7 @@ function WritingSettings() {
               {n} px
             </option>
           ))}
-        </select>
+        </Select>
       </Row>
       <p className="settings-sample" aria-hidden>
         The quick brown fox jumps over the lazy dog.

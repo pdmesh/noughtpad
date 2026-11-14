@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Cloud, HardDrive, KeyRound, Loader2, Plus, Trash2, X } from "lucide-react";
+import { Check, Cloud, Download, HardDrive, KeyRound, Loader2, Plus, Power, RefreshCw, Trash2, X } from "lucide-react";
 import { useEvent } from "../lib/useEvent";
 import { api, isApiError, type DownloadEvent, type LlmOverview, type LocalEntry, type RemoteKind } from "../lib/api";
 import { thisDevice } from "../lib/platform";
+import { Select } from "../components/Select";
 
 const GB = 1e9;
 const gb = (b: number) => `${(b / GB).toFixed(1)} GB`;
@@ -78,7 +79,7 @@ export function ModelsView({ focus }: { focus?: "local" | "remote" }) {
               {activeLocal ? `Your notes stay on ${thisDevice}.` : "The notes you choose are sent to this provider when you ask."}
             </span>
             <button className="btn btn-small" onClick={act(api.llmTurnOff)}>
-              Turn off
+              <Power size={14} aria-hidden /> Turn off
             </button>
           </>
         ) : (
@@ -147,7 +148,7 @@ export function ModelsView({ focus }: { focus?: "local" | "remote" }) {
                     </span>
                   ) : (
                     <button className="btn btn-small" onClick={act(() => api.llmUse({ kind: "remote", id: r.id }))}>
-                      Use
+                      <Check size={14} aria-hidden /> Use
                     </button>
                   )}
                   <button
@@ -222,7 +223,7 @@ function LocalRow({
               </span>
             ) : (
               <button className="btn btn-small btn-primary" onClick={onUse} disabled={disabled}>
-                Use
+                <Check size={14} aria-hidden /> Use
               </button>
             )}
             <button className="icon-btn" title="Delete the downloaded model" aria-label={`Delete ${m.name}`} onClick={onDelete}>
@@ -231,7 +232,7 @@ function LocalRow({
           </>
         ) : (
           <button className="btn btn-small" onClick={onDownload} disabled={disabled}>
-            {l.received > 0 ? `Resume (${gb(l.received)} of ${gb(m.bytes)})` : "Download"}
+            <Download size={14} aria-hidden /> {l.received > 0 ? `Resume (${gb(l.received)} of ${gb(m.bytes)})` : "Download"}
           </button>
         )}
       </div>
@@ -347,14 +348,14 @@ function AddProvider({ data, onSaved }: { data: LlmOverview; onSaved: () => void
         <span>Model</span>
         <div className="field-row">
           {models ? (
-            <select className="settings-select" value={model} onChange={(e) => setModel(e.target.value)}>
+            <Select className="select-wide" value={model} onChange={(e) => setModel(e.target.value)}>
               {!models.includes(model) && <option value={model}>{model || "Choose a model"}</option>}
               {models.map((m) => (
                 <option key={m} value={m}>
                   {m}
                 </option>
               ))}
-            </select>
+            </Select>
           ) : (
             <input
               spellCheck={false}
@@ -364,7 +365,7 @@ function AddProvider({ data, onSaved }: { data: LlmOverview; onSaved: () => void
             />
           )}
           <button type="button" className="btn btn-small" onClick={() => void loadModels()} disabled={!canList || busy !== null}>
-            {busy === "models" ? <Loader2 size={13} className="spin" aria-hidden /> : null} Load models
+            {busy === "models" ? <Loader2 size={14} className="spin" aria-hidden /> : <RefreshCw size={14} aria-hidden />} Load models
           </button>
         </div>
         {models && (
@@ -380,7 +381,7 @@ function AddProvider({ data, onSaved }: { data: LlmOverview; onSaved: () => void
       )}
       <div className="field-row">
         <button type="submit" className="btn btn-small btn-primary" disabled={!model.trim() || busy !== null}>
-          Save provider
+          <Check size={14} aria-hidden /> Save provider
         </button>
         <button type="button" className="btn btn-small" onClick={() => setOpen(false)}>
           Cancel

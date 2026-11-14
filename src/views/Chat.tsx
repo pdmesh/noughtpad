@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowUp, ChevronRight, Cloud, HardDrive, Search, Square } from "lucide-react";
+import { ArrowUp, ChevronRight, Cloud, HardDrive, Search, Send, Square } from "lucide-react";
 import { api, isApiError, openExternal, type ChatNote, type ChatStep } from "../lib/api";
 import { answerHtml } from "../lib/cite";
 import { formatDay } from "../lib/format";
@@ -167,7 +167,7 @@ export function ChatView({
               </p>
               <div className="field-row">
                 <button className="btn btn-small btn-primary" onClick={() => void send(pending, true)}>
-                  Send and ask
+                  <Send size={14} aria-hidden /> Send and ask
                 </button>
                 <button
                   className="btn btn-small"
