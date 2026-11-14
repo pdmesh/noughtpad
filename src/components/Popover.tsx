@@ -27,21 +27,33 @@ export function Popover({ anchor, peek, children, open, onOpenChange, label, cla
 
   useEffect(() => {
     if (!open) return;
+    clearTimeout(timer.current);
     setPeeking(false);
+    // Close after the click has moved focus, so a field inside gets its blur
+    // (a half-typed label is added) before it unmounts.
     const onDown = (e: MouseEvent) => {
-      if (!wrap.current?.contains(e.target as Node)) onOpenChange(false);
+      if (!wrap.current?.contains(e.target as Node)) setTimeout(() => onOpenChange(false));
     };
+    // Tabbing (or ⌘K) away closes it too.
+    const onFocusOut = (e: FocusEvent) => {
+      const to = e.relatedTarget as Node | null;
+      if (to && !wrap.current?.contains(to)) onOpenChange(false);
+    };
+    // Only an Escape from inside the popover is ours; others (the ⌘K palette) are left alone.
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
+      if (e.key !== "Escape" || !wrap.current?.contains(e.target as Node)) return;
       e.stopPropagation();
       onOpenChange(false);
       wrap.current?.querySelector<HTMLElement>(".popover-anchor button, .popover-anchor [tabindex]")?.focus();
     };
+    const w = wrap.current;
     document.addEventListener("mousedown", onDown, true);
     document.addEventListener("keydown", onKey, true);
+    w?.addEventListener("focusout", onFocusOut);
     return () => {
       document.removeEventListener("mousedown", onDown, true);
       document.removeEventListener("keydown", onKey, true);
+      w?.removeEventListener("focusout", onFocusOut);
     };
   }, [open, onOpenChange]);
 

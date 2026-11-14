@@ -24,3 +24,9 @@ export function fitCount(widths: number[], available: number, gap: number, reser
   }
   return n;
 }
+
+/** Whether an element is in the note's own text: inside the editor, but not in the
+ *  details line that can sit inside it (editor/headerSlot.ts). */
+export function inNoteText(el: Element | null | undefined): boolean {
+  return !!el?.closest(".cm-content") && !el.closest(".note-header-slot");
+}

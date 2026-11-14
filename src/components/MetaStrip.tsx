@@ -52,13 +52,15 @@ export function MetaStrip({ meta, onChange, onOpenUrl, onAddTitle }: Props) {
     const own = t.closest(".popover-wrap");
     const others = Array.from(r.children).reduce((sum, c) => (c === own || c === m ? sum : sum + (c as HTMLElement).offsetWidth + 6), 0);
     const widths = Array.from(m.children).map((c) => (c as HTMLElement).offsetWidth);
-    // 20px: the tag icon in front of the chips.
-    setShown(fitCount(widths, r.clientWidth - others - 20, CHIP_GAP, MORE_CHIP_W));
+    // 26px: the tag icon, its gap and the button's padding, in front of the chips.
+    setShown(fitCount(widths, r.clientWidth - others - 26, CHIP_GAP, MORE_CHIP_W));
   }, []);
-  useLayoutEffect(refit, [refit, labels, sourceName]);
+  // Anything else on the line changing size changes the room left for labels.
+  useLayoutEffect(refit, [refit, labels, sourceName, href, onAddTitle]);
   useLayoutEffect(() => {
     const ro = new ResizeObserver(refit);
     if (row.current) ro.observe(row.current);
+    void document.fonts?.ready.then(refit);
     return () => ro.disconnect();
   }, [refit]);
 
@@ -134,13 +136,15 @@ export function MetaStrip({ meta, onChange, onOpenUrl, onAddTitle }: Props) {
               value={meta.source?.title ?? ""}
               placeholder={hostname(url) ?? "Book, article, video…"}
               aria-label="Source title"
+              spellCheck={false}
+              autoCorrect="off"
               autoFocus
               onChange={(e) => setSource("title", e.target.value)}
             />
           </label>
           <label className="popover-field">
             <span>URL</span>
-            <input className="settings-input" value={meta.source?.url ?? ""} placeholder="https://…" aria-label="Source URL" onChange={(e) => setSource("url", e.target.value)} />
+            <input className="settings-input" value={meta.source?.url ?? ""} placeholder="https://…" aria-label="Source URL" spellCheck={false} autoCorrect="off" autoCapitalize="off" onChange={(e) => setSource("url", e.target.value)} />
           </label>
         </Popover>
         {href && (

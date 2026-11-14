@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { headingLine } from "../lib/metaLayout";
 import { useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
 import { useEvent } from "../lib/useEvent";
@@ -68,6 +69,8 @@ export function NotePane({ noteId, vaultRoot, presetLabels, onCreated, onTrashed
         metaRef.current = m;
         setDoc(d);
         setMeta(m);
+        // Known now, so a heading-first note opens with its details already under the heading.
+        setHeadingFirst(headingLine(d.content) !== null);
         setLoaded(true);
       },
       (e) => onNotice?.(isApiError(e) ? e.message : String(e)),

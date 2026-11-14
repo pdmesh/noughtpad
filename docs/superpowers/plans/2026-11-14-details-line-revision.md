@@ -38,6 +38,6 @@
 ### Task 8: Details under a first-line heading
 **Files:** Create `src/editor/headerSlot.ts`; modify `src/editor/Editor.tsx` (prop `headerSlot?: HTMLElement`), `src/components/NotePane.tsx`, `src/styles.css`
 **Consumes:** `headingLine` (Task 6).
-**Produces:** `headerSlotExtension(host: HTMLElement): Extension` — a StateField of a block `Decoration.widget({ side: 1, block: true })` at `headingLine(doc).to` whose widget returns `host` (same element every time, `eq` true, `ignoreEvent` true); `onHeading(cb: (has: boolean) => void)` via an update listener.
+**Produces (as built):** `headerSlot(host: HTMLElement, onHeading: (has: boolean) => void): Extension`; Editor prop `headerSlot?: { host; onHeading }` — a StateField of a block `Decoration.widget({ side: 1, block: true })` at `headingLine(doc).to` whose widget returns `host` (same element every time, `eq` true, `ignoreEvent` true); `onHeading(cb: (has: boolean) => void)` via an update listener.
 - [ ] NotePane: if no title and the doc's first line is a heading, portal the header into the slot host; else render it above the editor.
 - [ ] Verify (Review Focus 1, 2, 5) in the preview with a `# heading` note: details sit under the heading; typing in the tag/source popovers doesn't touch the note; Enter at end of heading moves text below the details line; deleting the `#` moves the details line above the text. Typecheck + tests. Commit.

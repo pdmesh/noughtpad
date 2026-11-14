@@ -17,6 +17,7 @@ import { describeSync, useSync } from "./lib/sync";
 import { useMatchMedia } from "./lib/useMediaQuery";
 import { back, canBack, canForward, emptyHistory, forward, replaceCurrent, visit, type NavHistory } from "./lib/navHistory";
 import { relatePlaces, type Place, type View } from "./lib/place";
+import { inNoteText } from "./lib/metaLayout";
 
 // Pages other than writing load after the editor is ready, keeping them out of
 // the startup bundle (G1: capture in < 300 ms).
@@ -433,7 +434,7 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
   const [typing, setTyping] = useState(false);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const inEditor = (e.target as HTMLElement | null)?.closest?.(".cm-content");
+      const inEditor = inNoteText(e.target as Element | null);
       if (inEditor && !e.metaKey && !e.ctrlKey && e.key.length === 1) setTyping(true);
     };
     const onMove = () => setTyping(false);

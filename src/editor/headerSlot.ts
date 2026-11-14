@@ -28,7 +28,22 @@ class SlotWidget extends WidgetType {
 
 const hasHeading = (s: EditorState) => headingLine(s.doc.line(1).text) !== null;
 
+/** A field inside the slot (not the editable editor around it) that should take the click. */
+const keepsFocus = (host: HTMLElement, t: EventTarget | null) => {
+  const field = t instanceof Element ? t.closest("input, textarea, select, [contenteditable=true]") : null;
+  return !!field && host.contains(field);
+};
+
 export function headerSlot(host: HTMLElement, onHeading: (has: boolean) => void): Extension {
+  // The editor ignores clicks here, but the browser would still drop a caret into
+  // the editable text next to the slot (moving the note's cursor) on a click on
+  // plain text or a button. Fields keep their normal clicks.
+  if (!host.dataset.slotReady) {
+    host.dataset.slotReady = "1";
+    host.addEventListener("mousedown", (e) => {
+      if (!keepsFocus(host, e.target)) e.preventDefault();
+    });
+  }
   const widget = new SlotWidget(host);
   const build = (s: EditorState): DecorationSet => {
     if (!hasHeading(s)) return Decoration.none;

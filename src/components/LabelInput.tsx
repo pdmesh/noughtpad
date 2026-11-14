@@ -51,6 +51,9 @@ export function LabelInput({ current, all, onAdd, onRemoveLast, autoFocus }: Pro
         value={draft}
         placeholder="Add label"
         autoFocus={autoFocus}
+        spellCheck={false}
+        autoCorrect="off"
+        autoCapitalize="off"
         aria-label="Add label"
         onValueChange={(v) => {
           if (v.endsWith(",")) add(v);

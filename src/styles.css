@@ -691,12 +691,22 @@ button {
   color: var(--fg-faint);
 }
 /* An invisible copy of every label chip, for measuring how many fit. */
+/* Zero-sized and clipped, so many labels never widen the page; the chips inside
+   still lay out at their natural width for measuring. */
 .meta-measure {
   position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  overflow: hidden;
   visibility: hidden;
   pointer-events: none;
   display: flex;
   gap: 4px;
+}
+.meta-measure > * {
+  flex: none;
 }
 .meta-tag-btn,
 .meta-source-btn {
