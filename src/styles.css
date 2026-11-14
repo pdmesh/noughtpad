@@ -354,6 +354,10 @@ button {
   .meta-strip.meta-empty {
     opacity: 0.55;
   }
+  /* No hover on touch: the adders stay visible. */
+  .meta-hover-only {
+    opacity: 1;
+  }
   /* Pages scroll under the fixed top bar; give it the page's own background
      so its buttons never sit on top of text. Same colour as the page, so it
      only shows where something would otherwise overlap. */
@@ -532,9 +536,7 @@ button {
 /* ---------- note pane --------------------------------------------------- */
 .note-pane {
   min-height: 30vh;
-  /* A set title comes first, with the details line under it; an untitled note
-     keeps the details on top and its (hidden) title below. Done with `order`
-     so the DOM, and the hover rule that reveals an empty title, stay as they are. */
+  /* A title, when shown, comes first (`order`), then the details line, then the text. */
   display: flex;
   flex-direction: column;
 }
@@ -662,11 +664,15 @@ button {
 .is-typing .meta-filled:not(:focus-within) {
   opacity: 0.2;
 }
+/* One line that never wraps: labels (as many as fit, then "+N"), source, ↗, "+ Title". */
 .meta-row {
+  position: relative;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 6px;
+  min-width: 0;
+  white-space: nowrap;
 }
 .meta-icon {
   color: var(--fg-faint);
@@ -684,36 +690,59 @@ button {
 .meta-input::placeholder {
   color: var(--fg-faint);
 }
-/* The source sits inline after the labels: its name, sized to fit, then ↗.
-   The URL field only opens while the source is being edited. */
-.meta-source {
+/* An invisible copy of every label chip, for measuring how many fit. */
+.meta-measure {
+  position: absolute;
+  visibility: hidden;
+  pointer-events: none;
+  display: flex;
+  gap: 4px;
+}
+.meta-tag-btn,
+.meta-source-btn {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   min-width: 0;
   max-width: 100%;
-  margin-left: 6px;
+  border: 0;
+  background: none;
+  padding: 2px 4px;
+  border-radius: 6px;
+  color: inherit;
+  font: inherit;
 }
-.meta-source-title,
-.meta-source-url {
+.meta-tag-btn:hover,
+.meta-source-btn:hover {
+  background: var(--bg-sunk);
+}
+.meta-tags {
+  flex: 0 1 auto;
   min-width: 0;
+}
+.meta-tags-line {
+  display: inline-flex;
+  min-width: 0;
+  overflow: hidden;
+}
+.chip-more {
+  color: var(--fg-muted);
+  background: var(--bg-sunk);
+}
+/* The source keeps its name (up to a cap); labels give way to "+N" first. */
+.meta-source {
+  flex: 0 0 auto;
+  min-width: 0;
+  max-width: 40%;
+}
+.meta-source .popover-anchor,
+.meta-tags .popover-anchor {
+  display: flex;
+  min-width: 0;
+}
+.meta-source-name {
+  overflow: hidden;
   text-overflow: ellipsis;
-}
-.meta-source-title {
-  field-sizing: content;
-  max-width: 34ch;
-}
-.meta-source-url {
-  width: 30ch;
-}
-/* The label field is only as wide as what's typed (or its placeholder), so the source sits right after the labels. */
-.meta-row .label-combo .meta-input {
-  field-sizing: content;
-  min-width: 2ch;
-}
-.meta-source:not(:focus-within) .meta-source-url,
-.meta-source:not(:focus-within) .meta-source-url-icon {
-  display: none;
 }
 .meta-open {
   flex: none;
@@ -725,6 +754,7 @@ button {
   display: inline-flex;
   align-items: center;
   gap: 5px;
+  flex: none;
   border: 0;
   background: none;
   color: var(--fg-faint);
@@ -733,6 +763,68 @@ button {
 }
 .meta-add:hover {
   color: var(--fg);
+}
+/* Adders keep their space (so labels don't reflow on hover) but only show on hover. */
+.meta-hover-only {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.note-header:hover .meta-hover-only,
+.note-header:focus-within .meta-hover-only {
+  opacity: 1;
+}
+
+/* ---------- popover (details line) ---------- */
+.popover-wrap {
+  position: relative;
+  display: inline-flex;
+  min-width: 0;
+}
+.popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: -8px;
+  z-index: 40;
+  min-width: 240px;
+  max-width: min(420px, 80vw);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  white-space: normal;
+  background: var(--bg-elev);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.14);
+  font-size: 0.82rem;
+}
+.popover.is-peek {
+  pointer-events: none;
+  min-width: 0;
+  padding: 6px 8px;
+}
+.popover-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.popover-url {
+  word-break: break-all;
+  color: var(--fg-muted);
+}
+.popover-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: var(--fg-muted);
+}
+.popover-field .settings-input {
+  width: 100%;
+  box-sizing: border-box;
+}
+.popover .label-combo .meta-input {
+  width: 100%;
 }
 
 .label-combo {
@@ -818,21 +910,10 @@ button {
 .note-title::placeholder {
   color: var(--fg-faint);
 }
-.note-title.has-title {
+/* The title, when there is one, comes before the details line (see .note-pane). */
+.note-title {
   order: -1;
   margin-bottom: 4px;
-}
-.note-title.no-title {
-  /* Space is kept so the text never jumps when the title appears. */
-  opacity: 0;
-}
-.note-header:hover + .note-title.no-title,
-.note-title.no-title:hover,
-.note-title.no-title:focus {
-  opacity: 1;
-}
-.chrome-auto.is-typing .note-title.no-title:not(:focus) {
-  opacity: 0;
 }
 
 /* ---------- editor (CodeMirror live preview) ---------------------------- */

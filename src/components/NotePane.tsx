@@ -34,6 +34,8 @@ export function NotePane({ noteId, vaultRoot, presetLabels, onCreated, onTrashed
   const [loaded, setLoaded] = useState(noteId === null);
   const [meta, setMeta] = useState<EditableMeta>({ ...emptyMeta, labels: presetLabels ?? [] });
   const [status, setStatus] = useState<"idle" | "pending" | "saving" | "saved" | "error">("idle");
+  // "+ Title" in the details line: show the (empty) title field until it loses focus.
+  const [addingTitle, setAddingTitle] = useState(false);
 
   const localRef = useRef<EditorHandle | null>(null);
   const editor = editorRef ?? localRef;
@@ -197,10 +199,11 @@ export function NotePane({ noteId, vaultRoot, presetLabels, onCreated, onTrashed
   const openLink = (url: string) =>
     void openExternal(url).catch((e) => onNotice?.(`Couldn't open the link: ${isApiError(e) ? e.message : String(e)}`));
 
+  const showTitle = !!meta.title || addingTitle;
   return (
     <article className="note-pane">
       <header className="note-header">
-        <MetaStrip meta={meta} onChange={onMeta} onOpenUrl={openLink} />
+        <MetaStrip meta={meta} onChange={onMeta} onOpenUrl={openLink} onAddTitle={showTitle ? undefined : () => setAddingTitle(true)} />
         <div className="note-header-right chrome">
           {doc && <span className="note-date" title={doc.path}>{formatDateTime(doc.created)}</span>}
           <span className={`save-dot save-${status}`} title={statusLabel(status)} aria-label={statusLabel(status)} />
@@ -211,20 +214,24 @@ export function NotePane({ noteId, vaultRoot, presetLabels, onCreated, onTrashed
           )}
         </div>
       </header>
-      {/* Optional title: invisible until the top of the note is hovered, unless one is set. */}
-      <input
-        className={`note-title ${meta.title ? "has-title" : "no-title"}`}
-        value={meta.title ?? ""}
-        placeholder="Title"
-        aria-label="Title (optional)"
-        onChange={(e) => onMeta({ ...meta, title: e.target.value || null })}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === "ArrowDown") {
-            e.preventDefault();
-            editor.current?.focus();
-          }
-        }}
-      />
+      {/* Optional title: shown when set, or once "+ Title" is chosen in the details line. */}
+      {showTitle && (
+        <input
+          className="note-title"
+          value={meta.title ?? ""}
+          placeholder="Title"
+          aria-label="Title (optional)"
+          autoFocus={addingTitle && !meta.title}
+          onChange={(e) => onMeta({ ...meta, title: e.target.value || null })}
+          onBlur={() => setAddingTitle(false)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === "ArrowDown") {
+              e.preventDefault();
+              editor.current?.focus();
+            }
+          }}
+        />
+      )}
       <Editor
         ref={editor}
         initial={doc?.content ?? ""}

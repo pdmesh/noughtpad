@@ -1,95 +1,156 @@
-import { useState } from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { BookOpen, ExternalLink, Link2, Tag, X } from "lucide-react";
+import { BookOpen, ExternalLink, Heading, Plus, Tag, X } from "lucide-react";
 import { api, type EditableMeta } from "../lib/api";
+import { fitCount } from "../lib/metaLayout";
 import { LabelInput } from "./LabelInput";
+import { Popover } from "./Popover";
 
 interface Props {
   meta: EditableMeta;
   onChange: (m: EditableMeta) => void;
   onOpenUrl: (url: string) => void;
+  /** Offered (as "+ Title" on hover) when the note has no title. */
+  onAddTitle?: () => void;
 }
 
+const CHIP_GAP = 4;
+const MORE_CHIP_W = 34;
+
 /**
- * Optional labels + source, on one quiet line under the title. Invisible until
- * hovered/focused when empty, faint when filled, so the page stays calm. The
- * source shows its name only; its URL field opens while the source is being
- * edited, and the ↗ button (with the full URL as its tooltip) opens the link.
+ * Labels and source on one line that never wraps. As many labels as fit are
+ * shown, then "+N"; the rest, and editing, live in popovers (hover previews,
+ * click edits). The source shows its name; its URL is in a popover and behind ↗.
+ * Invisible until hovered when empty, faint when filled, so the page stays calm.
  */
-export function MetaStrip({ meta, onChange, onOpenUrl }: Props) {
-  const [showSource, setShowSource] = useState(false);
+export function MetaStrip({ meta, onChange, onOpenUrl, onAddTitle }: Props) {
+  const [tagsOpen, setTagsOpen] = useState(false);
+  const [sourceOpen, setSourceOpen] = useState(false);
   const { data: allLabels = [] } = useQuery({ queryKey: ["notes", "labels"], queryFn: api.labels });
 
+  const labels = meta.labels;
   const hasSource = !!(meta.source?.title || meta.source?.url);
-  const filled = meta.labels.length > 0 || hasSource;
-  const sourceOpen = showSource || hasSource;
+  const filled = labels.length > 0 || hasSource;
   const url = meta.source?.url?.trim() ?? "";
   const href = openableUrl(url);
+  const sourceName = meta.source?.title?.trim() || hostname(url) || "";
 
-  const setSource = (field: "title" | "url", value: string) => {
-    const source = { ...(meta.source ?? {}), [field]: value };
-    onChange({ ...meta, source });
-  };
+  const setSource = (field: "title" | "url", value: string) => onChange({ ...meta, source: { ...(meta.source ?? {}), [field]: value } });
+  const removeLabel = (l: string) => onChange({ ...meta, labels: labels.filter((x) => x !== l) });
+
+  // How many labels fit: measured from an invisible copy of all the chips,
+  // against the room the rest of the line leaves.
+  const row = useRef<HTMLDivElement>(null);
+  const tags = useRef<HTMLSpanElement>(null);
+  const measure = useRef<HTMLSpanElement>(null);
+  const [shown, setShown] = useState(labels.length);
+  const refit = useCallback(() => {
+    const r = row.current;
+    const t = tags.current;
+    const m = measure.current;
+    if (!r || !t || !m) return;
+    const own = t.closest(".popover-wrap");
+    const others = Array.from(r.children).reduce((sum, c) => (c === own || c === m ? sum : sum + (c as HTMLElement).offsetWidth + 6), 0);
+    const widths = Array.from(m.children).map((c) => (c as HTMLElement).offsetWidth);
+    // 20px: the tag icon in front of the chips.
+    setShown(fitCount(widths, r.clientWidth - others - 20, CHIP_GAP, MORE_CHIP_W));
+  }, []);
+  useLayoutEffect(refit, [refit, labels, sourceName]);
+  useLayoutEffect(() => {
+    const ro = new ResizeObserver(refit);
+    if (row.current) ro.observe(row.current);
+    return () => ro.disconnect();
+  }, [refit]);
+
+  const hidden = labels.length - shown;
+  const chips = (list: string[], removable: boolean) =>
+    list.map((l) => (
+      <span key={l} className="chip">
+        {l}
+        {removable && (
+          <button className="chip-x" aria-label={`Remove label ${l}`} onClick={() => removeLabel(l)}>
+            <X size={11} />
+          </button>
+        )}
+      </span>
+    ));
 
   return (
     <div className={`meta-strip ${filled ? "meta-filled" : "meta-empty"}`}>
-      <div className="meta-row">
-        <Tag size={13} className="meta-icon" aria-hidden />
-        {meta.labels.map((l) => (
-          <span key={l} className="chip">
-            {l}
-            <button
-              className="chip-x"
-              aria-label={`Remove label ${l}`}
-              onClick={() => onChange({ ...meta, labels: meta.labels.filter((x) => x !== l) })}
-            >
-              <X size={11} />
-            </button>
-          </span>
-        ))}
-        <LabelInput
-          current={meta.labels}
-          all={allLabels}
-          onAdd={(labels) => onChange({ ...meta, labels: [...meta.labels, ...labels] })}
-          onRemoveLast={() => onChange({ ...meta, labels: meta.labels.slice(0, -1) })}
-        />
-        {sourceOpen ? (
-          <span className="meta-source">
-            <BookOpen size={13} className="meta-icon" aria-hidden />
+      <div className="meta-row" ref={row}>
+        <span className="meta-measure" ref={measure} aria-hidden>
+          {chips(labels, false)}
+        </span>
+        <Popover
+          className="meta-tags"
+          label="Labels"
+          open={tagsOpen}
+          onOpenChange={setTagsOpen}
+          peek={labels.length > 0 && <span className="popover-chips">{chips(labels, false)}</span>}
+          anchor={
+            <span className="meta-tags-line" ref={tags}>
+              <button className="meta-tag-btn" onClick={() => setTagsOpen(true)} title="Labels" aria-label={labels.length ? `Labels: ${labels.join(", ")}` : "Add label"}>
+                <Tag size={13} className="meta-icon" aria-hidden />
+                {chips(labels.slice(0, shown), false)}
+                {hidden > 0 && <span className="chip chip-more">+{hidden}</span>}
+                {labels.length === 0 && <Plus size={12} className="meta-hover-only" aria-hidden />}
+              </button>
+            </span>
+          }
+        >
+          <div className="popover-chips">{chips(labels, true)}</div>
+          <LabelInput
+            current={labels}
+            all={allLabels}
+            autoFocus
+            onAdd={(add) => onChange({ ...meta, labels: [...labels, ...add] })}
+            onRemoveLast={() => onChange({ ...meta, labels: labels.slice(0, -1) })}
+          />
+        </Popover>
+
+        <Popover
+          className="meta-source"
+          label="Source"
+          open={sourceOpen}
+          onOpenChange={setSourceOpen}
+          peek={url && <span className="popover-url">{url}</span>}
+          anchor={
+            hasSource ? (
+              <button className="meta-source-btn" onClick={() => setSourceOpen(true)} title="Edit source">
+                <BookOpen size={13} className="meta-icon" aria-hidden />
+                <span className="meta-source-name">{sourceName}</span>
+              </button>
+            ) : (
+              <button className="meta-add meta-hover-only" onClick={() => setSourceOpen(true)}>
+                <BookOpen size={13} aria-hidden /> Add source
+              </button>
+            )
+          }
+        >
+          <label className="popover-field">
+            <span>Source</span>
             <input
-              className="meta-input meta-source-title"
+              className="settings-input"
               value={meta.source?.title ?? ""}
-              // With only a URL, its site stands in for the name, so there's still something to click.
-              placeholder={hostname(url) ?? "Source (book, article, video…)"}
+              placeholder={hostname(url) ?? "Book, article, video…"}
               aria-label="Source title"
-              title={meta.source?.title || undefined}
-              size={Math.max(8, (meta.source?.title || hostname(url) || "Source (book, article, video…)").length)}
-              autoFocus={showSource && !hasSource}
+              autoFocus
               onChange={(e) => setSource("title", e.target.value)}
             />
-            <Link2 size={13} className="meta-icon meta-source-url-icon" aria-hidden />
-            <input
-              className="meta-input meta-source-url"
-              value={meta.source?.url ?? ""}
-              placeholder="URL"
-              aria-label="Source URL"
-              title={url || undefined}
-              onChange={(e) => setSource("url", e.target.value)}
-            />
-            {href && (
-              <button
-                className="icon-btn meta-open"
-                title={`Open in your browser: ${href}`}
-                aria-label="Open the source URL in your browser"
-                onClick={() => onOpenUrl(href)}
-              >
-                <ExternalLink size={13} />
-              </button>
-            )}
-          </span>
-        ) : (
-          <button className="meta-add" onClick={() => setShowSource(true)}>
-            <BookOpen size={13} aria-hidden /> Add source
+          </label>
+          <label className="popover-field">
+            <span>URL</span>
+            <input className="settings-input" value={meta.source?.url ?? ""} placeholder="https://…" aria-label="Source URL" onChange={(e) => setSource("url", e.target.value)} />
+          </label>
+        </Popover>
+        {href && (
+          <button className="icon-btn meta-open" title={`Open in your browser: ${href}`} aria-label="Open the source URL in your browser" onClick={() => onOpenUrl(href)}>
+            <ExternalLink size={13} />
+          </button>
+        )}
+        {onAddTitle && (
+          <button className="meta-add meta-hover-only" onClick={onAddTitle} title="Add a title">
+            <Heading size={13} aria-hidden /> Title
           </button>
         )}
       </div>

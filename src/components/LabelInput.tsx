@@ -9,6 +9,7 @@ interface Props {
   all: LabelCount[];
   onAdd: (labels: string[]) => void;
   onRemoveLast: () => void;
+  autoFocus?: boolean;
 }
 
 const MAX_SUGGESTIONS = 8;
@@ -18,7 +19,7 @@ const MAX_SUGGESTIONS = 8;
  * palette). Enter or comma adds, Backspace on an empty field removes the last
  * label, Escape closes the list.
  */
-export function LabelInput({ current, all, onAdd, onRemoveLast }: Props) {
+export function LabelInput({ current, all, onAdd, onRemoveLast, autoFocus }: Props) {
   const [draft, setDraft] = useState("");
   const [open, setOpen] = useState(false);
 
@@ -48,7 +49,8 @@ export function LabelInput({ current, all, onAdd, onRemoveLast }: Props) {
       <Command.Input
         className="meta-input"
         value={draft}
-        placeholder={current.length ? "" : "Add label"}
+        placeholder="Add label"
+        autoFocus={autoFocus}
         aria-label="Add label"
         onValueChange={(v) => {
           if (v.endsWith(",")) add(v);
