@@ -225,7 +225,7 @@ button {
   max-width: var(--measure);
   margin: 0 auto;
   /* --safe-top: a phone's status bar / notch, 0 on desktop (viewport-fit=cover in index.html). */
-  padding: calc(72px + var(--safe-top)) 24px 120px;
+  padding: calc(44px + var(--safe-top)) 24px 120px;
   transition: margin-left 0.2s ease;
 }
 /* With a panel open, the note is centred in the space left beside it. */
@@ -341,11 +341,11 @@ button {
     box-shadow: 4px 0 24px rgb(0 0 0 / 0.18);
   }
   .chrome-auto .topbar,
-  .chrome-auto .note-header-right,
+  .chrome-auto .note-header-right > *,
   /* There's no mouse move to bring chrome back after typing on a touch
      keyboard, so don't hide it in the first place. */
   .chrome-auto.is-typing .topbar,
-  .chrome-auto.is-typing .note-header-right {
+  .chrome-auto.is-typing .note-header-right > * {
     opacity: 1 !important;
     pointer-events: auto !important;
   }
@@ -526,6 +526,11 @@ button {
 /* ---------- note pane --------------------------------------------------- */
 .note-pane {
   min-height: 30vh;
+  /* A set title comes first, with the details line under it; an untitled note
+     keeps the details on top and its (hidden) title below. Done with `order`
+     so the DOM, and the hover rule that reveals an empty title, stay as they are. */
+  display: flex;
+  flex-direction: column;
 }
 /* The format toolbar: a tap alternative to the right-click menu, docked to
    the bottom of the screen, above the on-screen keyboard when it's open (the
@@ -580,10 +585,10 @@ button {
 .note-header {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
+  align-items: center;
   gap: 4px 12px;
-  min-height: 34px;
-  margin-bottom: 10px;
+  min-height: 28px;
+  margin-bottom: 12px;
 }
 .note-header-right {
   margin-left: auto;
@@ -592,11 +597,19 @@ button {
   gap: 8px;
   white-space: nowrap;
 }
-.chrome-auto .note-header-right {
+/* The date stays as a faint marker; save state and trash only show on hover. */
+.note-header-right > * {
+  transition: opacity 0.18s ease;
+}
+.chrome-auto .note-header-right > :not(.note-date) {
   opacity: 0;
 }
-.note-header:hover .note-header-right,
-.chrome-pinned .note-header-right {
+.chrome-auto.is-typing .note-header-right > .note-date {
+  opacity: 0.3;
+}
+.note-header:hover .note-header-right > *,
+.note-header:focus-within .note-header-right > *,
+.chrome-pinned .note-header-right > * {
   opacity: 1;
 }
 .note-date {
@@ -622,9 +635,7 @@ button {
 
 .meta-strip {
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  min-width: 0;
   font-size: 0.82rem;
   color: var(--fg-muted);
   transition: opacity 0.18s ease;
@@ -639,17 +650,11 @@ button {
 .note-header:focus-within .meta-strip {
   opacity: 1;
 }
-/* The source row takes a line of its own under the labels and date. */
-.meta-source {
-  order: 1;
-  flex: 1 0 100%;
-  min-width: 0;
-}
 .is-typing .meta-strip:not(:focus-within) {
   opacity: 0;
 }
 .is-typing .meta-filled:not(:focus-within) {
-  opacity: 0.35;
+  opacity: 0.2;
 }
 .meta-row {
   display: flex;
@@ -673,8 +678,15 @@ button {
 .meta-input::placeholder {
   color: var(--fg-faint);
 }
-.meta-source .meta-row {
-  flex-wrap: nowrap;
+/* The source sits inline after the labels: its name, sized to fit, then ↗.
+   The URL field only opens while the source is being edited. */
+.meta-source {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  max-width: 100%;
+  margin-left: 6px;
 }
 .meta-source-title,
 .meta-source-url {
@@ -682,10 +694,20 @@ button {
   text-overflow: ellipsis;
 }
 .meta-source-title {
-  flex: 2 1 0;
+  field-sizing: content;
+  max-width: 34ch;
 }
 .meta-source-url {
-  flex: 3 1 0;
+  width: 30ch;
+}
+/* The label field is only as wide as what's typed (or its placeholder), so the source sits right after the labels. */
+.meta-row .label-combo .meta-input {
+  field-sizing: content;
+  min-width: 2ch;
+}
+.meta-source:not(:focus-within) .meta-source-url,
+.meta-source:not(:focus-within) .meta-source-url-icon {
+  display: none;
 }
 .meta-open {
   flex: none;
@@ -789,6 +811,10 @@ button {
 }
 .note-title::placeholder {
   color: var(--fg-faint);
+}
+.note-title.has-title {
+  order: -1;
+  margin-bottom: 4px;
 }
 .note-title.no-title {
   /* Space is kept so the text never jumps when the title appears. */
@@ -2391,7 +2417,7 @@ button.cue:hover {
   padding-bottom: 0;
 }
 .chat-page {
-  min-height: calc(100vh - 72px - var(--safe-top));
+  min-height: calc(100vh - 44px - var(--safe-top));
   display: flex;
   flex-direction: column;
 }

@@ -11,10 +11,10 @@ interface Props {
 }
 
 /**
- * Optional source + labels. Invisible until hovered/focused (or faint when
- * filled), so the blank page stays blank. Renders two siblings inside the
- * note header: the labels row beside the date, and the source row on a line
- * of its own beneath, so a long URL can use the note's full width.
+ * Optional labels + source, on one quiet line under the title. Invisible until
+ * hovered/focused when empty, faint when filled, so the page stays calm. The
+ * source shows its name only; its URL field opens while the source is being
+ * edited, and the ↗ button (with the full URL as its tooltip) opens the link.
  */
 export function MetaStrip({ meta, onChange, onOpenUrl }: Props) {
   const [showSource, setShowSource] = useState(false);
@@ -23,7 +23,6 @@ export function MetaStrip({ meta, onChange, onOpenUrl }: Props) {
   const hasSource = !!(meta.source?.title || meta.source?.url);
   const filled = meta.labels.length > 0 || hasSource;
   const sourceOpen = showSource || hasSource;
-  const fill = filled ? "meta-filled" : "meta-empty";
   const url = meta.source?.url?.trim() ?? "";
   const href = openableUrl(url);
 
@@ -33,49 +32,42 @@ export function MetaStrip({ meta, onChange, onOpenUrl }: Props) {
   };
 
   return (
-    <>
-      <div className={`meta-strip ${fill}`}>
-        <div className="meta-row">
-          <Tag size={13} className="meta-icon" aria-hidden />
-          {meta.labels.map((l) => (
-            <span key={l} className="chip">
-              {l}
-              <button
-                className="chip-x"
-                aria-label={`Remove label ${l}`}
-                onClick={() => onChange({ ...meta, labels: meta.labels.filter((x) => x !== l) })}
-              >
-                <X size={11} />
-              </button>
-            </span>
-          ))}
-          <LabelInput
-            current={meta.labels}
-            all={allLabels}
-            onAdd={(labels) => onChange({ ...meta, labels: [...meta.labels, ...labels] })}
-            onRemoveLast={() => onChange({ ...meta, labels: meta.labels.slice(0, -1) })}
-          />
-          {!sourceOpen && (
-            <button className="meta-add" onClick={() => setShowSource(true)}>
-              <BookOpen size={13} aria-hidden /> Add source
+    <div className={`meta-strip ${filled ? "meta-filled" : "meta-empty"}`}>
+      <div className="meta-row">
+        <Tag size={13} className="meta-icon" aria-hidden />
+        {meta.labels.map((l) => (
+          <span key={l} className="chip">
+            {l}
+            <button
+              className="chip-x"
+              aria-label={`Remove label ${l}`}
+              onClick={() => onChange({ ...meta, labels: meta.labels.filter((x) => x !== l) })}
+            >
+              <X size={11} />
             </button>
-          )}
-        </div>
-      </div>
-      {sourceOpen && (
-        <div className={`meta-strip meta-source ${fill}`}>
-          <div className="meta-row">
+          </span>
+        ))}
+        <LabelInput
+          current={meta.labels}
+          all={allLabels}
+          onAdd={(labels) => onChange({ ...meta, labels: [...meta.labels, ...labels] })}
+          onRemoveLast={() => onChange({ ...meta, labels: meta.labels.slice(0, -1) })}
+        />
+        {sourceOpen ? (
+          <span className="meta-source">
             <BookOpen size={13} className="meta-icon" aria-hidden />
             <input
               className="meta-input meta-source-title"
               value={meta.source?.title ?? ""}
-              placeholder="Source (book, article, video…)"
+              // With only a URL, its site stands in for the name, so there's still something to click.
+              placeholder={hostname(url) ?? "Source (book, article, video…)"}
               aria-label="Source title"
               title={meta.source?.title || undefined}
+              size={Math.max(8, (meta.source?.title || hostname(url) || "Source (book, article, video…)").length)}
               autoFocus={showSource && !hasSource}
               onChange={(e) => setSource("title", e.target.value)}
             />
-            <Link2 size={13} className="meta-icon" aria-hidden />
+            <Link2 size={13} className="meta-icon meta-source-url-icon" aria-hidden />
             <input
               className="meta-input meta-source-url"
               value={meta.source?.url ?? ""}
@@ -94,11 +86,20 @@ export function MetaStrip({ meta, onChange, onOpenUrl }: Props) {
                 <ExternalLink size={13} />
               </button>
             )}
-          </div>
-        </div>
-      )}
-    </>
+          </span>
+        ) : (
+          <button className="meta-add" onClick={() => setShowSource(true)}>
+            <BookOpen size={13} aria-hidden /> Add source
+          </button>
+        )}
+      </div>
+    </div>
   );
+}
+
+function hostname(url: string): string | null {
+  const href = openableUrl(url);
+  return href ? new URL(href).hostname.replace(/^www\./, "") : null;
 }
 
 /** A source URL worth offering to open: http(s), or a bare domain such as `example.com/page`. */
