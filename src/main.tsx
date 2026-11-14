@@ -5,6 +5,7 @@ import "katex/dist/katex.min.css";
 import "./styles.css";
 import { App } from "./App";
 import { applyStyle, loadStyle } from "./lib/textStyle";
+import { applyTheme, loadTheme, watchSystemTheme } from "./lib/theme";
 
 // A file dropped where nothing handles it would make the webview open it in
 // place of the app. Swallow those (the editor and note page handle their own
@@ -17,8 +18,11 @@ window.addEventListener("drop", (e) => {
   if (isFileDrag(e)) e.preventDefault();
 });
 
-// Before the first render, so the note text never jumps to the chosen font.
+// Before the first render, so the note text never jumps to the chosen font
+// and the page never flashes the wrong theme.
 applyStyle(loadStyle());
+applyTheme(loadTheme());
+watchSystemTheme();
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, refetchOnWindowFocus: false, retry: 1 } },
