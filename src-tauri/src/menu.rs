@@ -21,6 +21,8 @@ const VIEW_ITEMS: &[(&str, &str, &str)] = &[
     ("chat", "Chat", "CmdOrCtrl+L"),
 ];
 const GO_ITEMS: &[(&str, &str, &str)] = &[
+    ("go-back", "Back", "CmdOrCtrl+["),
+    ("go-forward", "Forward", "CmdOrCtrl+]"),
     ("go-write", "Write", ""),
     ("go-notes", "All Notes", ""),
     ("go-journal", "Journal", ""),

@@ -1,6 +1,6 @@
 import { lazy, Suspense, type ComponentType, useCallback, useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowUpCircle, CalendarDays, History, Settings as SettingsIcon, FilePlus2, FolderOpen, MessageSquareText, Notebook, PanelLeft, PenLine, Search, Sprout, Waypoints, X } from "lucide-react";
+import { ArrowUpCircle, CalendarDays, ChevronLeft, ChevronRight, History, Settings as SettingsIcon, FilePlus2, FolderOpen, MessageSquareText, Notebook, PanelLeft, PenLine, Search, Sprout, Waypoints, X } from "lucide-react";
 import { api, isApiError, onEvent, pickFolder, type VaultInfo } from "./lib/api";
 import { useEvent } from "./lib/useEvent";
 import { NotePane } from "./components/NotePane";
@@ -15,6 +15,7 @@ import { imageFiles, loadMarkdownPipeline } from "./editor/clipboard";
 import { checkForUpdates, describeUpdate, installUpdate, startUpdateChecks, updateButtonLabel, useUpdateState } from "./lib/updates";
 import { describeSync, useSync } from "./lib/sync";
 import { useMatchMedia } from "./lib/useMediaQuery";
+import { back, canBack, canForward, emptyHistory, forward, visit, type NavHistory, type Relation } from "./lib/navHistory";
 
 // Pages other than writing load after the editor is ready, keeping them out of
 // the startup bundle (G1: capture in < 300 ms).
@@ -66,6 +67,22 @@ type View =
   | { kind: "settings" }
   /** `key` stays the same when a new chat gets its id, so the page isn't remounted. */
   | { kind: "chat"; id: string | null; start?: ScopeChoice; key: string };
+
+/** A place in the back/forward history: the view, and for Write, which note. */
+type Place = { view: View; noteId: string | null };
+
+function relatePlaces(prev: Place, next: Place): Relation {
+  const a = prev.view;
+  const b = next.view;
+  if (a.kind === "write" && b.kind === "write") {
+    if (prev.noteId === next.noteId) return "same";
+    // A new note that just got saved is the same page, now with an id.
+    return prev.noteId === null ? "replace" : "new";
+  }
+  // A new chat keeps its key when it gets its id.
+  if (a.kind === "chat" && b.kind === "chat" && a.key === b.key) return a.id === b.id ? "same" : "replace";
+  return JSON.stringify(a) === JSON.stringify(b) ? "same" : "new";
+}
 
 export function App() {
   const [vault, setVault] = useState<VaultInfo | null | undefined>(undefined);
@@ -215,6 +232,39 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
     window.scrollTo({ top: 0 });
   }, []);
 
+  // Back/forward. Every view change is recorded; going back or forward moves the index
+  // first, so the view change it causes is "the same place" and records nothing.
+  const [nav, setNav] = useState<NavHistory<Place>>(() => emptyHistory<Place>({ view: { kind: "write" }, noteId: null }));
+  const navRef = useRef(nav);
+  navRef.current = nav;
+  useEffect(() => {
+    setNav((h) => visit(h, { view, noteId: view.kind === "write" ? currentId : null }, relatePlaces));
+  }, [view, currentId]);
+  const goTo = useCallback(
+    async (place: Place) => {
+      if (place.view.kind !== "write") return setView(place.view);
+      if (!place.noteId) return newNote();
+      // A note trashed or deleted since: the blank page rather than a pane that never loads.
+      const exists = await api.getNote(place.noteId).then(
+        () => true,
+        () => false,
+      );
+      if (exists) openNote(place.noteId);
+      else newNote();
+    },
+    [openNote, newNote],
+  );
+  const step = useCallback(
+    (dir: "back" | "forward") => {
+      const r = dir === "back" ? back(navRef.current) : forward(navRef.current);
+      if (!r.place) return;
+      navRef.current = r.history;
+      setNav(r.history);
+      void goTo(r.place);
+    },
+    [goTo],
+  );
+
   const toggleListUnderEditor = useCallback(() => {
     setListUnderEditor((on) => {
       writePref("noughtpad.listUnderEditor", on ? "off" : "on");
@@ -322,9 +372,15 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
         case "go-models":
           setView({ kind: "models" });
           break;
+        case "go-back":
+          step("back");
+          break;
+        case "go-forward":
+          step("forward");
+          break;
       }
     },
-    [newNote, toggleChrome, openChat],
+    [newNote, toggleChrome, openChat, step],
   );
   useEvent<string>("menu", runCommand);
 
@@ -361,6 +417,28 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
     };
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
+  }, [runCommand]);
+
+  // ⌘[ / ⌘] go back and forward, caught before the editor (whose keymap outdents/indents
+  // with them; Tab and Shift-Tab still do that). The mouse's side buttons do the same.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || e.shiftKey || e.altKey || (e.key !== "[" && e.key !== "]")) return;
+      e.preventDefault();
+      e.stopPropagation();
+      runCommand(e.key === "[" ? "go-back" : "go-forward");
+    };
+    const onMouse = (e: MouseEvent) => {
+      if (e.button !== 3 && e.button !== 4) return;
+      e.preventDefault();
+      runCommand(e.button === 3 ? "go-back" : "go-forward");
+    };
+    window.addEventListener("keydown", onKey, true);
+    window.addEventListener("mouseup", onMouse);
+    return () => {
+      window.removeEventListener("keydown", onKey, true);
+      window.removeEventListener("mouseup", onMouse);
+    };
   }, [runCommand]);
 
   // While typing, chrome stays hidden even if the pointer rests on it; moving the mouse brings it back.
@@ -439,6 +517,12 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
       <div className="topbar chrome">
         <button className="icon-btn" onClick={toggleChrome} title="Toggle sidebar (⌘\)" aria-label="Toggle sidebar">
           <PanelLeft size={16} />
+        </button>
+        <button className="icon-btn" onClick={() => runCommand("go-back")} disabled={!canBack(nav)} title="Back (⌘[)" aria-label="Back">
+          <ChevronLeft size={16} />
+        </button>
+        <button className="icon-btn" onClick={() => runCommand("go-forward")} disabled={!canForward(nav)} title="Forward (⌘])" aria-label="Forward">
+          <ChevronRight size={16} />
         </button>
         <div className="topbar-spacer" />
         {sync.available && sync.enabled && (

@@ -18,6 +18,8 @@ const SHORTCUTS: Array<[string, string]> = [
   [`${mod} K`, "Search and commands"],
   [`${mod} J`, "Related notes"],
   [`${mod} L`, "New chat"],
+  [`${mod} [`, "Back"],
+  [`${mod} ]`, "Forward"],
   [`${mod} \\`, "Show or hide the sidebar and toolbar"],
   [`${isMac ? "⌘ ⇧" : "Ctrl ⇧"} Space`, "Quick capture from anywhere"],
 ];

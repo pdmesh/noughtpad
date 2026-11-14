@@ -518,6 +518,10 @@ button {
   background: var(--border);
   color: var(--fg);
 }
+.icon-btn:disabled {
+  opacity: 0.35;
+  pointer-events: none;
+}
 
 /* ---------- note pane --------------------------------------------------- */
 .note-pane {
