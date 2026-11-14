@@ -910,6 +910,20 @@ button {
 .note-title::placeholder {
   color: var(--fg-faint);
 }
+/* The details line inside the editor, under a first-line heading (editor/headerSlot.ts):
+   it keeps the UI font and sizes, not the note text's. */
+.note-header-slot {
+  font-family: var(--font-ui);
+  font-size: 1rem;
+  line-height: normal;
+  white-space: normal;
+  cursor: default;
+  caret-color: auto;
+}
+.note-header-slot .note-header {
+  margin: 2px 0 10px;
+}
+
 /* The title, when there is one, comes before the details line (see .note-pane). */
 .note-title {
   order: -1;

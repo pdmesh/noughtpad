@@ -8,6 +8,7 @@ import { drawSelection, EditorView, keymap, placeholder as placeholderExt } from
 import { tags as t } from "@lezer/highlight";
 import { assetResolver, linkOpener, livePreview } from "./livePreview";
 import { blockWidgets } from "./blocks";
+import { headerSlot as headerSlotExt } from "./headerSlot";
 import { markdownClipboard, pickImages, saveImages, type ClipboardOptions } from "./clipboard";
 import { commandById, COMMANDS, cursorToEnd, imagePicker } from "./commands";
 import { slashMenu } from "./slash";
@@ -38,6 +39,8 @@ interface Props extends ClipboardOptions {
   autoFocus?: boolean;
   resolveAsset?: (src: string) => string;
   openLink?: (url: string) => void;
+  /** Where the details line goes when the first line is a heading (see headerSlot.ts). */
+  headerSlot?: { host: HTMLElement; onHeading: (has: boolean) => void };
   ref?: Ref<EditorHandle>;
 }
 
@@ -67,7 +70,7 @@ const theme = EditorView.theme({
   },
 });
 
-export function Editor({ initial, onChange, placeholder, autoFocus, resolveAsset, openLink, saveAttachment, pasteClipboardImage, onError, ref }: Props) {
+export function Editor({ initial, onChange, placeholder, autoFocus, resolveAsset, openLink, headerSlot, saveAttachment, pasteClipboardImage, onError, ref }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
   const onChangeRef = useRef(onChange);
@@ -131,6 +134,7 @@ export function Editor({ initial, onChange, placeholder, autoFocus, resolveAsset
         ...(isTauri && !isCoarsePointer ? [nativeContextMenu()] : []),
         assetResolver.of(resolveAsset ?? ((s) => s)),
         ...(openLink ? [linkOpener.of(openLink)] : []),
+        ...(headerSlot ? [headerSlotExt(headerSlot.host, headerSlot.onHeading)] : []),
         placeholderExt(placeholder ?? ""),
         theme,
         EditorView.updateListener.of((u) => {
