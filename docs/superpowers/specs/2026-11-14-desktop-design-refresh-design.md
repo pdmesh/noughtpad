@@ -49,3 +49,19 @@ Considered: a single theme list vs. a light + dark pair. Chosen: **light + dark 
 ## Left to the builder
 
 Exact colour values (check contrast for fg/muted/faint against bg), the history cap, how the theme setting is stored, and whether the native window background should follow the theme.
+
+## Revision (same day): one-line details, popovers, heading-first notes
+
+Found in testing: most notes have no title field (2 of 48 sample notes); their first line stands in as the title, so they kept the old "details on top" layout.
+
+Considered for untitled notes: (1) details under the first line inside the editor, (2) details above with the hidden-title space removed, (3) details at the end/margin. Chosen: (1) when the first line is a heading, (2) otherwise.
+
+- Where the details line goes:
+  - Title field set: title → details → text.
+  - No title, first line is a heading (`#`…): that heading → details → rest of text. The details line lives inside the editor after line 1 and moves if line 1 changes.
+  - No title, first line is plain text: details → text, with no hidden title space (reclaimed).
+- Details line is **one line, never wraps**: tags (as many as fit, then a "+N" chip) · source name ↗ · date on the right; save-dot and trash on hover; fades while typing as before.
+- **Tags popover**: hovering "+N" previews all tags; clicking it (or a tag, or "+ tag" on hover) opens it for editing: remove chips, add with the existing label combobox.
+- **Source popover**: clicking the source name (or "+ Add source") opens a popover with the name and URL fields; hovering the name previews the URL. ↗ opens the link.
+- **Add a title**: a faint "+ Title" in the details line on hover; clicking shows the title field above, focused.
+- Popovers: hover only previews, click/focus opens for editing; Escape or an outside click closes; keyboard reachable.
