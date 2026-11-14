@@ -1,8 +1,26 @@
 @import "tailwindcss";
 
 /* ---------- tokens ---------------------------------------------------- */
+/* Shared, theme-independent tokens. */
 :root {
   --safe-top: env(safe-area-inset-top, 0px);
+  /* Translucent, so the selection (drawn behind the text) shows through code. */
+  --code-tint: color-mix(in srgb, var(--fg) 5.5%, transparent);
+  --font-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  /* Note text: the system font and size unless changed in Settings → Writing (lib/textStyle.ts). */
+  --font-text: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --text-size: 1rem;
+  --sidebar-w: 260px;
+  --related-w: 340px;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --measure: 720px;
+}
+
+/* Themes (Settings → Appearance, lib/theme.ts sets data-theme on <html>).
+   Each defines every colour token. Paper is also the fallback with no attribute.
+   The activity heat ramp is one hue per theme, an ordinal ramp against the surface. */
+:root,
+:root[data-theme="paper"] {
   --bg: #faf8f4;
   --bg-elev: #ffffff;
   --bg-sunk: #f2efe8;
@@ -16,49 +34,88 @@
   --selection: #f0dcbc;
   --mark: #f6dfae;
   --code-bg: #f1ede4;
-  /* Translucent, so the selection (drawn behind the text) shows through code. */
-  --code-tint: color-mix(in srgb, var(--fg) 5.5%, transparent);
   --danger: #b4443a;
-  /* Activity heat ramp (one hue, validated as an ordinal ramp vs the surface). */
+  --sync-ok: #7fb685;
   --heat-0: #ece7dc;
   --heat-1: #d9a35a;
   --heat-2: #c08036;
   --heat-3: #9a5f1c;
   --heat-4: #6b3e0c;
-  --font-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
-  /* Note text: the system font and size unless changed in Settings → Writing (lib/textStyle.ts). */
-  --font-text: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
-  --text-size: 1rem;
-  --sidebar-w: 260px;
-  --related-w: 340px;
-  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
-  --measure: 720px;
   color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #17191e;
-    --bg-elev: #1e2128;
-    --bg-sunk: #121418;
-    --fg: #e6e3dc;
-    --fg-muted: #a7aab2;
-    --fg-faint: #6c707a;
-    --border: #2c3039;
-    --accent: #e0a458;
-    --accent-soft: #3a2f22;
-    --link: #8cbce0;
-    --selection: #4a3c28;
-    --mark: #5a4523;
-    --code-bg: #22252d;
-    --danger: #e0786e;
-    --heat-0: #262a32;
-    --heat-1: #7a5220;
-    --heat-2: #a4702f;
-    --heat-3: #cf9446;
-    --heat-4: #f0bf78;
-    color-scheme: dark;
-  }
+:root[data-theme="white"] {
+  --bg: #ffffff;
+  --bg-elev: #ffffff;
+  --bg-sunk: #f6f7f8;
+  --fg: #1f2328;
+  --fg-muted: #59636e;
+  --fg-faint: #8c959f;
+  --border: #e4e6e9;
+  --accent: #2f6fb7;
+  --accent-soft: #e3eefa;
+  --link: #0969da;
+  --selection: #cfe2fb;
+  --mark: #fff1b3;
+  --code-bg: #f3f4f6;
+  --danger: #cf222e;
+  --sync-ok: #5fae72;
+  --heat-0: #e8edf3;
+  --heat-1: #a8c7ea;
+  --heat-2: #6fa2dc;
+  --heat-3: #3a78c2;
+  --heat-4: #1d4f8f;
+  color-scheme: light;
+}
+
+/* Graphite: the original dark palette on neutral (zinc) surfaces; keeps the amber accent. */
+:root[data-theme="graphite"] {
+  --bg: #18181b;
+  --bg-elev: #202024;
+  --bg-sunk: #121214;
+  --fg: #ececed;
+  --fg-muted: #a1a1aa;
+  --fg-faint: #71717a;
+  --border: #2e2e33;
+  --accent: #e0a458;
+  --accent-soft: #3a2f22;
+  --link: #8cbce0;
+  --selection: #3f3f46;
+  --mark: #5a4523;
+  --code-bg: #232327;
+  --danger: #f07167;
+  --sync-ok: #7ccf8f;
+  --heat-0: #262a32;
+  --heat-1: #7a5220;
+  --heat-2: #a4702f;
+  --heat-3: #cf9446;
+  --heat-4: #f0bf78;
+  color-scheme: dark;
+}
+
+/* Midnight: a blue-tinted dark, in the spirit of VS Code's dark themes. */
+:root[data-theme="midnight"] {
+  --bg: #161b26;
+  --bg-elev: #1c2230;
+  --bg-sunk: #11151d;
+  --fg: #e2e6ee;
+  --fg-muted: #9aa4b5;
+  --fg-faint: #687286;
+  --border: #2a3242;
+  --accent: #6cb6ff;
+  --accent-soft: #1f3350;
+  --link: #79c0ff;
+  --selection: #264f78;
+  --mark: #5a4a1f;
+  --code-bg: #1e2533;
+  --danger: #f47067;
+  --sync-ok: #7ccf8f;
+  --heat-0: #222a38;
+  --heat-1: #1f4a7a;
+  --heat-2: #2f6fb0;
+  --heat-3: #4f95d8;
+  --heat-4: #8cc4f5;
+  color-scheme: dark;
 }
 
 /* ---------- base -------------------------------------------------------- */
@@ -1082,19 +1139,17 @@ button {
 .tok-def {
   color: #2f6d9a;
 }
-@media (prefers-color-scheme: dark) {
-  .tok-keyword {
-    color: #c99be6;
-  }
-  .tok-string {
-    color: #a3cf8a;
-  }
-  .tok-number {
-    color: #e6a172;
-  }
-  .tok-def {
-    color: #8cbce0;
-  }
+:root[data-scheme="dark"] .tok-keyword {
+  color: #c99be6;
+}
+:root[data-scheme="dark"] .tok-string {
+  color: #a3cf8a;
+}
+:root[data-scheme="dark"] .tok-number {
+  color: #e6a172;
+}
+:root[data-scheme="dark"] .tok-def {
+  color: #8cbce0;
 }
 
 /* ---------- stream ------------------------------------------------------ */
@@ -2667,12 +2722,15 @@ button.cue:hover {
   color: var(--fg);
 }
 
-/* Sync status in the top bar: quiet when synced, accent while syncing, red when it needs you. */
+/* Sync status in the top bar: green when synced, accent while syncing, red when it needs you. */
 .sync-dot span {
   width: 7px;
   height: 7px;
   border-radius: 50%;
   background: var(--fg-faint);
+}
+.sync-dot.is-idle span {
+  background: var(--sync-ok);
 }
 .sync-dot.is-syncing span {
   background: var(--accent);

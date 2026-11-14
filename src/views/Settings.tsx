@@ -8,6 +8,7 @@ import { useState } from "react";
 import { useLlm } from "./Models";
 import { FONTS, SIZES, loadStyle, saveStyle, type FontChoice, type TextStyle } from "../lib/textStyle";
 import { thisDevice } from "../lib/platform";
+import { DARK_THEMES, LIGHT_THEMES, MODES, loadTheme, saveTheme, type ThemePrefs } from "../lib/theme";
 
 const isMac = typeof navigator !== "undefined" && /Mac/i.test(navigator.platform);
 const mod = isMac ? "⌘" : "Ctrl";
@@ -108,6 +109,8 @@ export function SettingsView({
           <ChevronRight size={15} aria-hidden />
         </button>
       </section>
+
+      <AppearanceSettings />
 
       <WritingSettings />
 
@@ -270,6 +273,34 @@ function Updates() {
 }
 
 /** The note text's font and size (this computer only). */
+function AppearanceSettings() {
+  const [prefs, setPrefs] = useState<ThemePrefs>(loadTheme);
+  const change = (patch: Partial<ThemePrefs>) => {
+    const next = { ...prefs, ...patch };
+    setPrefs(next);
+    saveTheme(next);
+  };
+  const select = <T extends string>(label: string, value: T, list: Array<{ value: T; label: string }>, key: keyof ThemePrefs) => (
+    <select className="settings-select" aria-label={label} value={value} onChange={(e) => change({ [key]: e.target.value })}>
+      {list.map((o) => (
+        <option key={o.value} value={o.value}>
+          {o.label}
+        </option>
+      ))}
+    </select>
+  );
+  return (
+    <section className="settings-section">
+      <h3 className="ideas-section-title">Appearance</h3>
+      <Row label="Mode" hint="System follows your computer's light or dark setting.">
+        {select("Mode", prefs.mode, MODES, "mode")}
+      </Row>
+      <Row label="Light theme">{select("Light theme", prefs.light, LIGHT_THEMES, "light")}</Row>
+      <Row label="Dark theme">{select("Dark theme", prefs.dark, DARK_THEMES, "dark")}</Row>
+    </section>
+  );
+}
+
 function WritingSettings() {
   const [style, setStyle] = useState<TextStyle>(loadStyle);
   const change = (patch: Partial<TextStyle>) => {
