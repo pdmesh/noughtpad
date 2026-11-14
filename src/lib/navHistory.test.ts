@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { back, canBack, canForward, emptyHistory, forward, visit, type NavHistory } from "./navHistory";
+import { back, canBack, canForward, emptyHistory, forward, replaceCurrent, visit, type NavHistory } from "./navHistory";
 
 // Places are strings here: "x!" is "x" after it got its id (a saved new note, a chat that started).
 const relate = (prev: string, next: string) => (prev === next ? "same" : next === `${prev}!` ? "replace" : "new");
@@ -42,5 +42,15 @@ describe("navigation history", () => {
     expect(h.entries).toHaveLength(100);
     expect(h.entries.at(-1)).toBe("p105");
     expect(h.index).toBe(99);
+  });
+});
+
+describe("replacing the current place", () => {
+  it("swaps a dead entry in place and keeps the places around it", () => {
+    const h = back(walk("a", "x", "b")).history;
+    const r = replaceCurrent(h, "blank");
+    expect(r.entries).toEqual(["a", "blank", "b"]);
+    expect(r.index).toBe(1);
+    expect(back(r).place).toBe("a");
   });
 });

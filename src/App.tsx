@@ -15,7 +15,8 @@ import { imageFiles, loadMarkdownPipeline } from "./editor/clipboard";
 import { checkForUpdates, describeUpdate, installUpdate, startUpdateChecks, updateButtonLabel, useUpdateState } from "./lib/updates";
 import { describeSync, useSync } from "./lib/sync";
 import { useMatchMedia } from "./lib/useMediaQuery";
-import { back, canBack, canForward, emptyHistory, forward, visit, type NavHistory, type Relation } from "./lib/navHistory";
+import { back, canBack, canForward, emptyHistory, forward, replaceCurrent, visit, type NavHistory } from "./lib/navHistory";
+import { relatePlaces, type Place, type View } from "./lib/place";
 
 // Pages other than writing load after the editor is ready, keeping them out of
 // the startup bundle (G1: capture in < 300 ms).
@@ -54,34 +55,6 @@ const SettingsView = page(settings, (m) => m.SettingsView);
 /** Warm everything that was left out of the startup bundle, so first use is instant. */
 function preloadDeferred() {
   for (const load of [loadMarkdownPipeline, chat.load, journal.load, ideas.load, settings.load, models.load]) void load();
-}
-
-/** "write" is the blank page; "notes" lists all notes (optionally one collection). */
-type View =
-  | { kind: "write" }
-  | { kind: "notes"; label?: string }
-  | { kind: "journal" }
-  | { kind: "ideas" }
-  | { kind: "theme"; id: string }
-  | { kind: "models"; focus?: "local" | "remote" }
-  | { kind: "settings" }
-  /** `key` stays the same when a new chat gets its id, so the page isn't remounted. */
-  | { kind: "chat"; id: string | null; start?: ScopeChoice; key: string };
-
-/** A place in the back/forward history: the view, and for Write, which note. */
-type Place = { view: View; noteId: string | null };
-
-function relatePlaces(prev: Place, next: Place): Relation {
-  const a = prev.view;
-  const b = next.view;
-  if (a.kind === "write" && b.kind === "write") {
-    if (prev.noteId === next.noteId) return "same";
-    // A new note that just got saved is the same page, now with an id.
-    return prev.noteId === null ? "replace" : "new";
-  }
-  // A new chat keeps its key when it gets its id.
-  if (a.kind === "chat" && b.kind === "chat" && a.key === b.key) return a.id === b.id ? "same" : "replace";
-  return JSON.stringify(a) === JSON.stringify(b) ? "same" : "new";
 }
 
 export function App() {
@@ -222,37 +195,52 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
     window.scrollTo({ top: 0 });
   }, []);
 
-  const newNote = useCallback(() => {
+  // `fromHistory`: a blank page reached with Back/Forward, which takes no label from the page left.
+  const startNote = useCallback((fromHistory: boolean) => {
     setView((v) => {
-      setPresetLabel(v.kind === "notes" ? v.label : undefined);
+      setPresetLabel(!fromHistory && v.kind === "notes" ? v.label : undefined);
       return { kind: "write" };
     });
     setCurrentId(null);
     setPaneKey(`new-${++newSeq.current}`);
     window.scrollTo({ top: 0 });
   }, []);
+  const newNote = useCallback(() => startNote(false), [startNote]);
+  // A save that lands after its pane was left (it flushes on unmount) mustn't claim the current note.
+  const paneKeyRef = useRef(paneKey);
+  paneKeyRef.current = paneKey;
 
   // Back/forward. Every view change is recorded; going back or forward moves the index
   // first, so the view change it causes is "the same place" and records nothing.
-  const [nav, setNav] = useState<NavHistory<Place>>(() => emptyHistory<Place>({ view: { kind: "write" }, noteId: null }));
+  const [nav, setNav] = useState<NavHistory<Place>>(() => emptyHistory<Place>({ view: { kind: "write" }, noteId: null, paneKey: "new-0" }));
   const navRef = useRef(nav);
   navRef.current = nav;
+  // Bumped on every place change, so a slow Back/Forward can tell it has been overtaken.
+  const placeSeq = useRef(0);
   useEffect(() => {
-    setNav((h) => visit(h, { view, noteId: view.kind === "write" ? currentId : null }, relatePlaces));
-  }, [view, currentId]);
+    placeSeq.current++;
+    setNav((h) => visit(h, { view, noteId: view.kind === "write" ? currentId : null, paneKey }, relatePlaces));
+  }, [view, currentId, paneKey]);
   const goTo = useCallback(
     async (place: Place) => {
       if (place.view.kind !== "write") return setView(place.view);
-      if (!place.noteId) return newNote();
-      // A note trashed or deleted since: the blank page rather than a pane that never loads.
+      if (!place.noteId) return startNote(true);
+      const ticket = placeSeq.current;
       const exists = await api.getNote(place.noteId).then(
         () => true,
         () => false,
       );
-      if (exists) openNote(place.noteId);
-      else newNote();
+      // The user went somewhere else (or pressed Back again) while this was loading.
+      if (placeSeq.current !== ticket) return;
+      if (exists) return openNote(place.noteId);
+      // Trashed or deleted since: the blank page takes its place in the history,
+      // so Back keeps going past it instead of landing here again.
+      const blank: Place = { view: { kind: "write" }, noteId: null, paneKey: "" };
+      navRef.current = replaceCurrent(navRef.current, blank);
+      setNav(navRef.current);
+      startNote(true);
     },
-    [openNote, newNote],
+    [openNote, startNote],
   );
   const step = useCallback(
     (dir: "back" | "forward") => {
@@ -518,10 +506,10 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
         <button className="icon-btn" onClick={toggleChrome} title="Toggle sidebar (⌘\)" aria-label="Toggle sidebar">
           <PanelLeft size={16} />
         </button>
-        <button className="icon-btn" onClick={() => runCommand("go-back")} disabled={!canBack(nav)} title="Back (⌘[)" aria-label="Back">
+        <button className="icon-btn nav-btn" onClick={() => runCommand("go-back")} disabled={!canBack(nav)} title="Back (⌘[)" aria-label="Back">
           <ChevronLeft size={16} />
         </button>
-        <button className="icon-btn" onClick={() => runCommand("go-forward")} disabled={!canForward(nav)} title="Forward (⌘])" aria-label="Forward">
+        <button className="icon-btn nav-btn" onClick={() => runCommand("go-forward")} disabled={!canForward(nav)} title="Forward (⌘])" aria-label="Forward">
           <ChevronRight size={16} />
         </button>
         <div className="topbar-spacer" />
@@ -608,7 +596,7 @@ function Workspace({ vault, onSwitchVault }: { vault: VaultInfo; onSwitchVault: 
             noteId={currentId ?? (paneKey.startsWith("new-") ? null : paneKey)}
             vaultRoot={vault.path}
             presetLabels={presetLabel ? [presetLabel] : undefined}
-            onCreated={setCurrentId}
+            onCreated={(id) => paneKeyRef.current === paneKey && setCurrentId(id)}
             onTrashed={newNote}
             onNotice={setNotice}
             editorRef={editorRef}

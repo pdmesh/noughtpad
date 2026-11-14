@@ -274,7 +274,7 @@ function Updates() {
   );
 }
 
-/** The note text's font and size (this computer only). */
+/** Light and dark themes, and which one shows (this computer only). */
 function AppearanceSettings() {
   const [prefs, setPrefs] = useState<ThemePrefs>(loadTheme);
   const change = (patch: Partial<ThemePrefs>) => {
@@ -303,6 +303,7 @@ function AppearanceSettings() {
   );
 }
 
+/** The note text's font and size (this computer only). */
 function WritingSettings() {
   const [style, setStyle] = useState<TextStyle>(loadStyle);
   const change = (patch: Partial<TextStyle>) => {

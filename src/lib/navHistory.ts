@@ -18,11 +18,7 @@ export function emptyHistory<T>(first: T): NavHistory<T> {
 export function visit<T>(h: NavHistory<T>, place: T, relate: (prev: T, next: T) => Relation, cap = 100): NavHistory<T> {
   const r = relate(h.entries[h.index], place);
   if (r === "same") return h;
-  if (r === "replace") {
-    const entries = h.entries.slice();
-    entries[h.index] = place;
-    return { entries, index: h.index };
-  }
+  if (r === "replace") return replaceCurrent(h, place);
   const entries = [...h.entries.slice(0, h.index + 1), place].slice(-cap);
   return { entries, index: entries.length - 1 };
 }
@@ -43,4 +39,11 @@ export function back<T>(h: NavHistory<T>): { history: NavHistory<T>; place: T | 
 export function forward<T>(h: NavHistory<T>): { history: NavHistory<T>; place: T | null } {
   if (!canForward(h)) return { history: h, place: null };
   return { history: { ...h, index: h.index + 1 }, place: h.entries[h.index + 1] };
+}
+
+/** Swap the current place for another without moving (a place that no longer exists). */
+export function replaceCurrent<T>(h: NavHistory<T>, place: T): NavHistory<T> {
+  const entries = h.entries.slice();
+  entries[h.index] = place;
+  return { entries, index: h.index };
 }
