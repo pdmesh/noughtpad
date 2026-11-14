@@ -153,7 +153,7 @@
   - Native menu: `("go-back", "Back", "CmdOrCtrl+[")` and `("go-forward", "Forward", "CmdOrCtrl+]")` at the top of `GO_ITEMS`.
   - Settings `SHORTCUTS`: add `` [`${mod} [`, "Back"] `` and `` [`${mod} ]`, "Forward"] ``.
 - [ ] **Step 6: Verify.**
-  - Run `pnpm typecheck && pnpm test && cargo check -p noughtpad`. Use whatever the Tauri crate is named in `src-tauri/Cargo.toml`.
+  - Run `pnpm typecheck && pnpm test && cargo check -p noughtpad-app`.
   - In the preview, go Write (open a note) → All notes → open another note → Settings → Chat. Press Back four times and check that each step lands where it should, including the right note, then Forward once.
   - Click into the editor on an indented list line and press ⌘[: the app should go Back and the line should keep its indent (Review Focus 1).
 - [ ] **Step 7: Commit** `Navigation: back/forward across the app (⌘[ ⌘], top bar, menu)`.
