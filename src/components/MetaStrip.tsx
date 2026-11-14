@@ -100,7 +100,7 @@ export function MetaStrip({ meta, onChange, onOpenUrl, onAddTitle }: Props) {
             </span>
           }
         >
-          <div className="popover-chips">{chips(labels, true)}</div>
+          {labels.length > 0 && <div className="popover-chips">{chips(labels, true)}</div>}
           <LabelInput
             current={labels}
             all={allLabels}
@@ -130,7 +130,7 @@ export function MetaStrip({ meta, onChange, onOpenUrl, onAddTitle }: Props) {
           }
         >
           <label className="popover-field">
-            <span>Source</span>
+            <span>Name</span>
             <input
               className="settings-input"
               value={meta.source?.title ?? ""}
@@ -146,6 +146,26 @@ export function MetaStrip({ meta, onChange, onOpenUrl, onAddTitle }: Props) {
             <span>URL</span>
             <input className="settings-input" value={meta.source?.url ?? ""} placeholder="https://…" aria-label="Source URL" spellCheck={false} autoCorrect="off" autoCapitalize="off" onChange={(e) => setSource("url", e.target.value)} />
           </label>
+          {hasSource && (
+            <div className="popover-footer">
+              {href ? (
+                <button className="popover-link" onClick={() => onOpenUrl(href)}>
+                  Open link <ExternalLink size={12} aria-hidden />
+                </button>
+              ) : (
+                <span />
+              )}
+              <button
+                className="popover-link popover-danger"
+                onClick={() => {
+                  onChange({ ...meta, source: null });
+                  setSourceOpen(false);
+                }}
+              >
+                Remove source
+              </button>
+            </div>
+          )}
         </Popover>
         {href && (
           <button className="icon-btn meta-open" title={`Open in your browser: ${href}`} aria-label="Open the source URL in your browser" onClick={() => onOpenUrl(href)}>

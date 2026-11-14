@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 
 interface Props {
   /** What the popover hangs from: the clickable part of the details line. */
@@ -29,6 +29,7 @@ export function Popover({ anchor, peek, children, open, onOpenChange, label, cla
     if (!open) return;
     clearTimeout(timer.current);
     setPeeking(false);
+    delete wrap.current?.dataset.cancelled;
     // Close after the click has moved focus, so a field inside gets its blur
     // (a half-typed label is added) before it unmounts.
     const onDown = (e: MouseEvent) => {
@@ -43,6 +44,8 @@ export function Popover({ anchor, peek, children, open, onOpenChange, label, cla
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape" || !wrap.current?.contains(e.target as Node)) return;
       e.stopPropagation();
+      // Escape discards: fields inside see this on their blur (LabelInput drops its draft).
+      if (wrap.current) wrap.current.dataset.cancelled = "1";
       onOpenChange(false);
       wrap.current?.querySelector<HTMLElement>(".popover-anchor button, .popover-anchor [tabindex]")?.focus();
     };
@@ -59,6 +62,18 @@ export function Popover({ anchor, peek, children, open, onOpenChange, label, cla
 
   useEffect(() => () => clearTimeout(timer.current), []);
 
+  // Keep the panel inside the window: one hanging from the right end of the line shifts left.
+  const panel = useRef<HTMLDivElement>(null);
+  const [shift, setShift] = useState(0);
+  const showing = open || peeking;
+  useLayoutEffect(() => {
+    if (!showing || !panel.current) return setShift(0);
+    const r = panel.current.getBoundingClientRect();
+    const over = r.right - shift - (window.innerWidth - 12);
+    setShift(over > 0 ? over : 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showing, open]);
+
   const hover = (on: boolean) => {
     clearTimeout(timer.current);
     if (!peek || open) return setPeeking(false);
@@ -69,12 +84,12 @@ export function Popover({ anchor, peek, children, open, onOpenChange, label, cla
     <span ref={wrap} className={`popover-wrap ${className}`} onMouseEnter={() => hover(true)} onMouseLeave={() => hover(false)}>
       <span className="popover-anchor">{anchor}</span>
       {open ? (
-        <div className="popover" role="dialog" aria-label={label}>
+        <div ref={panel} className="popover" role="dialog" aria-label={label} style={{ translate: shift ? `-${shift}px` : undefined }}>
           {children}
         </div>
       ) : (
         peeking && (
-          <div className="popover is-peek" aria-hidden>
+          <div ref={panel} className="popover is-peek" aria-hidden style={{ translate: shift ? `-${shift}px` : undefined }}>
             {peek}
           </div>
         )

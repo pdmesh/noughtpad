@@ -49,7 +49,7 @@ export function LabelInput({ current, all, onAdd, onRemoveLast, autoFocus }: Pro
       <Command.Input
         className="meta-input"
         value={draft}
-        placeholder="Add label"
+        placeholder="Add a label…"
         autoFocus={autoFocus}
         spellCheck={false}
         autoCorrect="off"
@@ -61,9 +61,11 @@ export function LabelInput({ current, all, onAdd, onRemoveLast, autoFocus }: Pro
           setOpen(true);
         }}
         onFocus={() => setOpen(true)}
-        onBlur={() => {
+        onBlur={(e) => {
           setOpen(false);
-          if (draft.trim()) add(draft);
+          // Clicking away keeps what was typed; Escape out of a popover discards it.
+          if (e.currentTarget.closest("[data-cancelled]")) setDraft("");
+          else if (draft.trim()) add(draft);
         }}
         onKeyDown={(e) => {
           if (e.key === "Escape") {

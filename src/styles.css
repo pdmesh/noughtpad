@@ -356,7 +356,7 @@ button {
   }
   /* No hover on touch: the adders stay visible. */
   .meta-hover-only {
-    opacity: 1;
+    visibility: visible;
   }
   /* Pages scroll under the fixed top bar; give it the page's own background
      so its buttons never sit on top of text. Same colour as the page, so it
@@ -609,15 +609,16 @@ button {
 .note-header-right > * {
   transition: opacity 0.18s ease;
 }
-.chrome-auto .note-header-right > :not(.note-date) {
+/* Trash only on hover, pinned or not. The save dot stays: it's invisible once
+   saved, and an error must show. */
+.note-header-right > .icon-btn {
   opacity: 0;
 }
 .chrome-auto.is-typing .note-header-right > .note-date {
   opacity: 0.3;
 }
 .note-header:hover .note-header-right > *,
-.note-header:focus-within .note-header-right > *,
-.chrome-pinned .note-header-right > * {
+.note-header:focus-within .note-header-right > * {
   opacity: 1;
 }
 .note-date {
@@ -641,28 +642,36 @@ button {
   background: var(--danger);
 }
 
+/* The line's own items fade (--meta-fade), never the popovers hanging from it,
+   so an opening popover is solid at once. */
 .meta-strip {
   flex: 1;
   min-width: 0;
   font-size: 0.82rem;
   color: var(--fg-muted);
+  --meta-fade: 1;
+}
+.meta-strip .popover-anchor,
+.meta-row > .meta-open,
+.meta-row > .meta-add {
+  opacity: var(--meta-fade);
   transition: opacity 0.18s ease;
 }
 .meta-empty {
-  opacity: 0;
+  --meta-fade: 0;
 }
 .meta-filled {
-  opacity: 0.55;
+  --meta-fade: 0.55;
 }
 .note-header:hover .meta-strip,
 .note-header:focus-within .meta-strip {
-  opacity: 1;
+  --meta-fade: 1;
 }
 .is-typing .meta-strip:not(:focus-within) {
-  opacity: 0;
+  --meta-fade: 0;
 }
 .is-typing .meta-filled:not(:focus-within) {
-  opacity: 0.2;
+  --meta-fade: 0.2;
 }
 /* One line that never wraps: labels (as many as fit, then "+N"), source, ↗, "+ Title". */
 .meta-row {
@@ -776,12 +785,11 @@ button {
 }
 /* Adders keep their space (so labels don't reflow on hover) but only show on hover. */
 .meta-hover-only {
-  opacity: 0;
-  transition: opacity 0.15s ease;
+  visibility: hidden;
 }
 .note-header:hover .meta-hover-only,
 .note-header:focus-within .meta-hover-only {
-  opacity: 1;
+  visibility: visible;
 }
 
 /* ---------- popover (details line) ---------- */
@@ -793,26 +801,55 @@ button {
 .popover {
   position: absolute;
   top: calc(100% + 6px);
-  left: -8px;
+  left: -6px;
   z-index: 40;
-  min-width: 240px;
-  max-width: min(420px, 80vw);
+  box-sizing: border-box;
+  width: 280px;
+  max-width: calc(100vw - 24px);
   padding: 10px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   white-space: normal;
+  text-align: left;
   background: var(--bg-elev);
   color: var(--fg);
   border: 1px solid var(--border);
   border-radius: 10px;
-  box-shadow: 0 10px 30px rgb(0 0 0 / 0.14);
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.06),
+    0 8px 24px rgb(0 0 0 / 0.12);
   font-size: 0.82rem;
+  animation: popover-in 0.12s ease-out;
 }
+.meta-source .popover {
+  width: 320px;
+}
+:root[data-scheme="dark"] .popover {
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.3),
+    0 10px 28px rgb(0 0 0 / 0.45);
+}
+@keyframes popover-in {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .popover {
+    animation: none;
+  }
+}
+/* Hover preview: a compact tooltip, not a panel. */
 .popover.is-peek {
   pointer-events: none;
-  min-width: 0;
+  width: max-content;
+  max-width: min(320px, calc(100vw - 24px));
   padding: 6px 8px;
+  gap: 4px;
+  border-radius: 8px;
+  font-size: 0.78rem;
 }
 .popover-chips {
   display: flex;
@@ -820,21 +857,76 @@ button {
   gap: 4px;
 }
 .popover-url {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
   word-break: break-all;
   color: var(--fg-muted);
 }
 .popover-field {
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  color: var(--fg-muted);
+  gap: 4px;
+  font-size: 0.72rem;
+  color: var(--fg-faint);
 }
-.popover-field .settings-input {
-  width: 100%;
-  box-sizing: border-box;
-}
+.popover-field .settings-input,
 .popover .label-combo .meta-input {
+  box-sizing: border-box;
   width: 100%;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--fg);
+  font: inherit;
+  font-size: 0.82rem;
+  outline: none;
+}
+.popover-field .settings-input:focus,
+.popover .label-combo .meta-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+/* Suggestions sit inside the panel, under the field, rather than in a second floating box. */
+.popover .label-list {
+  position: static;
+  margin-top: 4px;
+  min-width: 0;
+  max-height: 200px;
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+  background: none;
+}
+.popover .label-option {
+  padding: 5px 8px;
+  font-size: 0.82rem;
+}
+.popover-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+.popover-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  background: none;
+  padding: 2px 0;
+  color: var(--fg-muted);
+  font-size: 0.78rem;
+}
+.popover-link:hover {
+  color: var(--fg);
+}
+.popover-danger:hover {
+  color: var(--danger);
 }
 
 .label-combo {
