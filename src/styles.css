@@ -342,6 +342,29 @@ button {
 .topbar-spacer {
   flex: 1;
 }
+/* The page's own background behind the bar, so a scrolled page (Settings, a long
+   note) never runs under its buttons. It stops at the sidebar and the right-hand
+   panel when they show, which keep their own background up to the top. */
+.topbar::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--topbar-inset-left, 0px);
+  right: var(--topbar-inset-right, 0px);
+  z-index: -1;
+  background: var(--bg);
+  pointer-events: none;
+}
+.chrome-pinned .topbar,
+.chrome-auto .sidebar-hotzone:hover ~ .topbar,
+.chrome-auto .sidebar:hover ~ .topbar,
+.chrome-auto .sidebar:focus-within ~ .topbar {
+  --topbar-inset-left: var(--sidebar-w);
+}
+.related-open .topbar {
+  --topbar-inset-right: var(--related-w);
+}
 .chrome-auto .topbar {
   opacity: 0;
 }
