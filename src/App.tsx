@@ -1,6 +1,6 @@
 import { lazy, Suspense, type ComponentType, useCallback, useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowUpCircle, CalendarDays, ChevronLeft, ChevronRight, History, Settings as SettingsIcon, FilePlus2, FolderOpen, MessageSquareText, Notebook, PanelLeft, PenLine, Search, Sprout, Waypoints, X } from "lucide-react";
+import { ArrowUpCircle, CalendarDays, FolderCheck, ChevronLeft, ChevronRight, History, Settings as SettingsIcon, FilePlus2, FolderOpen, MessageSquareText, Notebook, PanelLeft, PenLine, Search, Sprout, Waypoints, X } from "lucide-react";
 import { api, isApiError, onEvent, pickFolder, type VaultInfo } from "./lib/api";
 import { useEvent } from "./lib/useEvent";
 import { NotePane } from "./components/NotePane";
@@ -118,10 +118,10 @@ function Welcome({ onOpened, error, setError }: { onOpened: (v: VaultInfo) => vo
       <p className="welcome-lede">A blank page that quietly remembers. Your notes are plain Markdown files in a folder you choose.</p>
       <div className="welcome-actions">
         <button className="btn btn-primary" onClick={() => open(defaultPath ?? null)}>
-          Start in {defaultPath ?? "~/Documents/Noughtpad"}
+          <FolderCheck size={14} aria-hidden /> Start in {defaultPath ?? "~/Documents/Noughtpad"}
         </button>
         <button className="btn" onClick={async () => open(await pickFolder())}>
-          <FolderOpen size={16} aria-hidden /> Choose another folder…
+          <FolderOpen size={14} aria-hidden /> Choose another folder…
         </button>
       </div>
       {error && <p className="error">{error}</p>}

@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { BookOpen, MessageSquareText, Sprout, Tag, X } from "lucide-react";
+import { BookOpen, MessageSquareText, Power, RotateCcw, Sprout, Tag, X } from "lucide-react";
 import { api, type Related } from "../lib/api";
 import { describeStatus, useSemanticStatus } from "../lib/useSemantic";
 import { formatDay, plainExcerpt } from "../lib/format";
@@ -73,7 +73,7 @@ export function RelatedPanel({ noteId, onOpen, onOpenTheme, onAsk, onClose, onNo
         <div className="related-card">
           <p>Semantic search stopped: {status.message}</p>
           <button className="btn" onClick={() => void api.enableSemantic()}>
-            Try again
+            <RotateCcw size={14} aria-hidden /> Try again
           </button>
         </div>
       )}
@@ -151,7 +151,7 @@ export function EnableCard() {
       </p>
       <p className="faint">One-time download of about 65 MB from Hugging Face. You can turn it off any time.</p>
       <button className="btn btn-primary" onClick={() => void api.enableSemantic()}>
-        Turn on
+        <Power size={14} aria-hidden /> Turn on
       </button>
     </div>
   );

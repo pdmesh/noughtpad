@@ -198,22 +198,106 @@ button {
   margin-top: 28px;
   align-items: flex-start;
 }
+/* ---------- controls: one look for buttons, dropdowns and text fields ---------- */
+:root {
+  --control-h: 32px;
+  --control-h-small: 28px;
+  --control-radius: 7px;
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
 .btn {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 9px 16px;
-  border-radius: 8px;
+  justify-content: center;
+  gap: 6px;
+  box-sizing: border-box;
+  height: var(--control-h);
+  padding: 0 14px;
+  border-radius: var(--control-radius);
   border: 1px solid var(--border);
   background: var(--bg-elev);
+  color: var(--fg);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 500;
+  white-space: nowrap;
+  box-shadow: 0 1px 1px rgb(0 0 0 / 0.04);
+  transition:
+    background 0.12s ease,
+    border-color 0.12s ease;
 }
-.btn:hover {
-  border-color: var(--fg-faint);
+.btn svg {
+  flex: none;
+  color: var(--fg-muted);
+}
+.btn:hover:not(:disabled) {
+  background: var(--bg-sunk);
+  border-color: color-mix(in srgb, var(--fg) 18%, var(--border));
+}
+.btn:active:not(:disabled) {
+  transform: translateY(0.5px);
+}
+.btn:focus-visible,
+.icon-btn:focus-visible,
+.segmented button:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-color: var(--accent);
 }
 .btn-primary {
   background: var(--fg);
   color: var(--bg);
   border-color: var(--fg);
+}
+.btn-primary svg {
+  color: inherit;
+}
+.btn-primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--fg) 86%, var(--bg));
+  border-color: transparent;
+}
+
+/* Dropdown (components/Select.tsx): drawn like a button, opens the system menu. */
+.select {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.select select {
+  appearance: none;
+  -webkit-appearance: none;
+  box-sizing: border-box;
+  height: var(--control-h-small);
+  min-width: 9.5rem;
+  max-width: 100%;
+  padding: 0 30px 0 10px;
+  border-radius: var(--control-radius);
+  border: 1px solid var(--border);
+  background: var(--bg-elev);
+  color: var(--fg);
+  font: inherit;
+  font-size: 0.86rem;
+  box-shadow: 0 1px 1px rgb(0 0 0 / 0.04);
+  cursor: pointer;
+}
+.select select:hover {
+  border-color: color-mix(in srgb, var(--fg) 18%, var(--border));
+}
+.select select:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
+}
+.select-chevron {
+  position: absolute;
+  right: 9px;
+  pointer-events: none;
+  color: var(--fg-faint);
+}
+.select-wide,
+.select-wide select {
+  flex: 1;
+  width: 100%;
 }
 .error {
   color: var(--danger);
@@ -401,6 +485,9 @@ button {
   }
   :root {
     --main-top: 70px;
+    /* Touch-sized buttons, dropdowns and fields. */
+    --control-h: 40px;
+    --control-h-small: 36px;
   }
   /* No room in the phone's top bar; the mobile pass decides where back/forward go. */
   .topbar .nav-btn {
@@ -873,22 +960,8 @@ button {
 }
 .popover-field .settings-input,
 .popover .label-combo .meta-input {
-  box-sizing: border-box;
   width: 100%;
   min-width: 0;
-  padding: 6px 8px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--bg);
-  color: var(--fg);
-  font: inherit;
-  font-size: 0.82rem;
-  outline: none;
-}
-.popover-field .settings-input:focus,
-.popover .label-combo .meta-input:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
 }
 /* Suggestions sit inside the panel, under the field, rather than in a second floating box. */
 .popover .label-list {
@@ -1503,26 +1576,6 @@ button {
   font-weight: 650;
   letter-spacing: -0.02em;
   margin: 0;
-}
-.segmented {
-  display: inline-flex;
-  padding: 2px;
-  border-radius: 8px;
-  background: var(--bg-sunk);
-  border: 1px solid var(--border);
-}
-.segmented button {
-  border: 0;
-  background: transparent;
-  padding: 3px 12px;
-  border-radius: 6px;
-  font-size: 0.82rem;
-  color: var(--fg-muted);
-}
-.segmented button.is-current {
-  background: var(--bg-elev);
-  color: var(--fg);
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
 }
 .journal-week {
   margin-top: 28px;
@@ -2246,11 +2299,9 @@ button.cue:hover {
 
 /* ---------- models (M4) ------------------------------------------------------ */
 .btn-small {
-  white-space: nowrap;
-  padding: 5px 11px;
+  height: var(--control-h-small);
+  padding: 0 11px;
   font-size: 0.84rem;
-  border-radius: 7px;
-  gap: 6px;
 }
 .btn:disabled {
   opacity: 0.5;
@@ -2363,24 +2414,32 @@ button.cue:hover {
   border-radius: 10px;
   background: var(--bg-elev);
 }
+/* Segmented control (journal ranges, provider kinds): one style. */
 .segmented {
-  display: flex;
+  display: inline-flex;
   flex-wrap: wrap;
-  gap: 4px;
-  padding: 3px;
-  border-radius: 9px;
+  gap: 2px;
+  padding: 2px;
+  border-radius: calc(var(--control-radius) + 2px);
+  border: 1px solid var(--border);
   background: var(--bg-sunk);
   align-self: flex-start;
 }
 .segmented button {
+  height: calc(var(--control-h-small) - 6px);
   border: 0;
   background: none;
-  padding: 5px 10px;
-  border-radius: 7px;
+  padding: 0 11px;
+  border-radius: var(--control-radius);
+  font: inherit;
   font-size: 0.84rem;
   color: var(--fg-muted);
 }
-.segmented button.is-on {
+.segmented button:hover {
+  color: var(--fg);
+}
+.segmented button.is-on,
+.segmented button.is-current {
   background: var(--bg-elev);
   color: var(--fg);
   box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
@@ -2396,14 +2455,10 @@ button.cue:hover {
   font-weight: 600;
 }
 .field input {
-  font: inherit;
-  font-size: 0.9rem;
-  padding: 7px 10px;
-  border-radius: 7px;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  color: var(--fg);
   min-width: 0;
+}
+/* Beside a button (Model + Load models), the field takes the room left. */
+.field-row input {
   flex: 1;
 }
 .settings-controls {
@@ -2411,23 +2466,35 @@ button.cue:hover {
   gap: 8px;
   align-items: center;
 }
-.settings-select,
-.settings-input {
-  font: inherit;
-  font-size: 0.88rem;
-  padding: 5px 8px;
-  border-radius: 7px;
+/* Text fields: one look everywhere (settings, provider form, popovers). */
+.settings-input,
+.field input,
+.popover-field .settings-input,
+.popover .label-combo .meta-input {
+  box-sizing: border-box;
+  height: var(--control-h-small);
+  padding: 0 10px;
+  border-radius: var(--control-radius);
   border: 1px solid var(--border);
   background: var(--bg-elev);
   color: var(--fg);
+  font: inherit;
+  font-size: 0.86rem;
+  outline: none;
+}
+.settings-input::placeholder,
+.field input::placeholder {
+  color: var(--fg-faint);
 }
 .settings-input {
   width: 170px;
 }
-.settings-select:focus,
-.settings-input:focus {
-  outline: 2px solid var(--accent-soft);
+.settings-input:focus,
+.field input:focus,
+.popover-field .settings-input:focus,
+.popover .label-combo .meta-input:focus {
   border-color: var(--accent);
+  box-shadow: var(--focus-ring);
 }
 .settings-sample {
   margin: 10px 0 0;
@@ -2436,10 +2503,7 @@ button.cue:hover {
   line-height: 1.7;
   color: var(--fg-muted);
 }
-.field input:focus {
-  outline: 2px solid var(--accent-soft);
-  border-color: var(--accent);
-}
+
 .field small {
   font-size: 0.76rem;
 }
